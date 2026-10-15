@@ -1,0 +1,119 @@
+// AI music suggestions. Signed-in users only, with a daily limit per user.
+// Uses Claude when ANTHROPIC_API_KEY is set, otherwise ChatGPT when OPENAI_API_KEY is set.
+
+const STYLE_NAME = {
+  lux: "sang trọng, vàng champagne",
+  korea: "Hàn Quốc, trắng kem, nhẹ nhàng",
+  cinema: "cinematic, tối, điện ảnh",
+  modern: "hiện đại, chuyển cảnh nhanh",
+};
+const MODE_NAME = {
+  party: "chiếu ảnh liên tục ở tiệc cưới",
+  stage: "màn hình sân khấu lúc làm lễ",
+  video: "video ảnh cưới có nhạc",
+  deliver: "bộ slide giao cho cô dâu chú rể",
+};
+
+async function supabaseUser(token) {
+  const r = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+  });
+  return r.ok ? r.json() : null;
+}
+
+async function bumpUsage(token) {
+  const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/bump_ai_usage`, {
+    method: "POST",
+    headers: {
+      apikey: process.env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  });
+  if (!r.ok) throw new Error("usage_failed");
+  return r.json();
+}
+
+async function askClaude(prompt) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!r.ok) throw new Error("ai_failed " + r.status);
+  const data = await r.json();
+  return (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+}
+
+async function askOpenAI(prompt) {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!r.ok) throw new Error("ai_failed " + r.status);
+  const data = await r.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+function parseList(text) {
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fence ? fence[1] : text.slice(text.indexOf("["), text.lastIndexOf("]") + 1);
+  const list = JSON.parse(body);
+  return (Array.isArray(list) ? list : [])
+    .filter((s) => s && s.title)
+    .slice(0, 10)
+    .map((s) => ({
+      title: String(s.title).slice(0, 120),
+      artist: String(s.artist || "").slice(0, 120),
+      why: String(s.why || "").slice(0, 300),
+      moment: String(s.moment || "").slice(0, 60),
+    }));
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "method" });
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY)
+    return res.status(503).json({ error: "ai_not_configured" });
+
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token || !(await supabaseUser(token))) return res.status(401).json({ error: "signed_out" });
+
+  const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+  const query = String(body.query || "").trim().slice(0, 300);
+  if (!query) return res.status(400).json({ error: "empty" });
+
+  const limit = Number(process.env.AI_DAILY_LIMIT || 30);
+  let used;
+  try {
+    used = await bumpUsage(token);
+  } catch {
+    return res.status(500).json({ error: "usage_failed" });
+  }
+  if (used > limit) return res.status(429).json({ error: "limit", limit });
+
+  const prompt = `Bạn là người chọn nhạc cho đám cưới ở Việt Nam.
+Yêu cầu của người dùng: "${query.replace(/"/g, "'")}"
+Bối cảnh: slide ảnh cưới dùng để ${MODE_NAME[body.mode] || MODE_NAME.party}, phong cách ${STYLE_NAME[body.style] || STYLE_NAME.lux}, khoảng ${Number(body.photos) || 0} ảnh.
+Gợi ý 8 bài hát CÓ THẬT, nổi tiếng, dễ tìm trên YouTube. Không bịa tên bài. Nếu không chắc ca sĩ thì ghi ca sĩ nổi tiếng nhất đã hát bài đó.
+Chỉ trả về một mảng JSON, mỗi phần tử: {"title": tên bài, "artist": ca sĩ, "why": một câu tiếng Việt vì sao hợp, "moment": lúc nên dùng, vài chữ tiếng Việt}.`;
+
+  try {
+    const text = process.env.ANTHROPIC_API_KEY ? await askClaude(prompt) : await askOpenAI(prompt);
+    return res.status(200).json({ songs: parseList(text), used, limit });
+  } catch (e) {
+    return res.status(502).json({ error: "ai_failed" });
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "slide-cuoi",
+  "private": true,
+  "type": "module",
+  "description": "Slide ảnh cưới: chiếu tiệc, màn hình sân khấu, video có nhạc, file slide giao khách. Có tài khoản và AI tìm nhạc.",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": { "node": ">=18" }
+}

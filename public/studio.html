@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Studio · Slide Ảnh Cưới</title>
+<link data-fonts rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Montserrat:wght@600;800&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/albums.html">‹ Album của tôi</a>
+  <div class="who"><span class="saving" id="saveState" role="status">Đang tải...</span><span id="email"></span><button id="out">Đăng xuất</button></div>
+</div>
+<div class="page">
+  <div class="sec-h">
+    <h1>Slide Ảnh Cưới <em id="titleNames">của bạn</em></h1>
+  </div>
+
+  <div class="layout">
+    <div class="main">
+      <section>
+        <h2><span class="n">1</span>Mục đích làm slide</h2>
+        <div class="opts" id="modes">
+          <label class="opt"><input type="radio" name="mode" value="party" checked><b>Chiếu ảnh liên tục ở tiệc cưới</b><span>Tự chạy vòng lặp cả buổi, có nhạc, giữ màn hình luôn sáng.</span></label>
+          <label class="opt"><input type="radio" name="mode" value="stage"><b>Màn hình sân khấu lúc làm lễ</b><span>Bấm chuyển từng màn theo chương trình, dùng được bút trình chiếu.</span></label>
+          <label class="opt"><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
+          <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="n">2</span>Phong cách</h2>
+        <div class="opts" id="styles">
+          <label class="opt"><input type="radio" name="style" value="lux" checked><div class="sw"><i style="background:#120d08"></i><i style="background:#d4ac63"></i><i style="background:#f6e7c1"></i></div><b>Sang trọng, vàng champagne</b><span>Khung viền vàng, chữ nghiêng, kim tuyến bay nhẹ.</span></label>
+          <label class="opt"><input type="radio" name="style" value="korea"><div class="sw"><i style="background:#f6f1ea"></i><i style="background:#fffdf9"></i><i style="background:#8a7560"></i></div><b>Hàn Quốc, trắng kem, nhẹ nhàng</b><span>Nền kem, ảnh viền trắng, khung vòm, chuyển cảnh êm.</span></label>
+          <label class="opt"><input type="radio" name="style" value="cinema"><div class="sw"><i style="background:#000"></i><i style="background:#1d5c6b"></i><i style="background:#d9853b"></i></div><b>Cinematic, tối, điện ảnh</b><span>Khung phim rộng, màu điện ảnh, hạt phim, chuyển qua nền đen.</span></label>
+          <label class="opt"><input type="radio" name="style" value="modern"><div class="sw"><i style="background:#121214"></i><i style="background:#ff5470"></i><i style="background:#f4f1ea"></i></div><b>Hiện đại, chuyển cảnh bắt mắt</b><span>Chữ to đậm, ảnh chia đôi màn hình, lướt, quét, mở tròn.</span></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-h">
+          <h2><span class="n">3</span>Ảnh</h2>
+          <span class="count" id="count"></span>
+        </div>
+        <div class="drop" id="drop"><div class="grid" id="grid"></div></div>
+        <div class="sec-h">
+          <p class="hint" id="photoHint"></p>
+          <label class="btn">＋ Thêm ảnh<input id="photoInput" type="file" accept="image/*" multiple></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-h">
+          <h2><span class="n">4</span>Nhạc nền</h2>
+          <label class="btn">♪ Thêm nhạc<input id="musicInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac" multiple></label>
+        </div>
+        <ul class="tracks" id="tracks"></ul>
+        <p class="hint" id="musicHint">Chưa có nhạc. Chọn một hoặc nhiều file MP3, các bài phát nối nhau và lặp lại.</p>
+        <div class="ai" id="ai" hidden>
+          <h3>✦ Trợ lý AI tìm nhạc <small>tả bài bạn muốn, AI gợi ý tên bài kèm link nghe thử</small></h3>
+          <div class="chips" id="aiChips">
+            <button data-q="Nhạc Việt lãng mạn, nhẹ nhàng để chiếu ảnh lúc đón khách">Nhạc Việt đón khách</button>
+            <button data-q="Nhạc không lời piano hoặc violin sang trọng cho tiệc cưới">Không lời sang trọng</button>
+            <button data-q="Ballad Hàn Quốc ngọt ngào về tình yêu, hợp video cưới">Ballad Hàn</button>
+            <button data-q="Nhạc sôi động, vui tươi cho lúc nâng ly và cắt bánh">Sôi động lúc nâng ly</button>
+            <button data-q="Nhạc tiếng Anh kinh điển cho đám cưới, lúc cô dâu bước vào">Cô dâu bước vào</button>
+          </div>
+          <div class="ai-row">
+            <input type="text" id="aiQ" placeholder="Ví dụ: nhạc bolero nhẹ nhàng cho đám cưới ở quê" aria-label="Yêu cầu tìm nhạc">
+            <button id="aiGo">Tìm nhạc</button>
+            <button id="aiStop" hidden>Dừng</button>
+          </div>
+          <p class="hint" id="aiNote"></p>
+          <ul class="songs" id="songs"></ul>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="n">5</span>Thông tin cô dâu chú rể</h2>
+        <div class="fields">
+          <label class="f">Chú rể<input type="text" id="groom" placeholder="Tên chú rể"></label>
+          <label class="f">Cô dâu<input type="text" id="bride" placeholder="Tên cô dâu"></label>
+          <label class="f">Ngày cưới<input type="date" id="date"></label>
+          <label class="f wide">Lời nhắn<input type="text" id="msg" placeholder="Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi"></label>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="n">6</span>Tùy chọn</h2>
+        <div class="fields">
+          <label class="f">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
+          <label class="f" data-for="party">Hiện lại màn hình tên
+            <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
+          </label>
+          <label class="f" data-for="video">Khung hình video
+            <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
+          </label>
+          <label class="f wide" data-for="stage">Chương trình sân khấu, mỗi dòng là một màn
+            <textarea id="cues">Chào mừng quý khách
+Lễ thành hôn
+Nghi thức trao nhẫn
+Cắt bánh, rót rượu
+Nâng ly chúc mừng
+[Trình chiếu ảnh]
+Cảm ơn quý khách</textarea>
+            <span class="hint">Dòng <b>[Trình chiếu ảnh]</b> sẽ tự chạy ảnh cho tới khi bạn bấm sang màn tiếp. Bấm <kbd>→</kbd> hoặc bút trình chiếu để chuyển màn, <kbd>B</kbd> để che đen màn hình.</span>
+          </label>
+        </div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
+          <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
+          <label class="check" data-for="stage"><input type="checkbox" id="stageMusic"><span>Phát nhạc trên màn hình sân khấu<small>Thường để MC và ban nhạc lo phần âm thanh, nên mặc định tắt.</small></span></label>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
+      <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
+      <div class="row">
+        <button class="go" id="go"></button>
+      </div>
+      <div class="row" data-for="deliver"><button id="tryDeliver">Xem thử như khách</button></div>
+      <div id="vprog" hidden>
+        <div class="prog"><i id="vbar"></i></div>
+        <div class="pv-meta"><span id="vtxt"></span><button id="vcancel">Hủy</button></div>
+      </div>
+      <p class="note" id="goNote"></p>
+    </aside>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/engine.js"></script>
+<script src="/js/studio.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Slide Ảnh Cưới</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="auth">
+  <header>
+    <div class="eyebrow">Studio slide cưới</div>
+    <h1>Slide Ảnh Cưới <em>trọn bộ</em></h1>
+    <p class="sub">Làm slide chiếu tiệc, màn hình sân khấu, video có nhạc và file slide giao cho cô dâu chú rể. Đăng nhập để lưu album.</p>
+  </header>
+
+  <section>
+    <div class="tabs" role="group" aria-label="Đăng nhập hoặc đăng ký">
+      <button id="tabIn" aria-pressed="true">Đăng nhập</button>
+      <button id="tabUp" aria-pressed="false">Tạo tài khoản</button>
+    </div>
+    <form id="form" class="fields" style="grid-template-columns:1fr" novalidate>
+      <label class="f">Email<input type="email" id="email" autocomplete="email" required></label>
+      <label class="f">Mật khẩu<input type="password" id="pw" autocomplete="current-password" minlength="6" required></label>
+      <button class="go" id="submit" type="submit">Đăng nhập</button>
+    </form>
+    <button id="forgot" type="button" style="align-self:flex-start;border:0;background:none;padding:0;color:var(--accent)">Quên mật khẩu?</button>
+    <div class="or">hoặc</div>
+    <button id="google" type="button">Tiếp tục với Google</button>
+    <p class="note" id="msg" role="status"></p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/js/common.js"></script>
+<script>
+(async () => {
+  const msg = (t, err) => { $("msg").textContent = t; $("msg").classList.toggle("err", !!err); };
+  const next = new URLSearchParams(location.search).get("next") || "/albums.html";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/albums.html";
+  let client;
+  try { client = await sb(); } catch (e) { return msg(e.message, true); }
+
+  const { data } = await client.auth.getSession();
+  if (data.session) return location.replace(safeNext);
+
+  let mode = "in";
+  function setMode(m) {
+    mode = m;
+    $("tabIn").setAttribute("aria-pressed", m === "in");
+    $("tabUp").setAttribute("aria-pressed", m === "up");
+    $("submit").textContent = m === "in" ? "Đăng nhập" : "Tạo tài khoản";
+    $("pw").autocomplete = m === "in" ? "current-password" : "new-password";
+    $("forgot").hidden = m !== "in";
+    msg("");
+  }
+  $("tabIn").onclick = () => setMode("in");
+  $("tabUp").onclick = () => setMode("up");
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("email").value.trim(), password = $("pw").value;
+    if (!email) return msg("Nhập email của bạn.", true);
+    if (password.length < 6) return msg("Mật khẩu cần ít nhất 6 ký tự.", true);
+    $("submit").disabled = true;
+    if (mode === "in") {
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      if (error) msg(/confirm/i.test(error.message) ? "Email chưa xác nhận. Mở hộp thư và bấm link xác nhận trước." : "Sai email hoặc mật khẩu.", true);
+      else location.replace(safeNext);
+    } else {
+      const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + "/albums.html" } });
+      if (error) msg("Chưa tạo được tài khoản: " + error.message, true);
+      else if (data.session) location.replace(safeNext);
+      else msg("Đã tạo tài khoản. Mở email và bấm link xác nhận, rồi quay lại đăng nhập.");
+    }
+    $("submit").disabled = false;
+  });
+
+  $("forgot").onclick = async () => {
+    const email = $("email").value.trim();
+    if (!email) return msg("Nhập email trước, rồi bấm Quên mật khẩu.", true);
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/reset.html" });
+    msg(error ? "Chưa gửi được email: " + error.message : "Đã gửi email đặt lại mật khẩu.", !!error);
+  };
+
+  $("google").onclick = async () => {
+    const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + safeNext } });
+    if (error) msg("Đăng nhập Google chưa bật trên máy chủ.", true);
+  };
+})();
+</script>
+</body>
+</html>
