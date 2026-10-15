@@ -1,5 +1,5 @@
 // AI music suggestions. Signed-in users only, with a daily limit per user.
-// Uses Claude when ANTHROPIC_API_KEY is set, otherwise ChatGPT when OPENAI_API_KEY is set.
+// Provider order: Claude (ANTHROPIC_API_KEY), ChatGPT (OPENAI_API_KEY), Gemini (GEMINI_API_KEY, has a free tier).
 
 const STYLE_NAME = {
   lux: "sang trọng, vàng champagne",
@@ -68,6 +68,28 @@ async function askOpenAI(prompt) {
   return data.choices?.[0]?.message?.content || "";
 }
 
+async function askGemini(prompt) {
+  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" },
+    }),
+  });
+  if (!r.ok) throw new Error("ai_failed " + r.status);
+  const data = await r.json();
+  return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+}
+
+const hasAI = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+function ask(prompt) {
+  if (process.env.ANTHROPIC_API_KEY) return askClaude(prompt);
+  if (process.env.OPENAI_API_KEY) return askOpenAI(prompt);
+  return askGemini(prompt);
+}
+
 function parseList(text) {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = fence ? fence[1] : text.slice(text.indexOf("["), text.lastIndexOf("]") + 1);
@@ -85,7 +107,7 @@ function parseList(text) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY)
+  if (!hasAI())
     return res.status(503).json({ error: "ai_not_configured" });
 
   const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
@@ -111,7 +133,7 @@ Gợi ý 8 bài hát CÓ THẬT, nổi tiếng, dễ tìm trên YouTube. Không 
 Chỉ trả về một mảng JSON, mỗi phần tử: {"title": tên bài, "artist": ca sĩ, "why": một câu tiếng Việt vì sao hợp, "moment": lúc nên dùng, vài chữ tiếng Việt}.`;
 
   try {
-    const text = process.env.ANTHROPIC_API_KEY ? await askClaude(prompt) : await askOpenAI(prompt);
+    const text = await ask(prompt);
     return res.status(200).json({ songs: parseList(text), used, limit });
   } catch (e) {
     return res.status(502).json({ error: "ai_failed" });

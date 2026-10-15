@@ -7,7 +7,7 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 - **Video:** xuất video ngang 16:9 hoặc dọc 9:16, có nhạc và hiệu ứng.
 - **Giao khách:** tải một file `.html` chứa sẵn ảnh, nhạc, hiệu ứng; khách mở bằng trình duyệt là xem.
 - 4 phong cách: vàng champagne, Hàn Quốc, cinematic, hiện đại.
-- AI gợi ý nhạc theo yêu cầu (Claude hoặc ChatGPT), giới hạn số lượt mỗi người mỗi ngày.
+- AI gợi ý nhạc theo yêu cầu (Claude, ChatGPT hoặc Gemini miễn phí), giới hạn số lượt mỗi người mỗi ngày.
 
 Mỗi người đăng ký bằng email (hoặc Google), album, ảnh và nhạc được lưu riêng, người khác không xem được.
 
@@ -41,6 +41,7 @@ Không có bước build. Web tĩnh nằm trong `public/`, hàm máy chủ trong
 
 Chọn một:
 
+- Gemini (miễn phí, có giới hạn lượt): tạo key tại https://aistudio.google.com/apikey, đặt vào `GEMINI_API_KEY`.
 - Claude: tạo key tại https://console.anthropic.com, đặt vào `ANTHROPIC_API_KEY`.
 - ChatGPT: tạo key tại https://platform.openai.com, đặt vào `OPENAI_API_KEY`.
 
@@ -51,7 +52,7 @@ Không đặt key nào thì web vẫn chạy, chỉ ẩn phần AI.
 1. Vào https://vercel.com, **Add New > Project**, chọn repo này. Framework Preset: **Other**. Không cần build command.
 2. Ở **Environment Variables**, thêm các biến trong `.env.example`:
    - `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-   - `ANTHROPIC_API_KEY` hoặc `OPENAI_API_KEY`
+   - `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` hoặc `OPENAI_API_KEY`
    - `AI_DAILY_LIMIT` (mặc định 30 lượt mỗi người mỗi ngày)
 3. Bấm **Deploy**. Xong thì gửi link cho mọi người đăng ký và dùng.
 
