@@ -26,8 +26,8 @@
       <button class="go" id="submit" type="submit">Đăng nhập</button>
     </form>
     <button id="forgot" type="button" style="align-self:flex-start;border:0;background:none;padding:0;color:var(--accent)">Quên mật khẩu?</button>
-    <div class="or">hoặc</div>
-    <button id="google" type="button">Tiếp tục với Google</button>
+    <div class="or" id="orLine" hidden>hoặc</div>
+    <button id="google" type="button" hidden>Tiếp tục với Google</button>
     <p class="note" id="msg" role="status"></p>
   </section>
 </div>
@@ -84,6 +84,7 @@
     msg(error ? "Chưa gửi được email: " + error.message : "Đã gửi email đặt lại mật khẩu.", !!error);
   };
 
+  enabledProviders().then((p) => { if (p.google) { $("google").hidden = false; $("orLine").hidden = false; } });
   $("google").onclick = async () => {
     const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + safeNext } });
     if (error) msg("Đăng nhập Google chưa bật trên máy chủ.", true);

@@ -1,15 +1,28 @@
 // Shared helpers: Supabase client (config comes from /api/config so no keys live in the repo) and auth guards.
 const $ = (id) => document.getElementById(id);
 
-let _sb = null;
-async function sb() {
-  if (_sb) return _sb;
+let _sb = null, _cfg = null;
+async function config() {
+  if (_cfg) return _cfg;
   const res = await fetch("/api/config");
   if (!res.ok) throw new Error("Không tải được cấu hình máy chủ.");
-  const cfg = await res.json();
+  return (_cfg = await res.json());
+}
+async function sb() {
+  if (_sb) return _sb;
+  const cfg = await config();
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error("Máy chủ chưa cấu hình Supabase (xem README).");
   _sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
   return _sb;
+}
+
+// Which external logins (google, ...) are switched on in Supabase Auth.
+async function enabledProviders() {
+  try {
+    const cfg = await config();
+    const r = await fetch(cfg.supabaseUrl + "/auth/v1/settings", { headers: { apikey: cfg.supabaseAnonKey } });
+    return r.ok ? (await r.json()).external || {} : {};
+  } catch { return {}; }
 }
 
 // Redirect to the login page when signed out; resolves with the user.
