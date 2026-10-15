@@ -47,6 +47,11 @@ create index if not exists album_photos_album on public.album_photos (album_id, 
 create index if not exists album_tracks_album on public.album_tracks (album_id, position);
 create index if not exists albums_user on public.albums (user_id, updated_at desc);
 
+-- Explicit grants, so the app works even when "Automatically expose new tables" is off.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.albums, public.album_photos, public.album_tracks to authenticated;
+grant select on public.ai_usage to authenticated;
+
 alter table public.albums enable row level security;
 alter table public.album_photos enable row level security;
 alter table public.album_tracks enable row level security;
