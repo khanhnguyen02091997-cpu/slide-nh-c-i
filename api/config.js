@@ -5,5 +5,7 @@ export default function handler(req, res) {
     supabaseUrl: process.env.SUPABASE_URL || "",
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
     aiEnabled: Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY),
+    // Chibi needs a paid Gemini image model, so it stays hidden until CHIBI_ENABLED=1.
+    chibiEnabled: Boolean(process.env.GEMINI_API_KEY && process.env.CHIBI_ENABLED === "1"),
   });
 }

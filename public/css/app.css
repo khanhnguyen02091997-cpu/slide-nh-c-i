@@ -84,7 +84,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 .chibi-box.busy::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{from{background-position:150% 0}to{background-position:-50% 0}}
 .chibi-arrow{color:var(--muted);font-size:20px}
-body:not(.has-ai) .thumb [data-a="c"]{display:none}
+body:not(.has-chibi) .thumb [data-a="c"]{display:none}
 .chips button{font-size:13px;padding:4px 12px;font-weight:400}
 .songs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .songs li{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}

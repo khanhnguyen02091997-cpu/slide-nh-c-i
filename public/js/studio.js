@@ -447,10 +447,12 @@ $("chAdd").onclick = () => {
 };
 $("chSave").onclick = () => chBlob && saveFile(chBlob, "chibi-" + slug() + ".png");
 
+function setupChibi() {
+  document.body.classList.add("has-chibi"); $("chibi").hidden = false;
+  const first = photos.find((p) => !p.sample); if (first) chibiPick(first, false), $("chNote").textContent = "Chọn kiểu rồi bấm Tạo chibi, hoặc bấm ✨ trên ảnh khác.";
+}
 function setupAI(enabled) {
   if (!enabled) return;
-  document.body.classList.add("has-ai"); $("chibi").hidden = false;
-  const first = photos.find((p) => !p.sample); if (first) chibiPick(first, false), $("chNote").textContent = "Chọn kiểu rồi bấm Tạo chibi, hoặc bấm ✨ trên ảnh khác.";
   $("ai").hidden = false;
   let ctl = null;
   const link = (href, txt) => { const a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = txt; return a; };
@@ -501,7 +503,7 @@ function setupAI(enabled) {
   client = await sb();
   $("email").textContent = user.email || "";
   $("out").onclick = signOut;
-  fetch("/api/config").then((r) => r.json()).then((c) => setupAI(c.aiEnabled)).catch(() => {});
+  fetch("/api/config").then((r) => r.json()).then((c) => { setupAI(c.aiEnabled); if (c.chibiEnabled) setupChibi(); }).catch(() => {});
   if (!(await load())) return;
   renderPhotos(); renderTracks();
   document.querySelectorAll(".main input, .main select, .main textarea").forEach((el) => {
