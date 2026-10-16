@@ -58,6 +58,20 @@
         </div>
       </section>
 
+      <section data-part="slide video">
+        <h2><span class="n">3</span>Hiệu ứng chuyển cảnh</h2>
+        <p class="hint">Bấm một kiểu, khung xem trước bên phải sẽ chạy thử ngay.</p>
+        <div class="pick" data-for-select="trans" role="group"><button type="button" data-v="auto" aria-pressed="true"><i aria-hidden="true">✦</i>Theo phong cách</button><button type="button" data-v="mix" aria-pressed="false"><i aria-hidden="true">🔀</i>Luân phiên nhiều kiểu</button><button type="button" data-v="fade" aria-pressed="false"><i aria-hidden="true">◐</i>Mờ dần</button><button type="button" data-v="white" aria-pressed="false"><i aria-hidden="true">☀</i>Lóe sáng trắng</button><button type="button" data-v="black" aria-pressed="false"><i aria-hidden="true">●</i>Tối dần</button><button type="button" data-v="heart" aria-pressed="false"><i aria-hidden="true">♥</i>Mở trái tim</button><button type="button" data-v="circle" aria-pressed="false"><i aria-hidden="true">◯</i>Mở vòng tròn</button><button type="button" data-v="zoom" aria-pressed="false"><i aria-hidden="true">⤢</i>Phóng to</button><button type="button" data-v="slide" aria-pressed="false"><i aria-hidden="true">⇆</i>Trượt ngang</button><button type="button" data-v="up" aria-pressed="false"><i aria-hidden="true">⇡</i>Đẩy lên</button><button type="button" data-v="wipe" aria-pressed="false"><i aria-hidden="true">▶</i>Quét ngang</button><button type="button" data-v="diag" aria-pressed="false"><i aria-hidden="true">◢</i>Quét chéo</button><button type="button" data-v="blinds" aria-pressed="false"><i aria-hidden="true">▥</i>Rèm dọc</button><button type="button" data-v="flip" aria-pressed="false"><i aria-hidden="true">⟲</i>Lật ảnh</button></div>
+        <select id="trans" hidden><option value="auto">Theo phong cách</option><option value="mix">Luân phiên nhiều kiểu</option><option value="fade">Mờ dần</option><option value="white">Lóe sáng trắng</option><option value="black">Tối dần</option><option value="heart">Mở trái tim</option><option value="circle">Mở vòng tròn</option><option value="zoom">Phóng to</option><option value="slide">Trượt ngang</option><option value="up">Đẩy lên</option><option value="wipe">Quét ngang</option><option value="diag">Quét chéo</option><option value="blinds">Rèm dọc</option><option value="flip">Lật ảnh</option></select>
+      </section>
+
+      <section data-part="slide video">
+        <h2><span class="n">4</span>Khung ảnh</h2>
+        <p class="hint">Màu khung tự theo phong cách đã chọn. Muốn chỉnh vùng cắt từng ảnh thì bấm vào ảnh ở mục Ảnh.</p>
+        <div class="pick" data-for-select="frame" role="group"><button type="button" data-v="auto" aria-pressed="true"><i aria-hidden="true">✦</i>Theo phong cách</button><button type="button" data-v="full" aria-pressed="false"><i aria-hidden="true">▣</i>Tràn màn hình</button><button type="button" data-v="thin" aria-pressed="false"><i aria-hidden="true">▢</i>Viền mảnh</button><button type="button" data-v="white" aria-pressed="false"><i aria-hidden="true">⬜</i>Viền trắng dày</button><button type="button" data-v="round" aria-pressed="false"><i aria-hidden="true">▢</i>Bo góc mềm</button><button type="button" data-v="polaroid" aria-pressed="false"><i aria-hidden="true">▱</i>Polaroid</button><button type="button" data-v="arch" aria-pressed="false"><i aria-hidden="true">⌂</i>Khung vòm</button><button type="button" data-v="oval" aria-pressed="false"><i aria-hidden="true">⬭</i>Khung oval</button></div>
+        <select id="frame" hidden><option value="auto">Theo phong cách</option><option value="full">Tràn màn hình</option><option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option><option value="polaroid">Polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option></select>
+      </section>
+
       <section>
         <div class="sec-h">
           <h2><span class="n">3</span>Ảnh</h2>
@@ -131,22 +145,6 @@
           <label class="f" data-for="party stage video deliver">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
           <label class="f" data-for="party">Hiện lại màn hình tên
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
-          </label>
-          <label class="f" data-for="party stage video deliver">Hiệu ứng chuyển cảnh
-            <select id="trans">
-              <option value="auto">Theo phong cách đã chọn</option><option value="mix">Đổi nhiều kiểu luân phiên</option>
-              <option value="fade">Mờ dần</option><option value="white">Lóe sáng trắng</option><option value="black">Tối dần qua nền đen</option>
-              <option value="heart">Mở hình trái tim</option><option value="circle">Mở vòng tròn</option><option value="zoom">Phóng to</option>
-              <option value="slide">Trượt ngang</option><option value="up">Đẩy từ dưới lên</option><option value="wipe">Quét ngang</option>
-              <option value="diag">Quét chéo</option><option value="blinds">Rèm dọc</option><option value="flip">Lật ảnh</option>
-            </select>
-          </label>
-          <label class="f" data-for="party stage video deliver">Khung ảnh
-            <select id="frame">
-              <option value="auto">Theo phong cách đã chọn</option><option value="full">Tràn màn hình</option>
-              <option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option>
-              <option value="polaroid">Ảnh polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option>
-            </select>
           </label>
           <label class="f" data-for="album">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option></select>

@@ -317,6 +317,14 @@ function startPreview() {
 function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); } requestAnimationFrame(pvFrame); }
 new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val("mode") === "album") { sizePv(); renderBook(); } }).observe(pv);
 
+/* ----- transition and frame pickers (buttons that drive hidden selects) ----- */
+function syncPick(id) { const v = $(id).value; document.querySelectorAll(`.pick[data-for-select="${id}"] button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v))); }
+document.querySelectorAll(".pick").forEach((g) => g.querySelectorAll("button").forEach((b) => b.onclick = () => {
+  const id = g.dataset.forSelect; $(id).value = b.dataset.v; syncPick(id); refresh(); changed();
+  // show it straight away: move the preview from the title card to the first photo
+  if (pvEng && photos.length) pvEng.go(1);
+}));
+
 /* ----- parts: slide (party / stage / deliver), video, album ----- */
 const partOf = (mode) => mode === "video" || mode === "album" ? mode : "slide";
 let lastSlide = "party";
@@ -340,6 +348,8 @@ document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
 const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in" };
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
+  document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
+  syncPick("trans"); syncPick("frame");
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
   const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" ? "party" : mode, n, c);
   const notes = {
