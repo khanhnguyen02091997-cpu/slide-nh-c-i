@@ -80,6 +80,7 @@ function text(ctx, st, s, f, size, x, y, color, align = "center") {
 
 /* Draw page `pg` (index n of total) onto a square canvas context of side S. */
 function render(ctx, S, pages, n, photos, style, info, mark) {
+  if (G.SlideEngine) G.SlideEngine.names(ctx, info);
   const st = STY[style] || STY.lux, pg = pages[n];
   ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, S, S);
   if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, S - 2 * p, S - 2 * p); }

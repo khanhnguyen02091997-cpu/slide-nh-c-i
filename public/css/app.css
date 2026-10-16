@@ -221,3 +221,7 @@ a.btn{text-decoration:none}
 .fold>:not(summary){margin:0 12px 12px}
 .t-manual{gap:8px}
 .redeem[hidden]{display:none}
+.nf-fold{margin-top:12px}.nf-pick{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.nf-pick button{font-size:19px;padding:10px 14px;min-height:52px;justify-content:center}
+.nf-pick button[data-v="auto"]{font-family:inherit;font-size:14px}
+.nf-pick .nf-s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Studio · Slide Ảnh Cưới</title>
-<link data-fonts rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Montserrat:wght@600;800&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link data-fonts rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Montserrat:wght@600;800&family=Playfair+Display:ital,wght@0,500;1,400;1,500&family=Alex+Brush&family=Charm:wght@700&family=Corinthia&family=Dancing+Script:wght@600&family=Great+Vibes&family=Lobster&family=Pacifico&family=Patrick+Hand&family=Pinyon+Script&family=Playball&display=swap">
 <link rel="stylesheet" href="/css/app.css">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1a120b">
@@ -80,8 +80,11 @@
 
       <section data-part="slide video">
         <h2><span class="n">4</span>Khung ảnh</h2>
-        <p class="hint">Màu khung tự theo phong cách đã chọn. Muốn chỉnh vùng cắt từng ảnh thì bấm vào ảnh ở mục Ảnh.</p>
-        <div class="pick" data-for-select="frame" role="group"><button type="button" data-v="auto" aria-pressed="true"><i aria-hidden="true">✦</i>Theo phong cách</button><button type="button" data-v="full" aria-pressed="false"><i aria-hidden="true">▣</i>Tràn màn hình</button><button type="button" data-v="thin" aria-pressed="false"><i aria-hidden="true">▢</i>Viền mảnh</button><button type="button" data-v="white" aria-pressed="false"><i aria-hidden="true">⬜</i>Viền trắng dày</button><button type="button" data-v="round" aria-pressed="false"><i aria-hidden="true">▢</i>Bo góc mềm</button><button type="button" data-v="polaroid" aria-pressed="false"><i aria-hidden="true">▱</i>Polaroid</button><button type="button" data-v="arch" aria-pressed="false"><i aria-hidden="true">⌂</i>Khung vòm</button><button type="button" data-v="oval" aria-pressed="false"><i aria-hidden="true">⬭</i>Khung oval</button></div>
+        <details class="fold">
+          <summary>Kiểu khung <span class="hint" id="frSum">Theo phong cách</span></summary>
+          <p class="hint">Màu khung tự theo phong cách đã chọn. Muốn chỉnh vùng cắt từng ảnh thì bấm vào ảnh ở mục Ảnh.</p>
+          <div class="pick" data-for-select="frame" role="group"><button type="button" data-v="auto" aria-pressed="true"><i aria-hidden="true">✦</i>Theo phong cách</button><button type="button" data-v="full" aria-pressed="false"><i aria-hidden="true">▣</i>Tràn màn hình</button><button type="button" data-v="thin" aria-pressed="false"><i aria-hidden="true">▢</i>Viền mảnh</button><button type="button" data-v="white" aria-pressed="false"><i aria-hidden="true">⬜</i>Viền trắng dày</button><button type="button" data-v="round" aria-pressed="false"><i aria-hidden="true">▢</i>Bo góc mềm</button><button type="button" data-v="polaroid" aria-pressed="false"><i aria-hidden="true">▱</i>Polaroid</button><button type="button" data-v="arch" aria-pressed="false"><i aria-hidden="true">⌂</i>Khung vòm</button><button type="button" data-v="oval" aria-pressed="false"><i aria-hidden="true">⬭</i>Khung oval</button></div>
+        </details>
         <select id="frame" hidden><option value="auto">Theo phong cách</option><option value="full">Tràn màn hình</option><option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option><option value="polaroid">Polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option></select>
       </section>
 
@@ -150,6 +153,11 @@
           <label class="f">Ngày cưới<input type="date" id="date"></label>
           <label class="f wide">Lời nhắn<input type="text" id="msg" placeholder="Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi"></label>
         </div>
+        <details class="fold nf-fold">
+          <summary>Kiểu chữ tên <span class="hint" id="nfSum">Theo phong cách</span></summary>
+          <div class="pick nf-pick" data-for-select="nameFont" role="group"><button type="button" data-v="auto"><span class="nf-s">Theo phong cách</span></button><button type="button" data-v="vibes" style='font-family:&quot;Great Vibes&quot;,cursive'><span class="nf-s">Great Vibes</span></button><button type="button" data-v="dancing" style='font-family:&quot;Dancing Script&quot;,cursive'><span class="nf-s">Dancing Script</span></button><button type="button" data-v="pinyon" style='font-family:&quot;Pinyon Script&quot;,cursive'><span class="nf-s">Pinyon Script</span></button><button type="button" data-v="alex" style='font-family:&quot;Alex Brush&quot;,cursive'><span class="nf-s">Alex Brush</span></button><button type="button" data-v="playball" style='font-family:&quot;Playball&quot;,cursive'><span class="nf-s">Playball</span></button><button type="button" data-v="charm" style='font-family:&quot;Charm&quot;,cursive'><span class="nf-s">Charm</span></button><button type="button" data-v="corinthia" style='font-family:&quot;Corinthia&quot;,cursive'><span class="nf-s">Corinthia</span></button><button type="button" data-v="pacifico" style='font-family:&quot;Pacifico&quot;,cursive'><span class="nf-s">Pacifico</span></button><button type="button" data-v="lobster" style='font-family:&quot;Lobster&quot;,cursive'><span class="nf-s">Lobster</span></button><button type="button" data-v="patrick" style='font-family:&quot;Patrick Hand&quot;,cursive'><span class="nf-s">Patrick Hand</span></button></div>
+        </details>
+        <select id="nameFont" hidden><option value="auto">Theo phong cách</option><option value="vibes">Great Vibes</option><option value="dancing">Dancing Script</option><option value="pinyon">Pinyon Script</option><option value="alex">Alex Brush</option><option value="playball">Playball</option><option value="charm">Charm</option><option value="corinthia">Corinthia</option><option value="pacifico">Pacifico</option><option value="lobster">Lobster</option><option value="patrick">Patrick Hand</option></select>
       </section>
 
       <section>

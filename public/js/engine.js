@@ -3,6 +3,23 @@
 "use strict";
 const F={play:'"Playfair Display",Georgia,serif',corm:'"Cormorant Garamond",Georgia,serif',sans:'"Be Vietnam Pro",system-ui,sans-serif',mont:'Montserrat,"Be Vietnam Pro",system-ui,sans-serif'};
 const ready=document.fonts?Promise.all(['italic 500 40px "Playfair Display"','italic 400 40px "Playfair Display"','italic 500 40px "Cormorant Garamond"','italic 400 40px "Cormorant Garamond"','300 40px "Be Vietnam Pro"','400 40px "Be Vietnam Pro"','800 40px Montserrat','600 40px Montserrat'].map(f=>document.fonts.load(f,"Ắ").catch(()=>{}))).then(()=>{}):Promise.resolve();
+/* Couple-name fonts the user can pick; "auto" keeps each style's own. All have Vietnamese glyphs. */
+const NAMEF={vibes:["Great Vibes",1.4],dancing:["Dancing Script",1.15,600],pinyon:["Pinyon Script",1.3],alex:["Alex Brush",1.4],playball:["Playball",1.15],charm:["Charm",1.1,700],corinthia:["Corinthia",1.7],pacifico:["Pacifico",1],lobster:["Lobster",1.05],patrick:["Patrick Hand",1.2]};
+const loadName=k=>NAMEF[k]&&document.fonts?document.fonts.load(`${NAMEF[k][2]||400} 40px "${NAMEF[k][0]}"`,"Ắ").catch(()=>{}):Promise.resolve();
+// Names are drawn in many places across the styles; rather than touch each, swap the font whenever
+// a name string is drawn on a context that has a chosen name font.
+function names(ctx,info){
+  const f=info&&NAMEF[info.nameFont];if(!f){ctx.__nf=null;return}
+  const m=new Map();for(const t of [info.names,info.groom,info.bride])if(t){m.set(t,t);m.set(t.toUpperCase(),t)}
+  ctx.__nf={m,fam:`"${f[0]}",cursive`,k:f[1],w:f[2]||400};
+}
+(function(P){if(!P||P.__nfp)return;P.__nfp=1;
+  const swap=(c,t,fn)=>{const nf=c.__nf,o=nf&&nf.m.get(t);if(o==null)return null;const f=c.font,px=parseFloat((f.match(/([\d.]+)px/)||[])[1]||40);
+    c.font=`${nf.w} ${px*nf.k}px ${nf.fam}`;try{return fn(o)}finally{c.font=f}};
+  const ft=P.fillText,mt=P.measureText;
+  P.fillText=function(t,x,y,w){const r=swap(this,t,o=>(w==null?ft.call(this,o,x,y):ft.call(this,o,x,y,w),1));if(r==null)return w==null?ft.call(this,t,x,y):ft.call(this,t,x,y,w)};
+  P.measureText=function(t){const r=swap(this,t,o=>mt.call(this,o));return r==null?mt.call(this,t):r};
+})(G.CanvasRenderingContext2D&&G.CanvasRenderingContext2D.prototype);
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
 const easeOut=x=>1-Math.pow(1-clamp(x),3);
@@ -439,7 +456,7 @@ function Engine(canvas,o){
     else one(c,k,l);
   }
   function draw(c,sc,lt){
-    const s=S(),W=canvas.width,H=canvas.height,I=o.info;c.save();
+    const s=S(),W=canvas.width,H=canvas.height,I=o.info;names(c,I);c.save();
     if(!o.photos.length&&sc.type!=="cue"){s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
     else if(sc.type==="photo")photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);
     else if(sc.type==="gallery")drawPhotoGallery(c,lt);
@@ -536,5 +553,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
+G.SlideEngine={ready,names,loadName,NAMEF,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
 })(window);

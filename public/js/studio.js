@@ -133,6 +133,7 @@ async function load() {
   if (s.sec) $("sec").value = s.sec;
   if (s.every != null) $("every").value = String(s.every);
   if (s.vfmt) $("vfmt").value = s.vfmt;
+  if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
   $("fitMusic").checked = s.fit !== false;
   if (s.book) $("bookSize").value = String(s.book);
@@ -284,7 +285,7 @@ async function trackFile(t) { if (!t.file) t.file = await (await fetch(t.url)).b
 const val = (n) => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
 function info() {
   const g = ($("groom").value.trim() || "Chú rể").normalize("NFC"), b = ($("bride").value.trim() || "Cô dâu").normalize("NFC");
-  return { groom: g, bride: b, names: g + " & " + b, date: fmtDate($("date").value), msg: $("msg").value.trim().normalize("NFC"), cap: $("cap").checked };
+  return { groom: g, bride: b, names: g + " & " + b, nameFont: $("nameFont").value, date: fmtDate($("date").value), msg: $("msg").value.trim().normalize("NFC"), cap: $("cap").checked };
 }
 /* ----- fit to music: length and beat of each track, measured in the browser ----- */
 const ana = new Map(); // url -> Promise<{dur, bpm, beat0}|null>
@@ -347,7 +348,7 @@ function fitted(mode) {
 function cfg() { const f = fitted(val("mode")); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -370,6 +371,7 @@ $("pgNext").onclick = () => { bookPage = Math.min(bookPages.length - 1, bookPage
 $("pgShuffle").onclick = () => { bookSeed++; layoutBook(); renderBook(); refresh(); };
 async function exportBook() {
   if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
+  await SE.loadName($("nameFont").value);
   const size = +$("bookSize").value;
   $("go").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
   try {
@@ -434,7 +436,8 @@ $("tAll").querySelectorAll("button").forEach((b) => b.onclick = () => {
 function syncPick(id) { const v = $(id).value; document.querySelectorAll(`.pick[data-for-select="${id}"] button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v))); }
 document.querySelectorAll(".pick[data-for-select]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.onclick = () => {
   const id = g.dataset.forSelect; $(id).value = b.dataset.v; syncPick(id); refresh(); changed();
-  // show it straight away: move the preview from the title card to the first photo
+  // name font: show the title card once the font has loaded; frame: move the preview to the first photo
+  if (id === "nameFont") return SE.loadName(b.dataset.v).then(() => { refresh(); if (pvEng) { pvHold = false; pvEng.go(0); } });
   if (pvEng && photos.length) pvEng.go(1);
 }));
 
@@ -462,7 +465,11 @@ const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
-  syncPick("frame"); renderTrans();
+  syncPick("frame"); syncPick("nameFont"); renderTrans();
+  const optText = (id) => $(id).selectedOptions[0]?.textContent || "";
+  $("frSum").textContent = "· " + optText("frame"); $("nfSum").textContent = "· " + optText("nameFont");
+  const nm = info().names;
+  document.querySelectorAll(".nf-pick button").forEach((b) => { if (b.dataset.v !== "auto") { b.querySelector(".nf-s").textContent = nm; b.title = b.querySelector(".nf-s").title = SE.NAMEF[b.dataset.v][0]; } });
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
   const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" ? "party" : mode, n, c);
   const notes = {
@@ -500,6 +507,7 @@ const slug = () => { const i = info(); return ("slide-cuoi-" + i.groom + "-" + i
 let cancelRec = null;
 function pickMime() { for (const m of ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
 async function exportVideo() {
+  await SE.loadName($("nameFont").value);
   const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
   const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
