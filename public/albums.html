@@ -105,7 +105,7 @@
     $("planTitle").textContent = p.until ? "Đang dùng bản Pro" : p.pro ? "Bản Pro (quản trị)" : "Bản miễn phí";
     $("planSub").textContent = p.until
       ? `${KIND[p.kind] || "Pro"}, dùng đến hết ngày ${fmtTime(p.until)}. Có mã mới thì nhập tiếp, số ngày được cộng dồn.`
-      : p.pro ? "Tài khoản quản trị luôn có Pro." : "Tối đa 10 ảnh mỗi album, 3 phong cách, video 720p, album in 20 cm, có dòng chữ nhỏ ở góc và ít lượt AI. Pro mở hết: không giới hạn ảnh, đủ 9 phong cách, video Full HD, album 25 và 30 cm, không có chữ. Có mã Pro thì nhập vào đây.";
+      : p.pro ? "Tài khoản quản trị luôn có Pro." + (p.beta ? " Đang mở thử nghiệm: mọi người khác đều có Pro và không thấy ô nhập mã. Tắt bằng dòng SQL update public.app_flags set open_beta = false;" : "") : "Tối đa 10 ảnh mỗi album, 3 phong cách, video 720p, album in 20 cm, có dòng chữ nhỏ ở góc và ít lượt AI. Pro mở hết: không giới hạn ảnh, đủ 9 phong cách, video Full HD, album 25 và 30 cm, không có chữ. Có mã Pro thì nhập vào đây.";
   }
   showPlan(await myPlan());
   const ERR = { invalid: "Mã không đúng hoặc đã bị khoá.", used: "Mã này đã có người dùng rồi.", already_yours: "Bạn đã kích hoạt mã này rồi.",
