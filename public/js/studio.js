@@ -406,6 +406,8 @@ function renderTrans() {
   const manual = val("tmode") === "manual", list = transList();
   $("tAuto").hidden = manual; $("tManual").hidden = !manual;
   if (!manual) { const names = [...new Set(list)].map((t) => TNAME[t]); $("tAutoInfo").textContent = list.length ? "Đang dùng: " + names.join(", ") + "." : ""; return; }
+  const used = [...new Set(list)].map((t) => TNAME[t]);
+  $("tSum").textContent = list.length ? `· ${list.length} ảnh, ${used.length > 3 ? used.slice(0, 3).join(", ") + "..." : used.join(", ")}` : "";
   const ul = $("tList"); ul.innerHTML = "";
   const opts = Object.entries(TNAME).map(([v, t]) => `<option value="${v}">${t}${plan.pro || FREE.trans.includes(v) ? "" : " (Pro)"}</option>`).join("");
   photos.forEach((p, i) => {

@@ -60,16 +60,21 @@
 
       <section data-part="slide video" class="trans-sec">
         <h2><span class="n">3</span>Hiệu ứng chuyển cảnh</h2>
-        <div class="opts">
-          <label class="opt"><input type="radio" name="tmode" value="auto" checked><b>🤖 App tự làm</b><span>Mỗi ảnh một hiệu ứng khác nhau, tự hợp với phong cách đã chọn.</span></label>
-          <label class="opt"><input type="radio" name="tmode" value="manual"><b>✋ Tự chỉnh từng ảnh</b><span>App làm sẵn trước, bạn đổi hiệu ứng của từng ảnh theo ý thích.</span></label>
+        <div class="seg" role="radiogroup" aria-label="Cách chọn hiệu ứng">
+          <label><input type="radio" name="tmode" value="auto" checked><span>🤖 App tự làm</span></label>
+          <label><input type="radio" name="tmode" value="manual"><span>✋ Tự chỉnh từng ảnh</span></label>
         </div>
-        <div class="t-auto" id="tAuto"><button type="button" id="tShuffle">🔀 Đổi bộ hiệu ứng khác</button><span class="hint" id="tAutoInfo"></span></div>
+        <div class="t-auto" id="tAuto"><button type="button" id="tShuffle">🔀 Đổi bộ khác</button><span class="hint" id="tAutoInfo"></span></div>
         <div class="t-manual" id="tManual" hidden>
-          <p class="hint">Đặt nhanh một kiểu cho tất cả ảnh:</p>
-          <div class="pick" id="tAll" role="group"><button type="button" data-v="fade"><i aria-hidden="true">◐</i>Mờ dần</button><button type="button" data-v="white"><i aria-hidden="true">☀</i>Lóe sáng trắng</button><button type="button" data-v="black"><i aria-hidden="true">●</i>Tối dần</button><button type="button" data-v="heart"><i aria-hidden="true">♥</i>Mở trái tim</button><button type="button" data-v="circle"><i aria-hidden="true">◯</i>Mở vòng tròn</button><button type="button" data-v="zoom"><i aria-hidden="true">⤢</i>Phóng to</button><button type="button" data-v="slide"><i aria-hidden="true">⇆</i>Trượt ngang</button><button type="button" data-v="up"><i aria-hidden="true">⇡</i>Đẩy lên</button><button type="button" data-v="wipe"><i aria-hidden="true">▶</i>Quét ngang</button><button type="button" data-v="diag"><i aria-hidden="true">◢</i>Quét chéo</button><button type="button" data-v="blinds"><i aria-hidden="true">▥</i>Rèm dọc</button><button type="button" data-v="flip"><i aria-hidden="true">⟲</i>Lật ảnh</button><button type="button" data-v="app"><i aria-hidden="true">🤖</i>Để app chọn lại</button></div>
-          <p class="hint">Hoặc đổi riêng từng ảnh. Hiệu ứng là kiểu chuyển sang ảnh đó, bấm ▶ để xem thử.</p>
-          <ul class="tlist" id="tList"></ul>
+          <details class="fold">
+            <summary>Đặt một kiểu cho tất cả ảnh</summary>
+            <div class="pick" id="tAll" role="group"><button type="button" data-v="fade"><i aria-hidden="true">◐</i>Mờ dần</button><button type="button" data-v="white"><i aria-hidden="true">☀</i>Lóe sáng trắng</button><button type="button" data-v="black"><i aria-hidden="true">●</i>Tối dần</button><button type="button" data-v="heart"><i aria-hidden="true">♥</i>Mở trái tim</button><button type="button" data-v="circle"><i aria-hidden="true">◯</i>Mở vòng tròn</button><button type="button" data-v="zoom"><i aria-hidden="true">⤢</i>Phóng to</button><button type="button" data-v="slide"><i aria-hidden="true">⇆</i>Trượt ngang</button><button type="button" data-v="up"><i aria-hidden="true">⇡</i>Đẩy lên</button><button type="button" data-v="wipe"><i aria-hidden="true">▶</i>Quét ngang</button><button type="button" data-v="diag"><i aria-hidden="true">◢</i>Quét chéo</button><button type="button" data-v="blinds"><i aria-hidden="true">▥</i>Rèm dọc</button><button type="button" data-v="flip"><i aria-hidden="true">⟲</i>Lật ảnh</button><button type="button" data-v="app"><i aria-hidden="true">🤖</i>Để app chọn lại</button></div>
+          </details>
+          <details class="fold" id="tFold">
+            <summary>Chỉnh riêng từng ảnh <span class="hint" id="tSum"></span></summary>
+            <p class="hint">Hiệu ứng là kiểu chuyển sang ảnh đó, bấm ▶ để xem thử.</p>
+            <ul class="tlist" id="tList"></ul>
+          </details>
         </div>
       </section>
 
