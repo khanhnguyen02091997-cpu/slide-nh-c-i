@@ -113,6 +113,8 @@ async function load() {
   if (s.cues) $("cues").value = s.cues;
   $("fitMusic").checked = s.fit !== false;
   if (s.book) $("bookSize").value = String(s.book);
+  if (s.trans) $("trans").value = s.trans;
+  if (s.frame) $("frame").value = s.frame;
   $("shuffle").checked = !!s.shuffle; $("cap").checked = s.cap !== false; $("stageMusic").checked = !!s.stageMusic;
   
   const [{ data: ps }, { data: ts }] = await Promise.all([
@@ -263,8 +265,8 @@ function fitted(mode) {
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
-function cfg() { const f = fitted(val("mode")); return { sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
-function readSettings() { return { book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function cfg() { const f = fitted(val("mode")); return { trans: $("trans").value, frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function readSettings() { return { trans: $("trans").value, frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -304,7 +306,7 @@ function startPreview() {
   if (mode === "album") { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
-  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, scenes: mk(), auto: true, loop: true, onLoop: mk,
+  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, trans: c.trans, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
@@ -355,7 +357,7 @@ async function exportVideo() {
   const vertical = $("vfmt").value === "v", W = vertical ? 1080 : 1920, H = vertical ? 1920 : 1080;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cfg(), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, scenes, auto: true, loop: false });
+  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, trans: c.trans, frame: c.frame, scenes, auto: true, loop: false });
   eng.render();
   const stream = cv.captureStream(30); let ac = null;
   $("go").disabled = true; $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
@@ -424,7 +426,7 @@ const bootSrc = `(async function(){
   await SE.ready;
   let raf=0,last=performance.now(),eng=null;
   function size(){const d=Math.min(2,devicePixelRatio||1);bg.width=innerWidth*d;bg.height=innerHeight*d}
-  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,sec:D.cfg.sec,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
+  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,sec:D.cfg.sec,trans:D.cfg.trans,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
   function f(n){eng.step(Math.min(.1,(n-last)/1000));last=n;eng.render();raf=requestAnimationFrame(f)}
   addEventListener("resize",size);idle();
   go.disabled=false;go.textContent=D.tracks.length?"▶ Xem slide cùng nhạc":"▶ Xem slide";
