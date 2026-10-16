@@ -26,6 +26,7 @@
           <label class="opt"><input type="radio" name="mode" value="stage"><b>Màn hình sân khấu lúc làm lễ</b><span>Bấm chuyển từng màn theo chương trình, dùng được bút trình chiếu.</span></label>
           <label class="opt"><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
           <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
+          <label class="opt"><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
         </div>
       </section>
 
@@ -109,9 +110,12 @@
       <section>
         <h2><span class="n">6</span>Tùy chọn</h2>
         <div class="fields">
-          <label class="f">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
+          <label class="f" data-for="party stage video deliver">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
           <label class="f" data-for="party">Hiện lại màn hình tên
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
+          </label>
+          <label class="f" data-for="album">Cỡ album
+            <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option></select>
           </label>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
@@ -128,8 +132,8 @@ Cảm ơn quý khách</textarea>
           </label>
         </div>
         <div class="checks">
-          <label class="check"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
-          <label class="check"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
+          <label class="check" data-for="party stage video deliver"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
+          <label class="check" data-for="party video deliver"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
           <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
           <label class="check" data-for="stage"><input type="checkbox" id="stageMusic"><span>Phát nhạc trên màn hình sân khấu<small>Thường để MC và ban nhạc lo phần âm thanh, nên mặc định tắt.</small></span></label>
         </div>
@@ -139,6 +143,10 @@ Cảm ơn quý khách</textarea>
     <aside class="side">
       <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
       <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
+      <div class="row book-nav" data-for="album">
+        <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
+        <button id="pgShuffle">🔀 Đổi bố cục</button>
+      </div>
       <div class="row">
         <button class="go" id="go"></button>
       </div>
@@ -156,6 +164,7 @@ Cảm ơn quý khách</textarea>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/engine.js"></script>
+<script src="/js/album.js"></script>
 <script src="/js/studio.js"></script>
 </body>
 </html>

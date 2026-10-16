@@ -6,6 +6,7 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 - **Màn hình sân khấu:** bấm chuyển từng màn theo chương trình, che đen màn hình.
 - **Video:** xuất video ngang 16:9 hoặc dọc 9:16, có nhạc và hiệu ứng.
 - **Giao khách:** tải một file `.html` chứa sẵn ảnh, nhạc, hiệu ứng; khách mở bằng trình duyệt là xem.
+- **Album ảnh để in:** tự xếp ảnh theo thời gian chụp, tự dàn trang 1 đến 4 ảnh, tải PDF vuông 20, 25 hoặc 30 cm gửi tiệm in.
 - 4 phong cách: vàng champagne, Hàn Quốc, cinematic, hiện đại.
 - Tự khớp ảnh với nhạc: chuyển ảnh đúng nhịp, video dài bằng bài nhạc.
 - AI vẽ lại ảnh thành chibi (cần `GEMINI_API_KEY`; Google có thể yêu cầu bật thanh toán cho model tạo ảnh).

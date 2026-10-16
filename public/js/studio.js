@@ -112,6 +112,7 @@ async function load() {
   if (s.vfmt) $("vfmt").value = s.vfmt;
   if (s.cues) $("cues").value = s.cues;
   $("fitMusic").checked = s.fit !== false;
+  if (s.book) $("bookSize").value = String(s.book);
   $("shuffle").checked = !!s.shuffle; $("cap").checked = s.cap !== false; $("stageMusic").checked = !!s.stageMusic;
   
   const [{ data: ps }, { data: ts }] = await Promise.all([
@@ -160,7 +161,10 @@ function renderPhotos() {
 }
 async function addFiles(files) {
   const imgs = [...files].filter((f) => f.type.startsWith("image/")); if (!imgs.length) return;
-  imgs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  // Order by capture time when every photo has it (phones and cameras mixed), otherwise by file name.
+  const when = new Map(await Promise.all(imgs.map(async (f) => [f, await PhotoBook.takenAt(f)])));
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true });
+  imgs.sort(imgs.every((f) => when.get(f)) ? (a, b) => when.get(a) - when.get(b) || byName(a, b) : byName);
   $("photoHint").textContent = "Đang xử lý " + imgs.length + " ảnh...";
   const added = [];
   for (const f of imgs) {
@@ -260,14 +264,44 @@ function fitted(mode) {
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
 function cfg() { const f = fitted(val("mode")); return { sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
-function readSettings() { return { fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
 const pv = $("pv"); let pvEng = null, pvLast = 0, pvHold = false;
 function sizePv() { const r = pv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1); pv.width = Math.max(320, Math.round(r.width * dpr)); pv.height = Math.max(180, Math.round(r.height * dpr)); }
+/* ----- photo book ----- */
+let bookPages = [], bookPage = 0, bookSeed = 0;
+function layoutBook() { bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed); bookPage = Math.min(bookPage, bookPages.length - 1); }
+function renderBook() {
+  if (val("mode") !== "album") return;
+  const S = Math.min(pv.width, pv.height), ctx = pv.getContext("2d");
+  ctx.clearRect(0, 0, pv.width, pv.height);
+  if (photos.length) PhotoBook.render(ctx, S, bookPages, bookPage, photos.map((p) => p.ph), val("style"), info());
+  const pg = bookPages[bookPage], label = !pg ? "" : pg.type === "cover" ? "Bìa" : pg.type === "end" ? "Trang cuối" : "Trang " + bookPage;
+  $("pvScene").textContent = "Xem trước · " + label; $("pgNum").textContent = (bookPage + 1) + " / " + bookPages.length;
+  $("pgPrev").disabled = bookPage <= 0; $("pgNext").disabled = bookPage >= bookPages.length - 1;
+}
+$("pgPrev").onclick = () => { bookPage = Math.max(0, bookPage - 1); renderBook(); };
+$("pgNext").onclick = () => { bookPage = Math.min(bookPages.length - 1, bookPage + 1); renderBook(); };
+$("pgShuffle").onclick = () => { bookSeed++; layoutBook(); renderBook(); refresh(); };
+async function exportBook() {
+  if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
+  const size = +$("bookSize").value;
+  $("go").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
+  try {
+    const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { sizeCm: size, px: size >= 30 ? 2400 : 2000,
+      onPage: (i, n) => { $("vbar").style.width = (i / n * 100) + "%"; $("vtxt").textContent = `Đang tạo trang ${i} / ${n}`; } });
+    saveFile(blob, slug() + "-album.pdf");
+    $("goNote").textContent = `Đã tải album PDF (${(blob.size / 1048576).toFixed(1)} MB, ${bookPages.length} trang ${size} × ${size} cm). Gửi file này cho tiệm in là được.`;
+  } catch (e) { fail("Chưa tạo được PDF: " + (e.message || e)); }
+  $("vprog").hidden = true; $("vcancel").hidden = false; $("go").disabled = false;
+}
+
 function startPreview() {
   const mode = val("mode"), c = cfg();
+  $("pvBox").classList.toggle("sq", mode === "album");
+  if (mode === "album") { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
   pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, scenes: mk(), auto: true, loop: true, onLoop: mk,
@@ -275,10 +309,10 @@ function startPreview() {
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
 function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); } requestAnimationFrame(pvFrame); }
-new ResizeObserver(() => { if (pvEng && !pvHold) sizePv(); }).observe(pv);
+new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val("mode") === "album") { sizePv(); renderBook(); } }).observe(pv);
 
 /* ----- mode-dependent action ----- */
-const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách" };
+const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in" };
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode;
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
@@ -287,6 +321,7 @@ function refresh() {
     party: `Một vòng chiếu khoảng ${fmtDur(SE.total(sc))}, chạy lặp lại tới khi bạn thoát. Màn hình tự phóng to, giữ sáng và ẩn chuột.`,
     stage: `${c.cues.length} màn theo chương trình. Bấm → hoặc bút trình chiếu để chuyển, B để che đen. Khung xem trước tự chạy để bạn xem từng màn.`,
     video: `Video dài khoảng ${fmtDur(SE.total(sc))}. Video dựng theo thời gian thật nên mất đúng chừng đó thời gian, giữ tab này mở trong lúc xuất.` + (tracks.length ? "" : " Chưa có nhạc, video sẽ không có tiếng."),
+    album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed).length} trang vuông ${$("bookSize").value} × ${$("bookSize").value} cm. Ảnh xếp theo thời gian chụp, mỗi trang tự dàn 1 đến 4 ảnh. Không ưng thì bấm Đổi bố cục.`,
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
   $("goNote").textContent = notes[mode]; $("goNote").classList.remove("err");
@@ -307,7 +342,7 @@ function openPlayer(mode) {
   SE.Player({ mode, style: val("style"), photos: photos.map((p) => p.ph), info: info(), cfg: cfg(), tracks: tracks.map((t) => t.url),
     musicOn: mode === "stage" ? $("stageMusic").checked : true, onClose: () => { pvHold = false; sizePv(); } });
 }
-$("go").onclick = () => { const m = val("mode"); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else exportDeliver(); };
+$("go").onclick = () => { const m = val("mode"); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (m === "album") exportBook(); else exportDeliver(); };
 $("tryDeliver").onclick = () => openPlayer("deliver");
 function fail(t) { $("goNote").textContent = t; $("goNote").classList.add("err"); }
 const slug = () => { const i = info(); return ("slide-cuoi-" + i.groom + "-" + i.bride).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^a-zA-Z0-9]+/g, "-").replace(/-+$/, "").toLowerCase(); };
