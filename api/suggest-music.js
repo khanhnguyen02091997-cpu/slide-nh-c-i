@@ -69,18 +69,27 @@ async function askOpenAI(prompt) {
 }
 
 async function askGemini(prompt) {
-  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json" },
-    }),
+  // Try a few model names: Google renames them often, and free-tier quotas differ per model.
+  const models = [process.env.GEMINI_MODEL, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"].filter(Boolean);
+  const key = process.env.GEMINI_API_KEY.trim();
+  const body = JSON.stringify({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: "application/json" },
   });
-  if (!r.ok) throw new Error("ai_failed " + r.status);
-  const data = await r.json();
-  return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+  let last = "";
+  for (const model of [...new Set(models)]) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+    const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body });
+    if (r.ok) {
+      const data = await r.json();
+      return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+    }
+    const err = await r.json().catch(() => ({}));
+    last = `gemini ${model} ${r.status} ${err.error?.status || ""} ${(err.error?.message || "").slice(0, 160)}`.trim();
+    console.error(last);
+    if (r.status !== 404 && r.status !== 429 && r.status !== 503) break;
+  }
+  throw new Error(last);
 }
 
 const hasAI = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
@@ -93,8 +102,9 @@ function ask(prompt) {
 function parseList(text) {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = fence ? fence[1] : text.slice(text.indexOf("["), text.lastIndexOf("]") + 1);
-  const list = JSON.parse(body);
-  return (Array.isArray(list) ? list : [])
+  let list = JSON.parse(body || text);
+  if (!Array.isArray(list)) list = Object.values(list || {}).find(Array.isArray) || [];
+  return list
     .filter((s) => s && s.title)
     .slice(0, 10)
     .map((s) => ({
@@ -122,7 +132,7 @@ export default async function handler(req, res) {
   try {
     used = await bumpUsage(token);
   } catch {
-    return res.status(500).json({ error: "usage_failed" });
+    return res.status(500).json({ error: "usage_failed", detail: "Supabase bump_ai_usage" });
   }
   if (used > limit) return res.status(429).json({ error: "limit", limit });
 
@@ -136,6 +146,7 @@ Chỉ trả về một mảng JSON, mỗi phần tử: {"title": tên bài, "art
     const text = await ask(prompt);
     return res.status(200).json({ songs: parseList(text), used, limit });
   } catch (e) {
-    return res.status(502).json({ error: "ai_failed" });
+    console.error(e);
+    return res.status(502).json({ error: "ai_failed", detail: String(e.message || e).slice(0, 240) });
   }
 }
