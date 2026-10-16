@@ -220,6 +220,8 @@ function build(mode,n,cfg){
     ord.forEach(i=>s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec}));
     s.push({type:"end",name:"Lời cảm ơn",dur:7});
   }
+  // Fit to music: every scene lasts a whole number of beats, so cuts land on the beat.
+  if(cfg.beat>0&&mode!=="stage")s.forEach(x=>x.dur=Math.max(2,Math.round(x.dur/cfg.beat))*cfg.beat);
   s.forEach((x,j)=>x.k=j);return s;
 }
 
@@ -299,7 +301,7 @@ function Player(p){
   au.addEventListener("ended",()=>{ti=(ti+1)%p.tracks.length;au.src=p.tracks[ti];if(musicOn&&!paused)au.play().catch(()=>{})});
   function fade(to,ms,done){const from=au.volume,t0=performance.now();(function f(n){const k=Math.min(1,(n-t0)/ms);au.volume=from+(to-from)*k;k<1?requestAnimationFrame(f):done&&done()})(t0)}
   function music(){const b=ov.querySelector('[data-a="music"]');if(b)b.textContent=musicOn?"♪ Tắt nhạc":"♪ Bật nhạc";
-    if(musicOn&&!paused){if(!au.src)au.src=p.tracks[0];au.volume=0;au.play().then(()=>fade(1,2000)).catch(()=>{})}else if(!au.paused)fade(0,500,()=>au.pause())}
+    if(musicOn&&!paused){if(!au.src){au.src=p.tracks[0];if(p.cfg.beat0)au.currentTime=p.cfg.beat0}au.volume=0;au.play().then(()=>fade(1,2000)).catch(()=>{})}else if(!au.paused)fade(0,500,()=>au.pause())}
   music();
   // loop
   let raf=0,last=performance.now();

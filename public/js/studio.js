@@ -111,9 +111,9 @@ async function load() {
   if (s.every != null) $("every").value = String(s.every);
   if (s.vfmt) $("vfmt").value = s.vfmt;
   if (s.cues) $("cues").value = s.cues;
+  $("fitMusic").checked = s.fit !== false;
   $("shuffle").checked = !!s.shuffle; $("cap").checked = s.cap !== false; $("stageMusic").checked = !!s.stageMusic;
-  $("secVal").textContent = $("sec").value + " giây";
-
+  
   const [{ data: ps }, { data: ts }] = await Promise.all([
     client.from("album_photos").select("*").eq("album_id", albumId).order("position"),
     client.from("album_tracks").select("*").eq("album_id", albumId).order("position"),
@@ -185,6 +185,7 @@ function renderTracks() {
     ul.appendChild(li);
   });
   $("musicHint").hidden = !!tracks.length;
+  analyzeAll();
 }
 $("musicInput").onchange = (e) => {
   [...e.target.files].filter((f) => f.type.startsWith("audio/") || /\.(mp3|m4a|wav|ogg|aac)$/i.test(f.name))
@@ -199,8 +200,66 @@ function info() {
   const g = ($("groom").value.trim() || "Chú rể").normalize("NFC"), b = ($("bride").value.trim() || "Cô dâu").normalize("NFC");
   return { groom: g, bride: b, names: g + " & " + b, date: fmtDate($("date").value), msg: $("msg").value.trim().normalize("NFC"), cap: $("cap").checked };
 }
-function cfg() { return { sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
-function readSettings() { return { sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+/* ----- fit to music: length and beat of each track, measured in the browser ----- */
+const ana = new Map(); // url -> Promise<{dur, bpm, beat0}|null>
+function analyze(t) {
+  if (!ana.has(t.url)) ana.set(t.url, (async () => {
+    try {
+      const ab = await (await trackFile(t)).arrayBuffer();
+      const buf = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(ab);
+      return { dur: buf.duration, ...beatOf(buf) };
+    } catch { return null; }
+  })());
+  return ana.get(t.url);
+}
+function beatOf(buf) {
+  const sr = buf.sampleRate, fps = 100, hop = Math.round(sr / fps), chs = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+  const n = Math.floor(chs[0].length / hop), env = new Float32Array(n), on = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let e = 0; for (const ch of chs) for (let k = i * hop, end = k + hop; k < end; k++) e += ch[k] * ch[k]; env[i] = Math.log(1 + 1000 * e / hop); }
+  for (let i = 1; i < n; i++) on[i] = Math.max(0, env[i] - env[i - 1]);
+  // Tempo: autocorrelation of onsets over up to 90 s from the middle of the song, 60-180 BPM.
+  const a = Math.max(1, Math.floor(n / 2 - 45 * fps)), b = Math.min(n, a + 90 * fps);
+  let mean = 0; for (let i = a; i < b; i++) mean += on[i]; mean /= Math.max(1, b - a);
+  const score = (lag) => { let s = 0; for (let i = a; i + lag < b; i++) s += (on[i] - mean) * (on[i + lag] - mean); return s / (b - a - lag); };
+  let best = 0, bestS = -Infinity, sc = {};
+  for (let lag = Math.floor(fps * 60 / 180); lag <= Math.ceil(fps * 60 / 60); lag++) {
+    const bpm = 60 * fps / lag, w = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 100), 2));
+    sc[lag] = score(lag); if (sc[lag] * w > bestS) { bestS = sc[lag] * w; best = lag; }
+  }
+  if (!best || !(bestS > 0)) return { bpm: 0, beat0: 0 };
+  const y0 = sc[best - 1] ?? sc[best], y2 = sc[best + 1] ?? sc[best], d = y0 - 2 * sc[best] + y2;
+  const lag = best + (d < 0 ? 0.5 * (y0 - y2) / d : 0), P = lag;
+  // Phase: where the beat grid lines up best within the first 30 s.
+  let ph = 0, phS = -1; const lim = Math.min(n, 30 * fps);
+  for (let o = 0; o < P; o++) { let s = 0; for (let x = o; x < lim; x += P) s += on[Math.round(x)] || 0; if (s > phS) { phS = s; ph = o; } }
+  return { bpm: 60 * fps / lag, beat0: ph / fps };
+}
+let fitInfo = null; // {dur, bpm, beat0} of the current playlist
+async function analyzeAll() {
+  if (!tracks.length) { fitInfo = null; return; }
+  const key = tracks.map((t) => t.url).join("|");
+  const rs = await Promise.all(tracks.map(analyze));
+  if (key !== tracks.map((t) => t.url).join("|")) return;
+  const ok = rs.filter(Boolean);
+  fitInfo = ok.length ? { dur: ok.reduce((s, r) => s + r.dur, 0), bpm: (rs[0] && rs[0].bpm) || 0, beat0: (rs[0] && rs[0].beat0) || 0 } : null;
+  refresh();
+}
+function fitted(mode) {
+  const base = +$("sec").value, n = Math.max(1, photos.length);
+  if (!$("fitMusic").checked || !fitInfo || mode === "stage") return { sec: base };
+  let sec = base;
+  if (mode === "video" || mode === "deliver") {
+    // Opening max(6,sec) + n photos + 7 s thank-you = length of the music.
+    const M = fitInfo.dur; sec = (M - 13) / n; if (sec >= 6) sec = (M - 7) / (n + 1);
+    sec = Math.min(15, Math.max(2.5, sec));
+  }
+  if (!fitInfo.bpm) return { sec, auto: true };
+  let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
+  return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
+}
+function cfg() { const f = fitted(val("mode")); return { sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function readSettings() { return { fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -230,11 +289,17 @@ function refresh() {
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
   $("goNote").textContent = notes[mode]; $("goNote").classList.remove("err");
+  showSec(mode);
   $("pvInfo").textContent = n + " ảnh" + (tracks.length ? " · " + tracks.length + " bài nhạc" : "");
   const i = info(); $("titleNames").textContent = i.names; document.title = i.names + " · Slide Ảnh Cưới";
   startPreview();
 }
-$("sec").addEventListener("input", () => $("secVal").textContent = $("sec").value + " giây");
+function showSec(mode) {
+  const f = fitted(mode), whole = (mode === "video" || mode === "deliver") && f.auto;
+  $("sec").disabled = whole;
+  $("secVal").textContent = (f.auto ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "") : "");
+}
+$("sec").addEventListener("input", () => showSec(val("mode")));
 
 function openPlayer(mode) {
   pvHold = true;
@@ -263,7 +328,7 @@ async function exportVideo() {
     const bufs = []; for (const t of tracks) { try { bufs.push(await ac.decodeAudioData(await (await trackFile(t)).arrayBuffer())); } catch {} }
     if (bufs.length) {
       const t0 = ac.currentTime + .25; let at = t0, j = 0;
-      while (at < t0 + dur) { const s = ac.createBufferSource(); s.buffer = bufs[j % bufs.length]; s.connect(gain); s.start(at); at += s.buffer.duration; j++; }
+      while (at < t0 + dur) { const s = ac.createBufferSource(); s.buffer = bufs[j % bufs.length]; s.connect(gain); const off = j === 0 ? Math.min(c.beat0 || 0, s.buffer.duration - 1) : 0; s.start(at, Math.max(0, off)); at += s.buffer.duration - Math.max(0, off); j++; }
       gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(1, t0 + 1.5); gain.gain.setValueAtTime(1, t0 + Math.max(1.6, dur - 3)); gain.gain.linearRampToValueAtTime(0, t0 + dur);
       stream.addTrack(dest.stream.getAudioTracks()[0]);
     }
