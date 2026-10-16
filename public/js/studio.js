@@ -8,18 +8,22 @@ const removed = { photos: [], tracks: [] };
 let loading = true;
 let plan = { pro: true };
 // Free plan: try everything in the preview, limits apply when showing or exporting.
-const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20 };
+const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20, trans: ["fade", "white", "black"] };
+// Manual transitions on the free plan: keep the app's pick when it is free, otherwise rotate the free ones.
+const freeTr = (t, i) => plan.pro || FREE.trans.includes(t) ? t : FREE.trans[i % FREE.trans.length];
 function proNeed(mode) {
   if (plan.pro) return "";
   const why = [];
   if (photos.filter((p) => !p.sample).length > FREE.photos) why.push(`quá ${FREE.photos} ảnh`);
   if (!FREE.styles.includes(val("style"))) why.push("phong cách này");
   if (mode === "album" && +$("bookSize").value > FREE.book) why.push(`khổ ${$("bookSize").value} cm`);
+  if (mode !== "album" && val("tmode") === "manual" && transList().some((t) => !FREE.trans.includes(t))) why.push("hiệu ứng có chữ Pro ở phần tự chỉnh");
   return why.length ? `Bản miễn phí chưa dùng được ${why.join(", ")}. Bạn vẫn xem thử thoải mái ở khung bên cạnh; để ${mode === "video" ? "xuất video" : mode === "album" ? "tải album" : mode === "deliver" ? "tạo file gửi khách" : "trình chiếu"} thì đổi lại hoặc nhập mã Pro.` : "";
 }
 function markPro() {
   if (plan.pro) return;
   document.querySelectorAll('input[name="style"]').forEach((r) => { if (!FREE.styles.includes(r.value)) r.closest("label").querySelector("b").insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
+  $("tAll").querySelectorAll("button").forEach((b) => { if (b.dataset.v !== "app" && !FREE.trans.includes(b.dataset.v)) b.insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
   [...$("bookSize").options].forEach((o) => { if (+o.value > FREE.book) o.textContent += " (Pro)"; });
   $("vfmt").insertAdjacentHTML("afterend", '<span class="hint">Bản miễn phí xuất video 720p, Pro xuất Full HD 1080p.</span>');
   $("planNote").innerHTML = `Bản miễn phí: tối đa ${FREE.photos} ảnh, 3 phong cách (Sang trọng, Hàn Quốc, Hiện đại), video 720p, album in 20 cm, có dòng chữ nhỏ ở góc. Các mục có chữ PRO vẫn xem thử được. <a href="/albums.html#pro">Nhập mã Pro</a> để mở hết.`;
@@ -392,7 +396,7 @@ new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val
 /* ----- per-photo transitions: the app picks (auto) or the user edits each photo (manual) ----- */
 let tSeed = 0;
 const TNAME = { fade: "Mờ dần", white: "Lóe sáng trắng", black: "Tối dần", heart: "Mở trái tim", circle: "Mở vòng tròn", zoom: "Phóng to", slide: "Trượt ngang", up: "Đẩy lên", wipe: "Quét ngang", diag: "Quét chéo", blinds: "Rèm dọc", flip: "Lật ảnh" };
-function transList() { const auto = SE.autoTrans(val("style"), photos.length, tSeed); return val("tmode") === "manual" ? photos.map((p, i) => p.tr || auto[i]) : auto; }
+function transList() { const auto = SE.autoTrans(val("style"), photos.length, tSeed); return val("tmode") === "manual" ? photos.map((p, i) => p.tr || freeTr(auto[i], i)) : auto; }
 function previewPhoto(i) {
   if (!pvEng) return; const sc = pvEng.scenes, j = sc.findIndex((x) => x.type === "photo" && x.i === i); if (j < 0) return;
   pvHold = false; pvEng.go(j > 0 ? j - 1 : sc.length - 1); pvEng.go(j);
@@ -402,7 +406,7 @@ function renderTrans() {
   $("tAuto").hidden = manual; $("tManual").hidden = !manual;
   if (!manual) { const names = [...new Set(list)].map((t) => TNAME[t]); $("tAutoInfo").textContent = list.length ? "Đang dùng: " + names.join(", ") + "." : ""; return; }
   const ul = $("tList"); ul.innerHTML = "";
-  const opts = Object.entries(TNAME).map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+  const opts = Object.entries(TNAME).map(([v, t]) => `<option value="${v}">${t}${plan.pro || FREE.trans.includes(v) ? "" : " (Pro)"}</option>`).join("");
   photos.forEach((p, i) => {
     const li = document.createElement("li");
     li.innerHTML = `<img alt=""><span>Ảnh ${i + 1}</span><select aria-label="Hiệu ứng chuyển sang ảnh ${i + 1}">${opts}</select><button type="button" aria-label="Xem thử hiệu ứng ảnh ${i + 1}">▶</button>`;
@@ -415,12 +419,12 @@ function renderTrans() {
 }
 document.querySelectorAll("input[name=tmode]").forEach((r) => r.addEventListener("change", () => {
   // switching to manual starts from what the app picked, so the user edits the app's version
-  if (val("tmode") === "manual") { const auto = SE.autoTrans(val("style"), photos.length, tSeed); photos.forEach((p, i) => { if (!p.tr) p.tr = auto[i]; }); }
+  if (val("tmode") === "manual") { const auto = SE.autoTrans(val("style"), photos.length, tSeed); photos.forEach((p, i) => { if (!p.tr) p.tr = freeTr(auto[i], i); }); }
 }));
 $("tShuffle").onclick = () => { tSeed++; refresh(); changed(); if (photos.length) previewPhoto(0); };
 $("tAll").querySelectorAll("button").forEach((b) => b.onclick = () => {
   const auto = SE.autoTrans(val("style"), photos.length, tSeed);
-  photos.forEach((p, i) => p.tr = b.dataset.v === "app" ? auto[i] : b.dataset.v); refresh(); changed(); if (photos.length) previewPhoto(0);
+  photos.forEach((p, i) => p.tr = b.dataset.v === "app" ? freeTr(auto[i], i) : b.dataset.v); refresh(); changed(); if (photos.length) previewPhoto(0);
 });
 
 /* ----- transition and frame pickers (buttons that drive hidden selects) ----- */

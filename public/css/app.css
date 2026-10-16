@@ -205,3 +205,4 @@ a.btn{text-decoration:none}
 #grid .thumb.lifting{opacity:.3;outline:2px dashed var(--accent,#a0784a);outline-offset:-2px}
 .thumb.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:grabbing}
 .pro-tag{font-size:10px;font-weight:700;line-height:1;font-style:normal;letter-spacing:.08em;background:var(--accent);color:var(--accent-fg);border-radius:999px;padding:3px 7px;vertical-align:2px;margin-left:4px}
+.pick button{position:relative}.pick .pro-tag{position:absolute;top:-7px;right:6px;margin:0;font-size:9px;padding:2px 6px}
