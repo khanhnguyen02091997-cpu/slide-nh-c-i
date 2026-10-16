@@ -350,6 +350,7 @@ function setupAI(enabled) {
       const j = await r.json().catch(() => ({}));
       if (r.status === 429) $("aiNote").textContent = `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt tìm nhạc, mai thử lại nhé.`;
       else if (r.status === 401) $("aiNote").textContent = "Phiên đăng nhập hết hạn, tải lại trang rồi thử.";
+      else if (j.error === "ai_busy") $("aiNote").textContent = "AI miễn phí đang quá tải, đợi 1-2 phút rồi bấm Tìm nhạc lại nhé.";
       else if (!r.ok) $("aiNote").textContent = "AI đang bận, thử lại sau nhé." + (j.detail ? " (Chi tiết: " + j.detail + ")" : "");
       else {
         const ul = $("songs");

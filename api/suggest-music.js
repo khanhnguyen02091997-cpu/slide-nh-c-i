@@ -70,7 +70,7 @@ async function askOpenAI(prompt) {
 
 async function askGemini(prompt) {
   // Try a few model names: Google renames them often, and free-tier quotas differ per model.
-  const models = [process.env.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.5-flash"].filter(Boolean);
+  const models = [process.env.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest", "gemini-3.8-flash-lite"].filter(Boolean);
   const key = process.env.GEMINI_API_KEY.trim();
   const body = JSON.stringify({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -78,12 +78,18 @@ async function askGemini(prompt) {
   });
   const errors = [];
   const tried = new Set();
-  while (models.length && tried.size < 6) {
+  let busy = 0;
+  while (models.length && tried.size < 7) {
     const model = models.shift();
     if (tried.has(model)) continue;
     tried.add(model);
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-    const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body });
+    let r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body });
+    if (r.status === 503) {
+      // Overload spikes are usually brief: wait a moment and retry the same model once.
+      await new Promise((ok) => setTimeout(ok, 1200));
+      r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body });
+    }
     if (r.ok) {
       const data = await r.json();
       return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
@@ -91,13 +97,16 @@ async function askGemini(prompt) {
     const err = await r.json().catch(() => ({}));
     const msg = err.error?.message || "";
     errors.push(`${model} ${r.status} ${msg.slice(0, 120)}`);
+    if (r.status === 503 || r.status === 429) busy++;
     console.error("gemini", model, r.status, msg);
     // A retired model's 404 names its replacement ("use models/gemini-x-flash"): try that next.
     const hint = msg.match(/models\/(gemini-[\w.-]+)/g);
     if (hint) models.unshift(...hint.map((h) => h.slice(7)).filter((m) => !tried.has(m)));
     if (r.status !== 404 && r.status !== 429 && r.status !== 503) break;
   }
-  throw new Error("gemini: " + errors.join(" | "));
+  const e = new Error("gemini: " + errors.join(" | "));
+  e.busy = busy > 0 && busy === errors.filter((x) => !/ 404 /.test(x)).length;
+  throw e;
 }
 
 const hasAI = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
@@ -155,6 +164,7 @@ Chỉ trả về một mảng JSON, mỗi phần tử: {"title": tên bài, "art
     return res.status(200).json({ songs: parseList(text), used, limit });
   } catch (e) {
     console.error(e);
+    if (e.busy) return res.status(503).json({ error: "ai_busy" });
     return res.status(502).json({ error: "ai_failed", detail: String(e.message || e).slice(0, 600) });
   }
 }
