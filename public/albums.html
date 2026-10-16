@@ -30,7 +30,7 @@
   const client = await sb();
   $("email").textContent = user.email || "";
   $("out").onclick = signOut;
-  const STYLE = { lux: "Vàng champagne", korea: "Hàn Quốc", cinema: "Cinematic", modern: "Hiện đại" };
+  const STYLE = { lux: "Vàng champagne", korea: "Hàn Quốc", cinema: "Cinematic", modern: "Hiện đại", vintage: "Vintage", floral: "Hoa pastel", red: "Song Hỷ", mono: "Đen trắng", garden: "Sân vườn" };
 
   async function load() {
     const { data: albums, error } = await client.from("albums").select("id,groom,bride,wedding_date,style,updated_at").order("updated_at", { ascending: false });

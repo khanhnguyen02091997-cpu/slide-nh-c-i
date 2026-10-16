@@ -6,6 +6,11 @@ const STYLE_NAME = {
   korea: "Hàn Quốc, trắng kem, nhẹ nhàng",
   cinema: "cinematic, tối, điện ảnh",
   modern: "hiện đại, chuyển cảnh nhanh",
+  vintage: "vintage, hoài cổ",
+  floral: "hoa pastel, lãng mạn",
+  red: "truyền thống, đỏ vàng, lễ gia tiên",
+  mono: "tối giản, đen trắng",
+  garden: "sân vườn, xanh lá, tự nhiên",
 };
 const MODE_NAME = {
   party: "chiếu ảnh liên tục ở tiệc cưới",

@@ -7,6 +7,11 @@ const STY = {
   lux:    { bg: "#f7f0e2", ink: "#3a2a14", soft: "#8a6f45", acc: "#b8904a", title: `italic 500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}`, line: true },
   korea:  { bg: "#fbf8f3", ink: "#6d5b48", soft: "#a08b74", acc: "#c9b49c", title: `italic 500 {s}px ${F.corm}`, body: `300 {s}px ${F.sans}`, mat: true },
   cinema: { bg: "#0e0e0f", ink: "#ece6da", soft: "#9a9286", acc: "#d9853b", title: `italic 500 {s}px ${F.corm}`, body: `300 {s}px ${F.sans}` },
+  vintage: { bg: "#efe3cc", ink: "#4a3622", soft: "#8a7356", acc: "#a08560", title: `italic 500 {s}px ${F.corm}`, body: `400 {s}px ${F.sans}`, mat: true },
+  floral: { bg: "#fbefef", ink: "#8f4352", soft: "#b07a83", acc: "#e7a3ae", title: `italic 500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}`, mat: true },
+  red: { bg: "#8e1116", ink: "#f3d48c", soft: "#e3b86a", acc: "#e8be6e", title: `italic 500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}`, line: true },
+  mono: { bg: "#f7f6f3", ink: "#111111", soft: "#777777", acc: "#111111", title: `500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}` },
+  garden: { bg: "#e8eee2", ink: "#2f4229", soft: "#6f8466", acc: "#7d9471", title: `italic 500 {s}px ${F.corm}`, body: `300 {s}px ${F.sans}`, mat: true },
   modern: { bg: "#f4f1ea", ink: "#121214", soft: "#6b6660", acc: "#ff5470", title: `800 {s}px ${F.mont}`, body: `400 {s}px ${F.sans}`, upper: true, bar: true },
 };
 const font = (t, s) => t.replace("{s}", Math.round(s));
