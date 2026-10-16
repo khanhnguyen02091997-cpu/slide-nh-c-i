@@ -1,4 +1,4 @@
-/* ===== Photo book: lays photos out on square pages and exports a print PDF ===== */
+/* ===== Photo book: lays photos out on square or 20 x 30 pages and exports a print PDF ===== */
 (function (G) {
 "use strict";
 const F = { play: '"Playfair Display",Georgia,serif', corm: '"Cormorant Garamond",Georgia,serif', sans: '"Be Vietnam Pro",system-ui,sans-serif', mont: 'Montserrat,"Be Vietnam Pro",system-ui,sans-serif' };
@@ -25,12 +25,13 @@ const T = {
   4: [[[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, .5, .5], [.5, .5, .5, .5]], [[0, 0, .62, 1], [.62, 0, .38, 1 / 3], [.62, 1 / 3, .38, 1 / 3], [.62, 2 / 3, .38, 1 / 3]],
       [[0, 0, 1, .5], [0, .5, 1 / 3, .5], [1 / 3, .5, 1 / 3, .5], [2 / 3, .5, 1 / 3, .5]]],
 };
-const M = .075, GUT = .022, CAP = .06; // margin, gutter, room for the page footer (fractions of page side)
+const M = .075, GUT = .022, CAP = .06; // margin, gutter, room for the page footer (fractions of the page's short side)
 const perms = (a) => a.length < 2 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p]));
-const inner = () => ({ x: M, y: M, w: 1 - 2 * M, h: 1 - 2 * M - CAP });
+// Inner box in short-side units for a page of aspect A (width / height).
+const inner = (A = 1) => { const W = Math.max(A, 1), H = Math.max(1 / A, 1); return { x: M, y: M, w: W - 2 * M, h: H - 2 * M - CAP, W, H }; };
 
-function best(ars) {
-  const k = ars.length, box = inner();
+function best(ars, A) {
+  const k = ars.length, box = inner(A);
   if (k === 1) return { cost: .24, cells: T[1][0], order: [0] };
   let top = null;
   for (const cells of T[k]) for (const ord of perms([...Array(k).keys()])) {
@@ -43,7 +44,7 @@ function best(ars) {
 }
 
 /* Group photos (kept in order) into pages, varying 1-4 photos per page. */
-function layout(ars, seed = 0) {
+function layout(ars, seed = 0, A = 1) {
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -51,7 +52,7 @@ function layout(ars, seed = 0) {
     let pick = null;
     for (let k = 1; k <= Math.min(4, left); k++) {
       if (left - k === 1 && k > 1 && left > 2) continue; // avoid leaving one lonely photo when we can help it
-      const b = best(ars.slice(i, i + k)), score = b.cost + .14 * Math.abs(k - want);
+      const b = best(ars.slice(i, i + k), A), score = b.cost + .14 * Math.abs(k - want);
       if (!pick || score < pick.score) pick = { k, b, score };
     }
     pages.push({ type: "photos", items: pick.b.order.map((o, j) => ({ photo: i + o, cell: pick.b.cells[j] })) });
@@ -78,58 +79,59 @@ function text(ctx, st, s, f, size, x, y, color, align = "center") {
   ctx.fillText(st.upper && f === st.title ? s.toUpperCase() : s, x, y);
 }
 
-/* Draw page `pg` (index n of total) onto a square canvas context of side S. */
-function render(ctx, S, pages, n, photos, style, info, mark) {
+/* Draw page n onto a context: dims is the side of a square page, or {W, H} in pixels. */
+function render(ctx, dims, pages, n, photos, style, info, mark) {
   if (G.SlideEngine) G.SlideEngine.names(ctx, info);
+  const W = typeof dims === "number" ? dims : dims.W, H = typeof dims === "number" ? dims : dims.H, S = Math.min(W, H), cx = W / 2;
   const st = STY[style] || STY.lux, pg = pages[n];
-  ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, S, S);
-  if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, S - 2 * p, S - 2 * p); }
+  ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, W, H);
+  if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, W - 2 * p, H - 2 * p); }
   if (st.bar && pg.type !== "photos") { ctx.fillStyle = st.acc; ctx.fillRect(S * M, S * .06, S * .08, S * .012); }
-  const names = info.names || "", date = info.date || "";
+  const names = info.names || "", date = info.date || "", foot = H - S * M * .6;
   if (pg.type === "cover") {
     const src = photos[pg.photo] && photos[pg.photo].c;
-    if (src) framed(ctx, st, S, src, S * .14, S * .12, S * .72, S * .56, false);
-    text(ctx, st, names, st.title, S * (st.upper ? .052 : .068), S / 2, S * .8, st.ink);
-    if (date) text(ctx, st, date, st.body, S * .026, S / 2, S * .86, st.soft);
-    if (st.line) { ctx.fillStyle = st.acc; ctx.fillRect(S * .46, S * .885, S * .08, Math.max(1, S * .0015)); }
+    if (src) framed(ctx, st, S, src, W * .14, H * .12, W * .72, H * .56, false);
+    text(ctx, st, names, st.title, S * (st.upper ? .052 : .068), cx, H * .8, st.ink);
+    if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
+    if (st.line) { ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .04, H * .885, S * .08, Math.max(1, S * .0015)); }
   } else if (pg.type === "end") {
-    text(ctx, st, "Cảm ơn", st.title, S * (st.upper ? .07 : .09), S / 2, S * .46, st.ink);
+    text(ctx, st, "Cảm ơn", st.title, S * (st.upper ? .07 : .09), cx, H * .46, st.ink);
     const msg = info.msg || "Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi";
     ctx.font = font(st.body, S * .026); const words = msg.split(" "), lines = []; let l = "";
-    for (const w of words) { const t = l ? l + " " + w : w; if (ctx.measureText(t).width > S * .6 && l) { lines.push(l); l = w; } else l = t; }
+    for (const w of words) { const t = l ? l + " " + w : w; if (ctx.measureText(t).width > W * .6 && l) { lines.push(l); l = w; } else l = t; }
     if (l) lines.push(l);
-    lines.forEach((ln, j) => text(ctx, st, ln, st.body, S * .026, S / 2, S * .54 + j * S * .04, st.soft));
-    text(ctx, st, names + (date ? " · " + date : ""), st.body, S * .022, S / 2, S * .86, st.soft);
+    lines.forEach((ln, j) => text(ctx, st, ln, st.body, S * .026, cx, H * .54 + j * S * .04, st.soft));
+    text(ctx, st, names + (date ? " · " + date : ""), st.body, S * .022, cx, H * .86, st.soft);
   } else {
-    const b = inner(), solo = pg.items.length === 1;
+    const b = inner(W / H), solo = pg.items.length === 1;
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
       const c = it.cell, x = (b.x + c[0] * b.w) * S + GUT * S / 2, y = (b.y + c[1] * b.h) * S + GUT * S / 2;
       framed(ctx, st, S, src, x, y, c[2] * b.w * S - GUT * S, c[3] * b.h * S - GUT * S, solo);
     }
-    text(ctx, st, String(n), st.body, S * .018, S / 2, S * (1 - M * .6), st.soft);
-    if (n === 1 || n % 6 === 0) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, S * (1 - M * .6), st.soft, "left");
+    text(ctx, st, String(n), st.body, S * .018, cx, foot, st.soft);
+    if (n === 1 || n % 6 === 0) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, foot, st.soft, "left");
   }
-  if (mark) text(ctx, st, mark, st.body, S * .016, S * (1 - M) - GUT * S / 2, S * (1 - M * .6), st.soft, "right");
+  if (mark) text(ctx, st, mark, st.body, S * .016, W - S * M - GUT * S / 2, foot, st.soft, "right");
   ctx.restore();
 }
 
-/* Minimal PDF: one JPEG per page, square pages of `sizeCm`. */
-async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, onPage, mark } = {}) {
-  const pt = sizeCm / 2.54 * 72, enc = new TextEncoder(), parts = [], offs = [];
+/* Minimal PDF: one JPEG per page. Pages are sizeCm square, or wCm x hCm; px is the long side. */
+async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, onPage, mark } = {}) {
+  const ptW = wCm / 2.54 * 72, ptH = hCm / 2.54 * 72, pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm), enc = new TextEncoder(), parts = [], offs = [];
   let len = 0; const put = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
   const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
-  const cv = document.createElement("canvas"); cv.width = cv.height = px; const ctx = cv.getContext("2d");
+  const cv = document.createElement("canvas"); cv.width = pxW; cv.height = pxH; const ctx = cv.getContext("2d");
   const N = pages.length, kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(" ");
   put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
   obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
   obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`));
   for (let i = 0; i < N; i++) {
-    render(ctx, px, pages, i, photos, style, info, mark);
+    render(ctx, { W: pxW, H: pxH }, pages, i, photos, style, info, mark);
     const jpg = new Uint8Array(await (await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .9))).arrayBuffer());
-    const p = 3 + i * 3, content = `q ${pt.toFixed(2)} 0 0 ${pt.toFixed(2)} 0 0 cm /Im0 Do Q`;
-    obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pt.toFixed(2)} ${pt.toFixed(2)}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));
-    obj(p + 1, () => { put(`<< /Type /XObject /Subtype /Image /Width ${px} /Height ${px} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put("\nendstream"); });
+    const p = 3 + i * 3, content = `q ${ptW.toFixed(2)} 0 0 ${ptH.toFixed(2)} 0 0 cm /Im0 Do Q`;
+    obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW.toFixed(2)} ${ptH.toFixed(2)}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));
+    obj(p + 1, () => { put(`<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put("\nendstream"); });
     obj(p + 2, () => put(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`));
     onPage && onPage(i + 1, N);
     await new Promise((ok) => setTimeout(ok, 0));
