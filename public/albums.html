@@ -17,13 +17,21 @@
 <body>
 <div class="topbar">
   <a class="brand" href="/albums.html">Slide Ảnh Cưới <em>trọn bộ</em></a>
-  <div class="who"><span id="email"></span><button id="out">Đăng xuất</button></div>
+  <div class="who"><a class="btn" id="adminLink" href="/admin.html" hidden>Quản lý mã</a><span id="email"></span><button id="out">Đăng xuất</button></div>
 </div>
 <div class="page">
   <div class="sec-h">
     <h1>Album <em>của tôi</em></h1>
     <button class="go" id="new">＋ Album mới</button>
   </div>
+  <section class="plan" id="pro" hidden>
+    <div class="plan-h"><b id="planTitle"></b><p class="hint" id="planSub"></p></div>
+    <form class="redeem" id="redeem">
+      <input type="text" id="code" placeholder="CUOI-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Mã kích hoạt">
+      <button class="go" type="submit">Kích hoạt</button>
+    </form>
+    <p class="note" id="codeMsg" role="status"></p>
+  </section>
   <p class="note" id="msg" role="status"></p>
   <div class="albums" id="list"></div>
   <div class="empty" id="empty" hidden>Chưa có album nào. Bấm <b>Album mới</b> để làm slide đầu tiên.</div>
@@ -86,6 +94,30 @@
     const { data, error } = await client.from("albums").insert({}).select("id").single();
     if (error) { $("msg").textContent = "Chưa tạo được album: " + error.message; $("new").disabled = false; return; }
     location.href = "/studio.html?album=" + data.id;
+  };
+
+  const KIND = { wedding: "Gói 1 đám cưới", studio: "Gói studio", year: "Gói 1 năm" };
+  function showPlan(p) {
+    $("pro").hidden = !!p.missing;
+    $("adminLink").hidden = !p.admin;
+    $("planTitle").textContent = p.until ? "Đang dùng bản Pro" : p.pro ? "Bản Pro (quản trị)" : "Bản miễn phí";
+    $("planSub").textContent = p.until
+      ? `${KIND[p.kind] || "Pro"}, dùng đến hết ngày ${fmtTime(p.until)}. Có mã mới thì nhập tiếp, số ngày được cộng dồn.`
+      : p.pro ? "Tài khoản quản trị luôn có Pro." : "Slide, video và album có dòng chữ nhỏ ở góc, AI giới hạn ít lượt mỗi ngày. Có mã Pro thì nhập vào đây.";
+  }
+  showPlan(await myPlan());
+  const ERR = { invalid: "Mã không đúng hoặc đã bị khoá.", used: "Mã này đã có người dùng rồi.", already_yours: "Bạn đã kích hoạt mã này rồi.",
+    too_many: "Nhập sai quá nhiều lần hôm nay, mai thử lại nhé.", signed_out: "Bạn cần đăng nhập lại." };
+  $("redeem").onsubmit = async (e) => {
+    e.preventDefault();
+    const code = $("code").value.trim(), btn = $("redeem").querySelector("button");
+    if (!code) return;
+    btn.disabled = true; $("codeMsg").classList.remove("err"); $("codeMsg").textContent = "Đang kiểm tra mã...";
+    const { data, error } = await client.rpc("redeem_code", { p_code: code });
+    btn.disabled = false;
+    if (error || !data || data.error) { $("codeMsg").classList.add("err"); $("codeMsg").textContent = ERR[data && data.error] || "Chưa kích hoạt được: " + (error ? error.message : "lỗi"); return; }
+    $("code").value = ""; $("codeMsg").textContent = "Kích hoạt xong, chúc mừng bạn!";
+    showPlan(await myPlan(true));
   };
 
   load();

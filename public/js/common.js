@@ -25,6 +25,19 @@ async function enabledProviders() {
   } catch { return {}; }
 }
 
+// Free or Pro (activation code). Until the plan functions are installed in Supabase, everyone is Pro.
+const MARK = "Làm bằng Slide Ảnh Cưới";
+let _plan = null;
+async function myPlan(fresh) {
+  if (_plan && !fresh) return _plan;
+  try {
+    const { data, error } = await (await sb()).rpc("my_plan");
+    _plan = error || !data ? { pro: true, missing: true } : data;
+  } catch { _plan = { pro: true, missing: true }; }
+  return _plan;
+}
+function fmtTime(v) { return v ? new Date(v).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }) : ""; }
+
 // Redirect to the login page when signed out; resolves with the user.
 async function requireUser() {
   const client = await sb();

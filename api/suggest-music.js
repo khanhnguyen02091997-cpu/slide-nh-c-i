@@ -40,6 +40,24 @@ export async function bumpUsage(token) {
   return r.json();
 }
 
+// Pro (activation code) or free. Before the plan functions exist in Supabase everyone counts as Pro.
+export async function planOf(token) {
+  try {
+    const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/my_plan`, {
+      method: "POST",
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    return r.ok ? await r.json() : { pro: true };
+  } catch { return { pro: true }; }
+}
+
+// Daily AI requests: AI_DAILY_LIMIT for Pro, AI_FREE_LIMIT for the free plan.
+export async function dailyLimit(token) {
+  const plan = await planOf(token);
+  return plan && plan.pro ? Number(process.env.AI_DAILY_LIMIT || 30) : Number(process.env.AI_FREE_LIMIT || 3);
+}
+
 async function askClaude(prompt) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -149,7 +167,7 @@ export default async function handler(req, res) {
   const query = String(body.query || "").trim().slice(0, 300);
   if (!query) return res.status(400).json({ error: "empty" });
 
-  const limit = Number(process.env.AI_DAILY_LIMIT || 30);
+  const limit = await dailyLimit(token);
   let used;
   try {
     used = await bumpUsage(token);

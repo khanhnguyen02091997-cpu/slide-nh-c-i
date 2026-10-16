@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quản lý mã · Slide Ảnh Cưới</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1a120b">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-180.png">
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/albums.html">Slide Ảnh Cưới <em>trọn bộ</em></a>
+  <div class="who"><a class="btn" href="/albums.html">Album của tôi</a><span id="email"></span><button id="out">Đăng xuất</button></div>
+</div>
+<div class="page">
+  <div>
+    <h1>Quản lý <em>mã Pro</em></h1>
+    <p class="sub">Tạo mã, copy gửi khách qua Zalo. Khách vào trang Album của tôi, dán mã vào ô Kích hoạt là lên Pro. Mỗi mã dùng được một lần.</p>
+  </div>
+  <p class="note err" id="deny" hidden></p>
+
+  <section id="maker" hidden>
+    <h2>Tạo mã mới</h2>
+    <form class="codes-form" id="make">
+      <label class="f">Loại mã
+        <select id="kind">
+          <option value="wedding">1 đám cưới (60 ngày)</option>
+          <option value="studio">Studio 30 ngày</option>
+          <option value="year">1 năm</option>
+        </select>
+      </label>
+      <label class="f">Số lượng
+        <input type="number" id="qty" min="1" max="100" value="1">
+      </label>
+      <label class="f">Ghi chú (tên khách, SĐT)
+        <input type="text" id="note" maxlength="200" placeholder="VD: Studio Hoa, 09xx">
+      </label>
+      <button class="go" type="submit">Tạo mã</button>
+    </form>
+    <div class="new-codes" id="fresh"></div>
+    <div class="row" id="copyAllRow" hidden><button id="copyAll">Copy tất cả mã vừa tạo</button></div>
+    <p class="note" id="makeMsg" role="status"></p>
+  </section>
+
+  <section id="listSec" hidden>
+    <div class="sec-h">
+      <h2>Tất cả mã <span class="n" id="stats"></span></h2>
+      <div class="filters" id="filters">
+        <button type="button" data-f="all" aria-pressed="true">Tất cả</button>
+        <button type="button" data-f="new" aria-pressed="false">Chưa dùng</button>
+        <button type="button" data-f="used" aria-pressed="false">Đã dùng</button>
+        <button type="button" data-f="off" aria-pressed="false">Đã khoá</button>
+      </div>
+    </div>
+    <input type="text" id="search" placeholder="Tìm mã, ghi chú hoặc email" aria-label="Tìm mã" style="font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px">
+    <div class="table-wrap">
+      <table class="codes">
+        <thead><tr><th>Mã</th><th>Loại</th><th>Ghi chú</th><th>Trạng thái</th><th>Người dùng</th><th>Hết hạn</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="emptyList" hidden>Chưa có mã nào.</p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/js/common.js"></script>
+<script>
+(async () => {
+  const user = await requireUser();
+  const client = await sb();
+  $("email").textContent = user.email || "";
+  $("out").onclick = signOut;
+
+  const plan = await myPlan();
+  if (!plan.admin) {
+    $("deny").hidden = false;
+    $("deny").textContent = plan.missing
+      ? "Supabase chưa có phần mã Pro. Chạy lại file supabase/schema.sql trong SQL Editor rồi tải lại trang."
+      : "Tài khoản này chưa phải quản trị. Thêm email của bạn vào bảng app_admins (xem README) rồi tải lại trang.";
+    return;
+  }
+  $("maker").hidden = false; $("listSec").hidden = false;
+
+  const KIND = { wedding: "1 đám cưới", studio: "Studio 30 ngày", year: "1 năm" };
+  let codes = [], filter = "all";
+
+  async function copy(text, btn) {
+    try { await navigator.clipboard.writeText(text); }
+    catch { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+    if (btn) { const old = btn.textContent; btn.textContent = "Đã copy ✓"; setTimeout(() => btn.textContent = old, 1500); }
+  }
+
+  function state(c) {
+    if (c.revoked) return ["Đã khoá", "off"];
+    if (!c.redeemed_by && !c.redeemed_email) return ["Chưa dùng", ""];
+    return new Date(c.expires_at) > new Date() ? ["Đang dùng", "on"] : ["Hết hạn", ""];
+  }
+
+  function draw() {
+    const q = $("search").value.trim().toLowerCase();
+    const shown = codes.filter((c) => {
+      if (filter === "new" && (c.redeemed_at || c.revoked)) return false;
+      if (filter === "used" && (!c.redeemed_at || c.revoked)) return false;
+      if (filter === "off" && !c.revoked) return false;
+      return !q || [c.code, c.note, c.redeemed_email].some((v) => (v || "").toLowerCase().includes(q));
+    });
+    const unused = codes.filter((c) => !c.redeemed_at && !c.revoked).length;
+    $("stats").textContent = `${codes.length} mã · ${unused} chưa dùng`;
+    $("emptyList").hidden = shown.length > 0;
+    const body = $("rows"); body.innerHTML = "";
+    for (const c of shown) {
+      const [label, cls] = state(c), tr = document.createElement("tr");
+      tr.innerHTML = `<td><code></code></td><td></td><td class="note-c"></td><td><span class="tag"></span></td><td></td><td></td><td><button data-copy>Copy</button> <button data-lock></button></td>`;
+      const td = tr.querySelectorAll("td");
+      td[0].querySelector("code").textContent = c.code;
+      td[1].textContent = KIND[c.kind] || c.kind;
+      td[2].textContent = c.note || "";
+      const tag = td[3].querySelector(".tag"); tag.textContent = label; if (cls) tag.classList.add(cls);
+      td[4].textContent = c.redeemed_email || "";
+      td[5].textContent = c.expires_at ? fmtTime(c.expires_at) : "";
+      tr.querySelector("[data-copy]").onclick = (e) => copy(c.code, e.target);
+      const lock = tr.querySelector("[data-lock]");
+      lock.textContent = c.revoked ? "Mở khoá" : "Khoá";
+      if (!c.revoked) lock.classList.add("danger");
+      lock.onclick = async () => {
+        if (!c.revoked && lock.dataset.confirm !== "1") { lock.dataset.confirm = "1"; lock.textContent = "Bấm lần nữa để khoá"; return; }
+        lock.disabled = true;
+        const { error } = await client.rpc("admin_set_revoked", { p_code: c.code, p_revoked: !c.revoked });
+        if (error) { lock.disabled = false; alert("Chưa đổi được: " + error.message); return; }
+        c.revoked = !c.revoked; draw();
+      };
+      body.appendChild(tr);
+    }
+  }
+
+  async function load() {
+    const { data, error } = await client.rpc("admin_list_codes");
+    if (error) { $("makeMsg").textContent = "Chưa tải được danh sách mã: " + error.message; return; }
+    codes = data || []; draw();
+  }
+
+  $("filters").querySelectorAll("button").forEach((b) => b.onclick = () => {
+    filter = b.dataset.f;
+    $("filters").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    draw();
+  });
+  $("search").oninput = draw;
+
+  let fresh = [];
+  $("make").onsubmit = async (e) => {
+    e.preventDefault();
+    const qty = Math.max(1, Math.min(100, Math.round(+$("qty").value || 1))), btn = $("make").querySelector("button");
+    btn.disabled = true; $("makeMsg").classList.remove("err"); $("makeMsg").textContent = "Đang tạo mã...";
+    const { data, error } = await client.rpc("admin_create_codes", { p_kind: $("kind").value, p_qty: qty, p_note: $("note").value.trim() });
+    btn.disabled = false;
+    if (error) { $("makeMsg").classList.add("err"); $("makeMsg").textContent = "Chưa tạo được mã: " + error.message; return; }
+    fresh = (data || []).map((c) => c.code);
+    const box = $("fresh"); box.innerHTML = "";
+    for (const code of fresh) {
+      const row = document.createElement("div"); row.className = "code-row";
+      row.innerHTML = `<code></code><button>Copy</button>`;
+      row.querySelector("code").textContent = code;
+      row.querySelector("button").onclick = (ev) => copy(code, ev.target);
+      box.appendChild(row);
+    }
+    $("copyAllRow").hidden = fresh.length < 2;
+    $("makeMsg").textContent = `Đã tạo ${fresh.length} mã ${KIND[$("kind").value].toLowerCase()}. Bấm Copy rồi dán vào Zalo gửi khách.`;
+    load();
+  };
+  $("copyAll").onclick = (e) => copy(fresh.join("\n"), e.target);
+
+  load();
+})();
+</script>
+</body>
+</html>

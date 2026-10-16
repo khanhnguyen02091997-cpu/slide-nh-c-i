@@ -79,7 +79,7 @@ function text(ctx, st, s, f, size, x, y, color, align = "center") {
 }
 
 /* Draw page `pg` (index n of total) onto a square canvas context of side S. */
-function render(ctx, S, pages, n, photos, style, info) {
+function render(ctx, S, pages, n, photos, style, info, mark) {
   const st = STY[style] || STY.lux, pg = pages[n];
   ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, S, S);
   if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, S - 2 * p, S - 2 * p); }
@@ -109,11 +109,12 @@ function render(ctx, S, pages, n, photos, style, info) {
     text(ctx, st, String(n), st.body, S * .018, S / 2, S * (1 - M * .6), st.soft);
     if (n === 1 || n % 6 === 0) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, S * (1 - M * .6), st.soft, "left");
   }
+  if (mark) text(ctx, st, mark, st.body, S * .016, S * (1 - M) - GUT * S / 2, S * (1 - M * .6), st.soft, "right");
   ctx.restore();
 }
 
 /* Minimal PDF: one JPEG per page, square pages of `sizeCm`. */
-async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, onPage } = {}) {
+async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, onPage, mark } = {}) {
   const pt = sizeCm / 2.54 * 72, enc = new TextEncoder(), parts = [], offs = [];
   let len = 0; const put = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
   const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
@@ -123,7 +124,7 @@ async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, onPage 
   obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
   obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`));
   for (let i = 0; i < N; i++) {
-    render(ctx, px, pages, i, photos, style, info);
+    render(ctx, px, pages, i, photos, style, info, mark);
     const jpg = new Uint8Array(await (await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .9))).arrayBuffer());
     const p = 3 + i * 3, content = `q ${pt.toFixed(2)} 0 0 ${pt.toFixed(2)} 0 0 cm /Im0 Do Q`;
     obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pt.toFixed(2)} ${pt.toFixed(2)}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));

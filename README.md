@@ -25,6 +25,7 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `public/index.html` | Đăng nhập, tạo tài khoản |
 | `public/albums.html` | Danh sách album của người dùng |
 | `public/studio.html` | Studio làm slide, tự lưu |
+| `public/admin.html` | Quản trị: tạo, copy, khoá mã Pro |
 | `public/js/engine.js` | Bộ dựng slide (dùng chung cho studio và file giao khách) |
 | `api/config.js` | Trả cấu hình công khai cho trình duyệt |
 | `api/suggest-music.js` | AI gợi ý nhạc, kiểm tra đăng nhập và giới hạn lượt |
@@ -60,8 +61,25 @@ Không đặt key nào thì web vẫn chạy, chỉ ẩn phần AI.
 2. Ở **Environment Variables**, thêm các biến trong `.env.example`:
    - `SUPABASE_URL`, `SUPABASE_ANON_KEY`
    - `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` hoặc `OPENAI_API_KEY`
-   - `AI_DAILY_LIMIT` (mặc định 30 lượt mỗi người mỗi ngày)
+   - `AI_DAILY_LIMIT` (mặc định 30 lượt mỗi ngày cho Pro), `AI_FREE_LIMIT` (mặc định 3 lượt mỗi ngày cho bản miễn phí)
 3. Bấm **Deploy**. Xong thì gửi link cho mọi người đăng ký và dùng.
+
+## Bán bản Pro bằng mã kích hoạt
+
+Ai cũng tự đăng ký và dùng miễn phí. Bản miễn phí có dòng chữ nhỏ “Làm bằng Slide Ảnh Cưới” ở góc slide, video, file giao khách và album PDF, và AI chỉ được `AI_FREE_LIMIT` lượt mỗi ngày (mặc định 3). Khách mua thì bạn gửi một mã `CUOI-XXXX-XXXX`, khách dán vào ô **Kích hoạt** ở trang Album của tôi là lên Pro.
+
+Cài một lần:
+
+1. Chạy lại toàn bộ `supabase/schema.sql` trong **SQL Editor** (chạy lại nhiều lần không sao).
+2. Thêm email đăng nhập của bạn làm quản trị, chạy trong SQL Editor:
+   ```sql
+   insert into public.app_admins (email) values ('email-cua-ban@gmail.com');
+   ```
+3. Đăng nhập web, trang Album của tôi sẽ có nút **Quản lý mã** (trang `/admin.html`).
+
+Ở trang quản lý: chọn loại mã (1 đám cưới 60 ngày, studio 30 ngày, 1 năm), số lượng, ghi chú tên khách, bấm **Tạo mã** rồi Copy gửi qua Zalo. Bảng bên dưới cho biết mã nào chưa dùng, ai đã dùng, ngày hết hạn, và có nút **Khoá** nếu khách chia mã cho người khác. Khách nhập nhiều mã thì số ngày được cộng dồn. Mỗi người nhập sai tối đa 10 lần mỗi ngày.
+
+Khi Supabase chưa chạy phần này, mọi người vẫn dùng như cũ (coi như Pro).
 
 ## Chi phí
 

@@ -1,6 +1,6 @@
 // Turn one wedding photo into a chibi illustration with a Gemini image model.
 // Signed-in users only; shares the daily AI limit with the music finder.
-import { supabaseUser, bumpUsage } from "./suggest-music.js";
+import { supabaseUser, bumpUsage, dailyLimit } from "./suggest-music.js";
 
 const STYLES = {
   anime: "a cute 2D anime chibi illustration with clean lineart and soft pastel colors",
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   if (!image || image.length > 4_000_000) return res.status(400).json({ error: "bad_image" });
   const style = STYLES[body.style] || STYLES.anime;
 
-  const limit = Number(process.env.AI_DAILY_LIMIT || 30);
+  const limit = await dailyLimit(token);
   let used;
   try { used = await bumpUsage(token); } catch { return res.status(500).json({ error: "usage_failed" }); }
   if (used > limit) return res.status(429).json({ error: "limit", limit });
