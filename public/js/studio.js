@@ -7,6 +7,23 @@ let tracks = [];   // {id?, path?, name, url, file?}
 const removed = { photos: [], tracks: [] };
 let loading = true;
 let plan = { pro: true };
+// Free plan: try everything in the preview, limits apply when showing or exporting.
+const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20 };
+function proNeed(mode) {
+  if (plan.pro) return "";
+  const why = [];
+  if (photos.filter((p) => !p.sample).length > FREE.photos) why.push(`quá ${FREE.photos} ảnh`);
+  if (!FREE.styles.includes(val("style"))) why.push("phong cách này");
+  if (mode === "album" && +$("bookSize").value > FREE.book) why.push(`khổ ${$("bookSize").value} cm`);
+  return why.length ? `Bản miễn phí chưa dùng được ${why.join(", ")}. Bạn vẫn xem thử thoải mái ở khung bên cạnh; để ${mode === "video" ? "xuất video" : mode === "album" ? "tải album" : mode === "deliver" ? "tạo file gửi khách" : "trình chiếu"} thì đổi lại hoặc nhập mã Pro.` : "";
+}
+function markPro() {
+  if (plan.pro) return;
+  document.querySelectorAll('input[name="style"]').forEach((r) => { if (!FREE.styles.includes(r.value)) r.closest("label").querySelector("b").insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
+  [...$("bookSize").options].forEach((o) => { if (+o.value > FREE.book) o.textContent += " (Pro)"; });
+  $("vfmt").insertAdjacentHTML("afterend", '<span class="hint">Bản miễn phí xuất video 720p, Pro xuất Full HD 1080p.</span>');
+  $("planNote").innerHTML = `Bản miễn phí: tối đa ${FREE.photos} ảnh, 3 phong cách (Sang trọng, Hàn Quốc, Hiện đại), video 720p, album in 20 cm, có dòng chữ nhỏ ở góc. Các mục có chữ PRO vẫn xem thử được. <a href="/albums.html#pro">Nhập mã Pro</a> để mở hết.`;
+}
 
 /* ----- sample photos for an empty album ----- */
 function sample(i) {
@@ -214,11 +231,15 @@ const endDrag = (e) => {
 addEventListener("pointerup", endDrag); addEventListener("pointercancel", endDrag);
 
 async function addFiles(files) {
-  const imgs = [...files].filter((f) => f.type.startsWith("image/")); if (!imgs.length) return;
+  let imgs = [...files].filter((f) => f.type.startsWith("image/")); if (!imgs.length) return;
+  let cut = 0;
+  if (!plan.pro) { const room = Math.max(0, FREE.photos - photos.filter((p) => !p.sample).length); cut = Math.max(0, imgs.length - room); }
   // Order by capture time when every photo has it (phones and cameras mixed), otherwise by file name.
   const when = new Map(await Promise.all(imgs.map(async (f) => [f, await PhotoBook.takenAt(f)])));
   const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true });
   imgs.sort(imgs.every((f) => when.get(f)) ? (a, b) => when.get(a) - when.get(b) || byName(a, b) : byName);
+  if (cut) imgs = imgs.slice(0, imgs.length - cut);
+  if (!imgs.length) return renderPhotos(), $("photoHint").innerHTML = `Bản miễn phí tối đa ${FREE.photos} ảnh. <a href="/albums.html#pro">Nhập mã Pro</a> để thêm không giới hạn.`;
   $("photoHint").textContent = "Đang xử lý " + imgs.length + " ảnh...";
   const added = [];
   for (const f of imgs) {
@@ -227,6 +248,7 @@ async function addFiles(files) {
   }
   if (added.length) photos = photos.filter((p) => !p.sample).concat(added);
   renderPhotos(); refresh(); changed();
+  if (cut) $("photoHint").innerHTML = `Bản miễn phí tối đa ${FREE.photos} ảnh nên ${cut} ảnh cuối chưa được thêm. <a href="/albums.html#pro">Nhập mã Pro</a> để thêm không giới hạn.`;
 }
 $("photoInput").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
 const drop = $("drop");
@@ -443,7 +465,8 @@ function refresh() {
     album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed).length} trang vuông ${$("bookSize").value} × ${$("bookSize").value} cm. Ảnh xếp theo thời gian chụp, mỗi trang tự dàn 1 đến 4 ảnh. Không ưng thì bấm Đổi bố cục.`,
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
-  $("goNote").textContent = notes[mode]; $("goNote").classList.remove("err");
+  const need = proNeed(mode);
+  $("goNote").textContent = need || notes[mode]; $("goNote").classList.toggle("err", !!need);
   showSec(mode);
   $("pvInfo").textContent = n + " ảnh" + (tracks.length ? " · " + tracks.length + " bài nhạc" : "");
   const i = info(); $("titleNames").textContent = i.names; document.title = i.names + " · Slide Ảnh Cưới";
@@ -461,7 +484,7 @@ function openPlayer(mode) {
   SE.Player({ mode, style: val("style"), photos: photos.map((p) => p.ph), info: info(), cfg: cfg(), tracks: tracks.map((t) => t.url),
     musicOn: mode === "stage" ? $("stageMusic").checked : true, onClose: () => { pvHold = false; sizePv(); } });
 }
-$("go").onclick = () => { const m = val("mode"); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (m === "album") exportBook(); else exportDeliver(); };
+$("go").onclick = () => { const m = val("mode"); if (proNeed(m)) return fail(proNeed(m)); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (m === "album") exportBook(); else exportDeliver(); };
 $("tryDeliver").onclick = () => openPlayer("deliver");
 function fail(t) { $("goNote").textContent = t; $("goNote").classList.add("err"); }
 const slug = () => { const i = info(); return ("slide-cuoi-" + i.groom + "-" + i.bride).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^a-zA-Z0-9]+/g, "-").replace(/-+$/, "").toLowerCase(); };
@@ -471,7 +494,7 @@ let cancelRec = null;
 function pickMime() { for (const m of ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
 async function exportVideo() {
   const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
-  const vertical = $("vfmt").value === "v", W = vertical ? 1080 : 1920, H = vertical ? 1920 : 1080;
+  const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cfg(), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
   const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
@@ -682,11 +705,12 @@ function setupAI(enabled) {
   user = await requireUser();
   client = await sb();
   plan = await myPlan();
-  $("planNote").hidden = plan.pro;
+  $("planNote").hidden = plan.pro; markPro();
   $("email").textContent = user.email || "";
   $("out").onclick = signOut;
   fetch("/api/config").then((r) => r.json()).then((c) => { setupAI(c.aiEnabled); if (c.chibiEnabled) setupChibi(); }).catch(() => {});
   if (!(await load())) return;
+  if (!plan.pro && +$("bookSize").value > FREE.book) $("bookSize").value = String(FREE.book);
   renderPhotos(); renderTracks();
   document.querySelectorAll(".main input, .main select, .main textarea").forEach((el) => {
     if (el.type === "file" || el.id === "aiQ") return;
