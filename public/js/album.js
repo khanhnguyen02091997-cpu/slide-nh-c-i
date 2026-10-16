@@ -58,7 +58,8 @@ function layout(ars, seed = 0) {
 
 function coverImg(ctx, src, x, y, w, h) {
   const s = Math.max(w / src.width, h / src.height), dw = src.width * s, dh = src.height * s;
-  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.drawImage(src, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); const fx = src.fx == null ? .5 : src.fx, fy = src.fy == null ? .5 : src.fy;
+  ctx.drawImage(src, x + (w - dw) * fx, y + (h - dh) * fy, dw, dh); ctx.restore();
 }
 function containRect(ar, x, y, w, h) { let fw = w, fh = w / ar; if (fh > h) { fh = h; fw = h * ar; } return { x: x + (w - fw) / 2, y: y + (h - fh) / 2, w: fw, h: fh }; }
 function framed(ctx, st, S, src, x, y, w, h, contain) {

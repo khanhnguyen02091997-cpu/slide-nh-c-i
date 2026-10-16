@@ -18,10 +18,14 @@ function prep(img){
   const b=document.createElement("canvas");b.width=t.width*10;b.height=t.height*10;const bx=b.getContext("2d");bx.imageSmoothingQuality="high";bx.drawImage(t,0,0,b.width,b.height);
   return {c,b,ar:c.width/c.height};
 }
+// fx/fy on the source (0..1, set by focus()) choose which part survives the crop; px/py add Ken Burns drift.
 function cover(ctx,src,x,y,w,h,z=1,px=0,py=0){
   const s=Math.max(w/src.width,h/src.height)*z,dw=src.width*s,dh=src.height*s;
-  ctx.drawImage(src,x+(w-dw)/2+px*(dw-w)/2,y+(h-dh)/2+py*(dh-h)/2,dw,dh);
+  const fx=src.fx==null?.5:src.fx,fy=src.fy==null?.5:src.fy;
+  const ox=clamp((w-dw)*fx+px*(dw-w)/2,w-dw,0),oy=clamp((h-dh)*fy+py*(dh-h)/2,h-dh,0);
+  ctx.drawImage(src,x+ox,y+oy,dw,dh);
 }
+function focus(ph,fx=.5,fy=.5){ph.fx=ph.c.fx=ph.b.fx=fx;ph.fy=ph.c.fy=ph.b.fy=fy;return ph}
 function fit(ar,x,y,w,h){let fw=w,fh=w/ar;if(fh>h){fh=h;fw=h*ar}return{x:x+(w-fw)/2,y:y+(h-fh)/2,w:fw,h:fh}}
 function kb(p,seed,amt){const a=hash(seed+1)*6.283;return{z:1+amt*p,px:Math.cos(a)*(p-.5)*1.2,py:Math.sin(a)*(p-.5)*1.2}}
 function vignette(ctx,W,H,a){const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.hypot(W,H)*.62);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,"+a+")");ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
@@ -397,5 +401,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,prep,build,Engine,Player,total,STY};
+G.SlideEngine={ready,prep,focus,build,Engine,Player,total,STY};
 })(window);

@@ -40,13 +40,7 @@ async function save() {
   saving = true; again = false;
   status("Đang lưu...");
   try {
-    const s = readSettings();
-    let r = await client.from("albums").update({
-      groom: $("groom").value.trim(), bride: $("bride").value.trim(), wedding_date: $("date").value || null,
-      message: $("msg").value.trim(), mode: val("mode"), style: val("style"), settings: s, updated_at: new Date().toISOString(),
-    }).eq("id", albumId);
-    if (r.error) throw r.error;
-
+    let r;
     const base = user.id + "/" + albumId;
     // removed files
     if (removed.photos.length) {
@@ -77,6 +71,12 @@ async function save() {
       r = await client.from("album_photos").upsert(real.map((p, i) => ({ id: p.id, album_id: albumId, user_id: user.id, path: p.path, position: i, width: p.ph.c.width, height: p.ph.c.height })));
       if (r.error) throw r.error;
     }
+    // album row last: its settings refer to photos by storage path, which new photos only have now
+    r = await client.from("albums").update({
+      groom: $("groom").value.trim(), bride: $("bride").value.trim(), wedding_date: $("date").value || null,
+      message: $("msg").value.trim(), mode: val("mode"), style: val("style"), settings: readSettings(), updated_at: new Date().toISOString(),
+    }).eq("id", albumId);
+    if (r.error) throw r.error;
     for (const t of tracks) {
       if (t.path) continue;
       status("Đang tải nhạc lên: " + t.name + "...");
@@ -134,6 +134,7 @@ async function load() {
       } catch { return null; }
     }));
     photos = loaded.filter(Boolean);
+    const fm = s.focus || {}; for (const p of photos) if (fm[p.path]) SE.focus(p.ph, fm[p.path][0], fm[p.path][1]);
   } else {
     for (let i = 0; i < 6; i++) photos.push(sample(i));
   }
@@ -146,11 +147,13 @@ function renderPhotos() {
   const grid = $("grid"); grid.innerHTML = "";
   photos.forEach((p, i) => {
     const d = document.createElement("div"); d.className = "thumb";
-    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="l" aria-label="Đưa lên trước">‹</button><button data-a="c" aria-label="Tạo ảnh chibi từ ảnh này">✨</button><button data-a="x" aria-label="Xóa ảnh">✕</button><button data-a="r" aria-label="Đưa ra sau">›</button></div>`;
-    d.querySelector("img").alt = p.name;
+    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="l" aria-label="Đưa lên trước">‹</button><button data-a="f" aria-label="Chỉnh vùng cắt ảnh">✥</button><button data-a="c" aria-label="Tạo ảnh chibi từ ảnh này">✨</button><button data-a="x" aria-label="Xóa ảnh">✕</button><button data-a="r" aria-label="Đưa ra sau">›</button></div>`;
+    const im = d.querySelector("img"); im.alt = p.name; im.title = "Bấm để chỉnh vùng cắt";
+    im.style.objectPosition = `${(p.ph.fx ?? .5) * 100}% ${(p.ph.fy ?? .5) * 100}%`; im.onclick = () => openCrop(p);
     d.querySelectorAll("button").forEach((b) => b.onclick = () => {
       const a = b.dataset.a;
       if (a === "c") return chibiPick(p);
+      if (a === "f") return openCrop(p);
       if (a === "x") { if (p.path) removed.photos.push(p); else if (!p.sample && p.thumb.startsWith("blob:")) URL.revokeObjectURL(p.thumb); photos.splice(i, 1); }
       if (a === "l" && i > 0) [photos[i - 1], photos[i]] = [photos[i], photos[i - 1]];
       if (a === "r" && i < photos.length - 1) [photos[i + 1], photos[i]] = [photos[i], photos[i + 1]];
@@ -266,7 +269,8 @@ function fitted(mode) {
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
 function cfg() { const f = fitted(val("mode")); return { trans: $("trans").value, frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
-function readSettings() { return { trans: $("trans").value, frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
+function readSettings() { return { focus: focusMap(), trans: $("trans").value, frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -403,7 +407,7 @@ async function exportDeliver() {
   $("go").disabled = true; $("goNote").textContent = "Đang đóng gói ảnh và nhạc...";
   try {
     if (!engineSrc) engineSrc = await (await fetch("/js/engine.js")).text();
-    const I = info(), data = { style: val("style"), info: I, cfg: cfg(), photos: photos.map((p) => jpeg(p.ph)), tracks: [] };
+    const I = info(), data = { style: val("style"), info: I, cfg: cfg(), photos: photos.map((p) => jpeg(p.ph)), focus: photos.map((p) => [p.ph.fx ?? .5, p.ph.fy ?? .5]), tracks: [] };
     for (const t of tracks) data.tracks.push(await dataURL(await trackFile(t)));
     const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const fonts = document.querySelector("link[data-fonts]").outerHTML;
@@ -422,7 +426,7 @@ ${fonts}
 }
 const bootSrc = `(async function(){
   const D=window.__SLIDE,SE=window.SlideEngine,bg=document.getElementById("bg"),go=document.getElementById("go"),cv=document.getElementById("cv");
-  const photos=(await Promise.all(D.photos.map(src=>{const im=new Image();im.src=src;return im.decode().then(()=>SE.prep(im)).catch(()=>null)}))).filter(Boolean);
+  const photos=(await Promise.all(D.photos.map((src,i)=>{const im=new Image();im.src=src;const f=(D.focus||[])[i]||[.5,.5];return im.decode().then(()=>SE.focus(SE.prep(im),f[0],f[1])).catch(()=>null)}))).filter(Boolean);
   await SE.ready;
   let raf=0,last=performance.now(),eng=null;
   function size(){const d=Math.min(2,devicePixelRatio||1);bg.width=innerWidth*d;bg.height=innerHeight*d}
@@ -434,6 +438,32 @@ const bootSrc = `(async function(){
 })();`;
 
 /* ----- AI music finder (server-side, uses the site's own AI key) ----- */
+/* ----- crop focus editor ----- */
+let cropP = null, cropA = 16 / 9, cropF = [.5, .5];
+function openCrop(p) {
+  cropP = p; cropF = [p.ph.fx ?? .5, p.ph.fy ?? .5]; $("cropImg").src = p.thumb; $("crop").hidden = false;
+  $("cropImg").decode().catch(() => {}).then(() => { drawCrop(); $("cropStage").focus(); });
+}
+function cropBox() { const img = $("cropImg"), W = img.clientWidth, H = img.clientHeight; let w = W, h = H; if (W / H > cropA) w = H * cropA; else h = W / cropA; return { W, H, w, h }; }
+function drawCrop() { const b = cropBox(), win = $("cropWin"); Object.assign(win.style, { width: b.w + "px", height: b.h + "px", left: (b.W - b.w) * cropF[0] + "px", top: (b.H - b.h) * cropF[1] + "px" }); }
+function cropAt(x, y) { const b = cropBox(), cl = (v) => Math.max(0, Math.min(1, v)); cropF = [b.W > b.w ? cl((x - b.w / 2) / (b.W - b.w)) : cropF[0], b.H > b.h ? cl((y - b.h / 2) / (b.H - b.h)) : cropF[1]]; drawCrop(); }
+(() => {
+  const st = $("cropStage"); let down = false;
+  const pos = (e) => { const r = st.getBoundingClientRect(); cropAt(e.clientX - r.left, e.clientY - r.top); };
+  st.addEventListener("pointerdown", (e) => { down = true; st.setPointerCapture(e.pointerId); pos(e); });
+  st.addEventListener("pointermove", (e) => { if (down) pos(e); });
+  st.addEventListener("pointerup", () => { down = false; });
+  st.addEventListener("keydown", (e) => { const d = { ArrowLeft: [-.04, 0], ArrowRight: [.04, 0], ArrowUp: [0, -.04], ArrowDown: [0, .04] }[e.key]; if (!d) return; e.preventDefault(); cropF = [Math.max(0, Math.min(1, cropF[0] + d[0])), Math.max(0, Math.min(1, cropF[1] + d[1]))]; drawCrop(); });
+  $("cropAsp").querySelectorAll("button").forEach((b) => b.onclick = () => { cropA = +b.dataset.a; $("cropAsp").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); drawCrop(); });
+  const close = () => { $("crop").hidden = true; cropP = null; };
+  $("cropX").onclick = close;
+  $("crop").addEventListener("click", (e) => { if (e.target === $("crop")) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("crop").hidden) close(); });
+  $("cropReset").onclick = () => { cropF = [.5, .5]; drawCrop(); };
+  $("cropOk").onclick = () => { if (cropP) { SE.focus(cropP.ph, cropF[0], cropF[1]); renderPhotos(); refresh(); changed(); } close(); };
+  window.addEventListener("resize", () => { if (!$("crop").hidden) drawCrop(); });
+})();
+
 /* ----- chibi ----- */
 let chPick = null, chStyle = "anime", chBlob = null, chCtl = null;
 function chibiPick(p, scroll = true) {

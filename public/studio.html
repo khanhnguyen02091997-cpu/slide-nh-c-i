@@ -177,6 +177,18 @@ Cảm ơn quý khách</textarea>
 </div>
 
 
+<div class="crop" id="crop" hidden role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="crop-card">
+    <div class="sec-h"><b id="cropTitle">Kéo khung để chọn phần ảnh giữ lại</b><button id="cropX" aria-label="Đóng">✕</button></div>
+    <div class="chips" id="cropAsp" aria-label="Xem thử theo tỉ lệ">
+      <button data-a="1.7778" aria-pressed="true">Màn hình ngang 16:9</button><button data-a="0.5625" aria-pressed="false">Dọc 9:16</button><button data-a="1" aria-pressed="false">Vuông (album)</button><button data-a="0.74" aria-pressed="false">Khung vòm</button>
+    </div>
+    <div class="crop-wrap"><div class="crop-stage" id="cropStage" tabindex="0" aria-label="Vùng ảnh, kéo hoặc dùng phím mũi tên"><img id="cropImg" alt="" draggable="false"><div class="crop-win" id="cropWin"></div></div></div>
+    <p class="hint">Kéo khung sáng tới phần muốn giữ, ví dụ mặt và đầu cô dâu chú rể. Mọi tỉ lệ khung đều theo vị trí này.</p>
+    <div class="row"><button id="cropReset">Về giữa</button><button class="go" id="cropOk">Xong</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/engine.js"></script>
