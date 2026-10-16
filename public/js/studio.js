@@ -114,7 +114,9 @@ async function load() {
   if (s.cues) $("cues").value = s.cues;
   $("fitMusic").checked = s.fit !== false;
   if (s.book) $("bookSize").value = String(s.book);
-  if (s.trans) $("trans").value = s.trans;
+  tSeed = s.tseed || 0;
+  const legacy = s.trans && s.trans !== "auto" && s.trans !== "mix" ? s.trans : null; // single kind chosen before per-photo existed
+  document.querySelector(`input[name=tmode][value="${s.tmode || (legacy ? "manual" : "auto")}"]`).checked = true;
   if (s.frame) $("frame").value = s.frame;
   $("shuffle").checked = !!s.shuffle; $("cap").checked = s.cap !== false; $("stageMusic").checked = !!s.stageMusic;
   
@@ -136,6 +138,7 @@ async function load() {
     }));
     photos = loaded.filter(Boolean);
     const fm = s.focus || {}; for (const p of photos) if (fm[p.path]) SE.focus(p.ph, fm[p.path][0], fm[p.path][1]);
+    const pt = s.ptrans || {}; for (const p of photos) { if (pt[p.path]) p.tr = pt[p.path]; else if (legacy) p.tr = legacy; }
   } else {
     for (let i = 0; i < 6; i++) photos.push(sample(i));
   }
@@ -269,9 +272,10 @@ function fitted(mode) {
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
-function cfg() { const f = fitted(val("mode")); return { mark: plan.pro ? "" : MARK, trans: $("trans").value, frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function cfg() { const f = fitted(val("mode")); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
-function readSettings() { return { focus: focusMap(), trans: $("trans").value, frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -311,12 +315,54 @@ function startPreview() {
   if (mode === "album") { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
-  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
+  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
 function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); } requestAnimationFrame(pvFrame); }
 new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val("mode") === "album") { sizePv(); renderBook(); } }).observe(pv);
+
+/* ----- per-photo transitions: the app picks (auto) or the user edits each photo (manual) ----- */
+let tSeed = 0;
+const TNAME = { fade: "Mờ dần", white: "Lóe sáng trắng", black: "Tối dần", heart: "Mở trái tim", circle: "Mở vòng tròn", zoom: "Phóng to", slide: "Trượt ngang", up: "Đẩy lên", wipe: "Quét ngang", diag: "Quét chéo", blinds: "Rèm dọc", flip: "Lật ảnh" };
+function transList() { const auto = SE.autoTrans(val("style"), photos.length, tSeed); return val("tmode") === "manual" ? photos.map((p, i) => p.tr || auto[i]) : auto; }
+function previewPhoto(i) {
+  if (!pvEng) return; const sc = pvEng.scenes, j = sc.findIndex((x) => x.type === "photo" && x.i === i); if (j < 0) return;
+  pvHold = false; pvEng.go(j > 0 ? j - 1 : sc.length - 1); pvEng.go(j);
+}
+function renderTrans() {
+  const manual = val("tmode") === "manual", list = transList();
+  $("tAuto").hidden = manual; $("tManual").hidden = !manual;
+  if (!manual) { const names = [...new Set(list)].map((t) => TNAME[t]); $("tAutoInfo").textContent = list.length ? "Đang dùng: " + names.join(", ") + "." : ""; return; }
+  const ul = $("tList"); ul.innerHTML = "";
+  const opts = Object.entries(TNAME).map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+  photos.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<img alt=""><span>Ảnh ${i + 1}</span><select aria-label="Hiệu ứng chuyển sang ảnh ${i + 1}">${opts}</select><button type="button" aria-label="Xem thử hiệu ứng ảnh ${i + 1}">▶</button>`;
+    li.querySelector("img").src = p.thumb; li.querySelector("img").style.objectPosition = `${(p.ph.fx ?? .5) * 100}% ${(p.ph.fy ?? .5) * 100}%`;
+    const sel = li.querySelector("select"); sel.value = list[i];
+    sel.onchange = (e) => { e.stopPropagation(); p.tr = sel.value; refresh(); changed(); previewPhoto(i); };
+    li.querySelector("button").onclick = () => previewPhoto(i);
+    ul.appendChild(li);
+  });
+}
+document.querySelectorAll("input[name=tmode]").forEach((r) => r.addEventListener("change", () => {
+  // switching to manual starts from what the app picked, so the user edits the app's version
+  if (val("tmode") === "manual") { const auto = SE.autoTrans(val("style"), photos.length, tSeed); photos.forEach((p, i) => { if (!p.tr) p.tr = auto[i]; }); }
+}));
+$("tShuffle").onclick = () => { tSeed++; refresh(); changed(); if (photos.length) previewPhoto(0); };
+$("tAll").querySelectorAll("button").forEach((b) => b.onclick = () => {
+  const auto = SE.autoTrans(val("style"), photos.length, tSeed);
+  photos.forEach((p, i) => p.tr = b.dataset.v === "app" ? auto[i] : b.dataset.v); refresh(); changed(); if (photos.length) previewPhoto(0);
+});
+
+/* ----- transition and frame pickers (buttons that drive hidden selects) ----- */
+function syncPick(id) { const v = $(id).value; document.querySelectorAll(`.pick[data-for-select="${id}"] button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v))); }
+document.querySelectorAll(".pick[data-for-select]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.onclick = () => {
+  const id = g.dataset.forSelect; $(id).value = b.dataset.v; syncPick(id); refresh(); changed();
+  // show it straight away: move the preview from the title card to the first photo
+  if (pvEng && photos.length) pvEng.go(1);
+}));
 
 /* ----- parts: slide (party / stage / deliver), video, album ----- */
 const partOf = (mode) => mode === "video" || mode === "album" ? mode : "slide";
@@ -341,6 +387,8 @@ document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
 const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in" };
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
+  document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
+  syncPick("frame"); renderTrans();
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
   const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" ? "party" : mode, n, c);
   const notes = {
@@ -381,7 +429,7 @@ async function exportVideo() {
   const vertical = $("vfmt").value === "v", W = vertical ? 1080 : 1920, H = vertical ? 1920 : 1080;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cfg(), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, frame: c.frame, scenes, auto: true, loop: false });
+  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
   eng.render();
   const stream = cv.captureStream(30); let ac = null;
   $("go").disabled = true; $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
@@ -450,7 +498,7 @@ const bootSrc = `(async function(){
   await SE.ready;
   let raf=0,last=performance.now(),eng=null;
   function size(){const d=Math.min(2,devicePixelRatio||1);bg.width=innerWidth*d;bg.height=innerHeight*d}
-  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,mark:D.cfg.mark,sec:D.cfg.sec,trans:D.cfg.trans,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
+  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,mark:D.cfg.mark,sec:D.cfg.sec,trans:D.cfg.trans,trs:D.cfg.trs,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
   function f(n){eng.step(Math.min(.1,(n-last)/1000));last=n;eng.render();raf=requestAnimationFrame(f)}
   addEventListener("resize",size);idle();
   go.disabled=false;go.textContent=D.tracks.length?"▶ Xem slide cùng nhạc":"▶ Xem slide";
