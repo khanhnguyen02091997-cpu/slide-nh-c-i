@@ -166,3 +166,12 @@ a.btn{text-decoration:none}
 .pick button i{font-style:normal;width:22px;text-align:center;color:var(--accent);font-size:16px}
 .pick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}
 .pick button[aria-pressed="true"] i{color:inherit}
+.t-auto{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+.t-manual{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.t-manual[hidden]{display:none}
+.tlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.tlist li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--bg);min-width:0}
+.tlist img{width:44px;height:44px;object-fit:cover;border-radius:6px;flex:none}
+.tlist span{font-size:13px;color:var(--muted);flex:none;min-width:42px}
+.tlist select{flex:1;min-width:0;padding:6px 8px;font-size:13.5px}
+.tlist button{flex:none;padding:6px 10px}

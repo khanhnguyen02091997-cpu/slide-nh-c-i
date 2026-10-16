@@ -349,6 +349,10 @@ const TR={
   blinds(c,A,B,e,W,H){const n=9,w=W/n;reveal(c,A,B,()=>{c.beginPath();for(let j=0;j<n;j++)c.rect(j*w,0,w*clamp(e*1.6-j/n*.6),H)})},
 };
 const MIX=["fade","heart","slide","white","circle","zoom","wipe","flip","diag","blinds","up"];
+// Varied per-photo transitions that suit each style, no kind twice in a row.
+const POOL={lux:["fade","white","zoom","circle","heart"],korea:["fade","white","slide","heart","zoom"],cinema:["black","fade","zoom","wipe"],modern:["slide","wipe","circle","zoom","diag","blinds","flip","up"],
+  vintage:["fade","black","flip","zoom"],floral:["heart","fade","white","circle","zoom"],red:["fade","white","heart","circle","zoom"],mono:["up","wipe","slide","fade","diag"],garden:["fade","slide","white","circle","heart"]};
+function autoTrans(style,n,seed=0){const pool=POOL[style]||MIX,out=[];let prev="";for(let i=0;i<n;i++){const k=Math.floor(hash(i*7.13+seed*31.7+1)*pool.length);let t=pool[k];if(t===prev)t=pool[(k+1)%pool.length];out.push(t);prev=t}return out}
 function pickTrans(name,k){if(!name||name==="auto")return null;if(name==="mix")return TR[MIX[k%MIX.length]];return TR[name]||null}
 
 /* ---------- photo frames the user can pick, drawn in the colors of the chosen style ---------- */
@@ -421,21 +425,23 @@ function Engine(canvas,o){
   const ctx=canvas.getContext("2d"),bufs=[0,1,2,3].map(()=>document.createElement("canvas"));
   let idx=0,t=0,time=0,prev=null,prevT=0,ended=false;
   const S=()=>STY[o.style]||STY.lux;
-  const TT=()=>pickTrans(o.trans,0)?1.1:S().T;
+  // o.trs[i] is the transition into photo i (per-photo choice); other scenes use o.trans.
+  const nameFor=(sc,kk)=>{const i=sc?(sc.type==="photo"?sc.i:null):kk;return(i!=null&&o.trs&&o.trs[i])||o.trans};
+  const TT=(nm)=>pickTrans(nm,0)?1.1:S().T;
   const photo=(c,W,H,ph,p,i,I,lt)=>{if(o.frame&&o.frame!=="auto")framed(o.style,c,W,H,ph,p,i,I,lt,o.frame);else S().photo(c,W,H,ph,p,i,I,lt)};
-  const trans=(c,A,B,x,W,H,k)=>{const f=pickTrans(o.trans,k);if(f){c.save();f(c,A,B,x,W,H);c.restore()}else S().trans(c,A,B,x,W,H,k)};
+  const trans=(c,A,B,x,W,H,k,nm)=>{const f=pickTrans(nm,k);if(f){c.save();f(c,A,B,x,W,H);c.restore()}else S().trans(c,A,B,x,W,H,k)};
   function fitBufs(){for(const b of bufs)if(b.width!==canvas.width||b.height!==canvas.height){b.width=canvas.width;b.height=canvas.height}}
   function photoAt(sc){const n=o.photos.length;if(!n)return null;return o.photos[((sc.i||0)%n+n)%n]}
   function drawPhotoGallery(c,lt){
     const s=S(),n=o.photos.length,per=o.sec,k=Math.floor(lt/per),l=lt-k*per,W=canvas.width,H=canvas.height;
-    const T=TT(),one=(cx,kk,tt)=>photo(cx,W,H,o.photos[kk%n],clamp(tt/(per+T)),kk%n,o.info,tt);
-    if(k>0&&l<T){const A=bufs[2],B=bufs[3];one(A.getContext("2d"),k-1,per+l);one(B.getContext("2d"),k,l);c.save();trans(c,A,B,ease(l/T),W,H,k);c.restore()}
+    const nm=nameFor(null,k%n),T=TT(nm),one=(cx,kk,tt)=>photo(cx,W,H,o.photos[kk%n],clamp(tt/(per+T)),kk%n,o.info,tt);
+    if(k>0&&l<T){const A=bufs[2],B=bufs[3];one(A.getContext("2d"),k-1,per+l);one(B.getContext("2d"),k,l);c.save();trans(c,A,B,ease(l/T),W,H,k,nm);c.restore()}
     else one(c,k,l);
   }
   function draw(c,sc,lt){
     const s=S(),W=canvas.width,H=canvas.height,I=o.info;c.save();
     if(!o.photos.length&&sc.type!=="cue"){s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
-    else if(sc.type==="photo")photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT())),sc.i,I,lt);
+    else if(sc.type==="photo")photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);
     else if(sc.type==="gallery")drawPhotoGallery(c,lt);
     else if(sc.type==="title")s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[0]);
     else if(sc.type==="end")s.card(c,W,H,{kicker:"Trân trọng cảm ơn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[Math.min(1,o.photos.length-1)]);
@@ -445,8 +451,8 @@ function Engine(canvas,o){
   function render(){
     const s=S(),W=canvas.width,H=canvas.height,cur=o.scenes[idx];if(!cur)return;
     ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
-    const T=TT();
-    if(prev&&t<T){fitBufs();const A=bufs[0],B=bufs[1];draw(A.getContext("2d"),prev,prevT+t);draw(B.getContext("2d"),cur,t);ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);trans(ctx,A,B,ease(t/T),W,H,cur.k)}
+    const nm=nameFor(cur),T=TT(nm);
+    if(prev&&t<T){fitBufs();const A=bufs[0],B=bufs[1];draw(A.getContext("2d"),prev,prevT+t);draw(B.getContext("2d"),cur,t);ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);trans(ctx,A,B,ease(t/T),W,H,cur.k,nm)}
     else{if(cur.type==="gallery")fitBufs();draw(ctx,cur,t)}
     if(s.overlay)s.overlay(ctx,W,H,time);
     ctx.restore();
@@ -488,7 +494,7 @@ function Player(p){
   function size(){const dpr=Math.min(2,window.devicePixelRatio||1);let w=ov.clientWidth*dpr,h=ov.clientHeight*dpr;const k=Math.min(1,2560/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k)}
   size();const ro=new ResizeObserver(size);ro.observe(ov);
   const mk=()=>build(p.mode,p.photos.length,p.cfg);
-  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,frame:p.cfg.frame,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
+  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
   function label(i,sc){lbl.textContent=(i+1)+"/"+eng.scenes.length+" · "+sc.name}
   label(0,eng.scene);
   // music
@@ -527,5 +533,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,prep,focus,build,Engine,Player,total,STY};
+G.SlideEngine={ready,prep,focus,autoTrans,build,Engine,Player,total,STY};
 })(window);
