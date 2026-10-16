@@ -99,6 +99,8 @@
   const KIND = { wedding: "Gói 1 đám cưới", studio: "Gói studio", year: "Gói 1 năm" };
   function showPlan(p) {
     $("pro").hidden = !!p.missing;
+    // open test: everyone has Pro, no code box (turn off with supabase/open-beta.sql)
+    $("redeem").hidden = !!p.beta && !p.admin; if (p.beta && !p.admin) { $("planTitle").textContent = "Bản dùng thử, mở toàn bộ tính năng"; $("planSub").textContent = "Đang trong giai đoạn thử nghiệm nên mọi tính năng Pro đều mở miễn phí. Thấy lỗi hay góp ý gì thì báo lại giúp nhé."; return; }
     $("adminLink").hidden = !p.admin;
     $("planTitle").textContent = p.until ? "Đang dùng bản Pro" : p.pro ? "Bản Pro (quản trị)" : "Bản miễn phí";
     $("planSub").textContent = p.until

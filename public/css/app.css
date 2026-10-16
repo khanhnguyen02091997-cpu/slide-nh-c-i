@@ -220,3 +220,4 @@ a.btn{text-decoration:none}
 .fold>summary .hint{font-weight:400;margin:0}
 .fold>:not(summary){margin:0 12px 12px}
 .t-manual{gap:8px}
+.redeem[hidden]{display:none}
