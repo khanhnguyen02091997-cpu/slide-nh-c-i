@@ -143,10 +143,11 @@ function renderPhotos() {
   const grid = $("grid"); grid.innerHTML = "";
   photos.forEach((p, i) => {
     const d = document.createElement("div"); d.className = "thumb";
-    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="l" aria-label="Đưa lên trước">‹</button><button data-a="x" aria-label="Xóa ảnh">✕</button><button data-a="r" aria-label="Đưa ra sau">›</button></div>`;
+    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="l" aria-label="Đưa lên trước">‹</button><button data-a="c" aria-label="Tạo ảnh chibi từ ảnh này">✨</button><button data-a="x" aria-label="Xóa ảnh">✕</button><button data-a="r" aria-label="Đưa ra sau">›</button></div>`;
     d.querySelector("img").alt = p.name;
     d.querySelectorAll("button").forEach((b) => b.onclick = () => {
       const a = b.dataset.a;
+      if (a === "c") return chibiPick(p);
       if (a === "x") { if (p.path) removed.photos.push(p); else if (!p.sample && p.thumb.startsWith("blob:")) URL.revokeObjectURL(p.thumb); photos.splice(i, 1); }
       if (a === "l" && i > 0) [photos[i - 1], photos[i]] = [photos[i], photos[i - 1]];
       if (a === "r" && i < photos.length - 1) [photos[i + 1], photos[i]] = [photos[i], photos[i + 1]];
@@ -396,8 +397,60 @@ const bootSrc = `(async function(){
 })();`;
 
 /* ----- AI music finder (server-side, uses the site's own AI key) ----- */
+/* ----- chibi ----- */
+let chPick = null, chStyle = "anime", chBlob = null, chCtl = null;
+function chibiPick(p, scroll = true) {
+  chPick = p; $("chSrc").src = p.thumb; $("chSrc").hidden = false; $("chSrcEmpty").hidden = true;
+  $("chGo").disabled = false; $("chNote").textContent = p.sample ? "Đây là ảnh mẫu, chọn ảnh cưới thật sẽ ra đẹp hơn." : "Chọn kiểu rồi bấm Tạo chibi.";
+  if (scroll) $("chibi").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+$("chStyles").querySelectorAll("button").forEach((b) => b.onclick = () => {
+  chStyle = b.dataset.s; $("chStyles").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+function smallJpeg(c) { const k = Math.min(1, 1024 / Math.max(c.width, c.height)), o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k); o.getContext("2d").drawImage(c, 0, 0, o.width, o.height); return o.toDataURL("image/jpeg", .88); }
+$("chGo").onclick = async () => {
+  if (!chPick) return;
+  chCtl && chCtl.abort(); chCtl = new AbortController();
+  $("chGo").disabled = true; $("chAdd").hidden = $("chSave").hidden = true; $("chOut").hidden = true; $("chOutEmpty").hidden = false;
+  $("chOutEmpty").textContent = "AI đang vẽ..."; $("chOut").parentElement.classList.add("busy");
+  $("chNote").textContent = "Thường mất 10 đến 30 giây.";
+  try {
+    const { data } = await client.auth.getSession();
+    const r = await fetch("/api/chibi", { method: "POST", signal: chCtl.signal,
+      headers: { "content-type": "application/json", authorization: "Bearer " + (data.session && data.session.access_token) },
+      body: JSON.stringify({ image: smallJpeg(chPick.ph.c), style: chStyle }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.image) {
+      chBlob = await (await fetch(j.image)).blob();
+      $("chOut").src = j.image; $("chOut").hidden = false; $("chOutEmpty").hidden = true;
+      $("chAdd").hidden = $("chSave").hidden = false;
+      $("chNote").textContent = `Xong. Thích thì bấm Thêm vào album, chưa ưng thì bấm Tạo chibi lần nữa. Hôm nay đã dùng ${j.used}/${j.limit} lượt AI.`;
+    } else {
+      $("chOutEmpty").textContent = "Chưa tạo được";
+      $("chNote").textContent =
+        r.status === 429 ? `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt AI, mai thử lại nhé.` :
+        r.status === 401 ? "Phiên đăng nhập hết hạn, tải lại trang rồi thử." :
+        j.error === "need_billing" ? "Key Gemini miễn phí không được tạo ảnh. Cần bật thanh toán cho key trong Google AI Studio." :
+        j.error === "ai_busy" ? "AI đang quá tải, đợi 1-2 phút rồi thử lại nhé." :
+        "Chưa tạo được ảnh, thử lại hoặc chọn ảnh khác nhé." + (j.detail ? " (Chi tiết: " + j.detail + ")" : "");
+    }
+  } catch (e) {
+    $("chOutEmpty").textContent = "Chưa tạo được"; $("chNote").textContent = "Chưa kết nối được AI, thử lại sau nhé.";
+  }
+  $("chOut").parentElement.classList.remove("busy"); $("chGo").disabled = false;
+};
+$("chAdd").onclick = () => {
+  if (!chBlob) return;
+  const base = (chPick && chPick.name || "anh").replace(/\.[^.]+$/, "");
+  addFiles([new File([chBlob], "chibi-" + base + ".png", { type: chBlob.type || "image/png" })]);
+  $("chAdd").hidden = true; $("chNote").textContent = "Đã thêm ảnh chibi vào cuối danh sách ảnh.";
+};
+$("chSave").onclick = () => chBlob && saveFile(chBlob, "chibi-" + slug() + ".png");
+
 function setupAI(enabled) {
   if (!enabled) return;
+  document.body.classList.add("has-ai"); $("chibi").hidden = false;
+  const first = photos.find((p) => !p.sample); if (first) chibiPick(first, false), $("chNote").textContent = "Chọn kiểu rồi bấm Tạo chibi, hoặc bấm ✨ trên ảnh khác.";
   $("ai").hidden = false;
   let ctl = null;
   const link = (href, txt) => { const a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = txt; return a; };

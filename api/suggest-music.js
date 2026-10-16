@@ -14,14 +14,14 @@ const MODE_NAME = {
   deliver: "bộ slide giao cho cô dâu chú rể",
 };
 
-async function supabaseUser(token) {
+export async function supabaseUser(token) {
   const r = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
   });
   return r.ok ? r.json() : null;
 }
 
-async function bumpUsage(token) {
+export async function bumpUsage(token) {
   const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/bump_ai_usage`, {
     method: "POST",
     headers: {

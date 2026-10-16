@@ -49,6 +49,25 @@
           <p class="hint" id="photoHint"></p>
           <label class="btn">＋ Thêm ảnh<input id="photoInput" type="file" accept="image/*" multiple></label>
         </div>
+        <div class="ai" id="chibi" hidden>
+          <h3>✦ Ảnh chibi bằng AI <small>bấm ✨ trên một ảnh, AI vẽ lại thành chibi dễ thương</small></h3>
+          <div class="chibi-row">
+            <div class="chibi-box"><img id="chSrc" alt="Ảnh gốc" hidden><span id="chSrcEmpty">Chưa chọn ảnh</span></div>
+            <span class="chibi-arrow" aria-hidden="true">→</span>
+            <div class="chibi-box"><img id="chOut" alt="Ảnh chibi" hidden><span id="chOutEmpty">Ảnh chibi hiện ở đây</span></div>
+          </div>
+          <div class="chips" id="chStyles" role="radiogroup" aria-label="Kiểu chibi">
+            <button data-s="anime" aria-pressed="true">Anime 2D</button>
+            <button data-s="3d" aria-pressed="false">Tượng 3D</button>
+            <button data-s="water" aria-pressed="false">Màu nước</button>
+          </div>
+          <div class="ai-row">
+            <button id="chGo" disabled>✨ Tạo chibi</button>
+            <button id="chAdd" hidden>＋ Thêm vào album</button>
+            <button id="chSave" hidden>⬇ Tải ảnh</button>
+          </div>
+          <p class="note" id="chNote" role="status">Bấm ✨ trên một ảnh ở trên để chọn ảnh.</p>
+        </div>
       </section>
 
       <section>
