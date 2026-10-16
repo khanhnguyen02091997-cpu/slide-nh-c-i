@@ -17,16 +17,22 @@
     <h1>Slide Ảnh Cưới <em id="titleNames">của bạn</em></h1>
   </div>
 
+  <div class="tabs" role="tablist" aria-label="Chọn phần làm">
+    <button role="tab" data-part="slide" aria-selected="true"><b>▶ Slide trình chiếu</b><span>Chiếu tiệc, sân khấu, file giao khách</span></button>
+    <button role="tab" data-part="video" aria-selected="false"><b>🎬 Video có nhạc</b><span>Xuất file video ngang hoặc dọc</span></button>
+    <button role="tab" data-part="album" aria-selected="false"><b>📖 Album ảnh in</b><span>Tự dàn trang, tải PDF gửi tiệm in</span></button>
+  </div>
+
   <div class="layout">
     <div class="main">
-      <section>
+      <section data-part="slide">
         <h2><span class="n">1</span>Mục đích làm slide</h2>
         <div class="opts" id="modes">
           <label class="opt"><input type="radio" name="mode" value="party" checked><b>Chiếu ảnh liên tục ở tiệc cưới</b><span>Tự chạy vòng lặp cả buổi, có nhạc, giữ màn hình luôn sáng.</span></label>
           <label class="opt"><input type="radio" name="mode" value="stage"><b>Màn hình sân khấu lúc làm lễ</b><span>Bấm chuyển từng màn theo chương trình, dùng được bút trình chiếu.</span></label>
-          <label class="opt"><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
+          <label class="opt" hidden><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
           <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
-          <label class="opt"><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
+          <label class="opt" hidden><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
         </div>
       </section>
 
@@ -71,7 +77,7 @@
         </div>
       </section>
 
-      <section>
+      <section data-part="slide video">
         <div class="sec-h">
           <h2><span class="n">4</span>Nhạc nền</h2>
           <label class="btn">♪ Thêm nhạc<input id="musicInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac" multiple></label>

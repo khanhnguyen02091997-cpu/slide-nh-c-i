@@ -317,10 +317,29 @@ function startPreview() {
 function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); } requestAnimationFrame(pvFrame); }
 new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val("mode") === "album") { sizePv(); renderBook(); } }).observe(pv);
 
+/* ----- parts: slide (party / stage / deliver), video, album ----- */
+const partOf = (mode) => mode === "video" || mode === "album" ? mode : "slide";
+let lastSlide = "party";
+function showPart(part) {
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.part === part)));
+  document.querySelectorAll("section[data-part]").forEach((sec) => sec.hidden = !sec.dataset.part.split(" ").includes(part));
+  let n = 0; document.querySelectorAll(".main section").forEach((sec) => { if (!sec.hidden) { const el = sec.querySelector("h2 .n"); if (el) el.textContent = ++n; } });
+  const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới" }[part];
+  document.querySelector("h1").firstChild.textContent = h + " ";
+}
+document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+  const part = b.dataset.part, cur = val("mode");
+  if (partOf(cur) === part) return;
+  if (partOf(cur) === "slide") lastSlide = cur;
+  const mode = part === "slide" ? lastSlide : part;
+  document.querySelector(`input[name=mode][value="${mode}"]`).checked = true;
+  showPart(part); refresh(); changed();
+});
+
 /* ----- mode-dependent action ----- */
 const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in" };
 function refresh() {
-  const mode = val("mode"); document.body.dataset.mode = mode;
+  const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
   const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" ? "party" : mode, n, c);
   const notes = {
