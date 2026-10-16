@@ -1,0 +1,16 @@
+{
+  "name": "Slide Ảnh Cưới",
+  "short_name": "Ảnh Cưới",
+  "description": "Làm slide chiếu tiệc, video có nhạc, album ảnh in và file giao khách.",
+  "lang": "vi",
+  "start_url": "/albums.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f3ef",
+  "theme_color": "#1a120b",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

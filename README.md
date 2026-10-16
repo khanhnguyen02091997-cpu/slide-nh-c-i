@@ -14,6 +14,10 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 
 Mỗi người đăng ký bằng email (hoặc Google), album, ảnh và nhạc được lưu riêng, người khác không xem được.
 
+## Cài như app
+
+Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc trên (hoặc biểu tượng cài đặt trên thanh địa chỉ). Trên iPhone: Safari, nút Chia sẻ, **Thêm vào MH chính**. Trên Mac Safari: Tệp, **Thêm vào Dock**.
+
 ## Cấu trúc
 
 | Đường dẫn | Nội dung |

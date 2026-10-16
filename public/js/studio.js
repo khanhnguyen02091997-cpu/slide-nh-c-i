@@ -321,13 +321,13 @@ new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val
 const partOf = (mode) => mode === "video" || mode === "album" ? mode : "slide";
 let lastSlide = "party";
 function showPart(part) {
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.part === part)));
+  document.querySelectorAll(".parts button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.part === part)));
   document.querySelectorAll("section[data-part]").forEach((sec) => sec.hidden = !sec.dataset.part.split(" ").includes(part));
   let n = 0; document.querySelectorAll(".main section").forEach((sec) => { if (!sec.hidden) { const el = sec.querySelector("h2 .n"); if (el) el.textContent = ++n; } });
   const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới" }[part];
   document.querySelector("h1").firstChild.textContent = h + " ";
 }
-document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
   const part = b.dataset.part, cur = val("mode");
   if (partOf(cur) === part) return;
   if (partOf(cur) === "slide") lastSlide = cur;
