@@ -30,6 +30,7 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `api/config.js` | Trả cấu hình công khai cho trình duyệt |
 | `api/suggest-music.js` | AI gợi ý nhạc, kiểm tra đăng nhập và giới hạn lượt |
 | `supabase/schema.sql` | Bảng dữ liệu, phân quyền, kho lưu ảnh và nhạc |
+| `supabase/free-limits.sql` | Giới hạn bản miễn phí ở máy chủ (tối đa 10 ảnh mỗi album) |
 
 Không có bước build. Web tĩnh nằm trong `public/`, hàm máy chủ trong `api/` chạy trên Vercel.
 
@@ -38,7 +39,7 @@ Không có bước build. Web tĩnh nằm trong `public/`, hàm máy chủ trong
 ### 1. Supabase (tài khoản, dữ liệu, lưu ảnh)
 
 1. Tạo project miễn phí tại https://supabase.com.
-2. Vào **SQL Editor > New query**, dán toàn bộ `supabase/schema.sql`, bấm **Run**.
+2. Vào **SQL Editor > New query**, dán toàn bộ `supabase/schema.sql`, bấm **Run**. Sau đó làm tương tự với `supabase/free-limits.sql`.
 3. Vào **Authentication > URL Configuration**:
    - **Site URL**: địa chỉ web của bạn, ví dụ `https://slide-cuoi.vercel.app`
    - **Redirect URLs**: thêm `https://slide-cuoi.vercel.app/**`

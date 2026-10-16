@@ -115,7 +115,8 @@ async function save() {
     }
     status("Đã lưu");
   } catch (e) {
-    status("Chưa lưu được, sẽ thử lại khi bạn sửa tiếp (" + (e.message || e) + ")", true);
+    const m = String(e.message || e);
+    status(/free_photo_limit|free photo limit/.test(m) ? `Bản miễn phí chỉ lưu được ${FREE.photos} ảnh mỗi album. Xóa bớt ảnh hoặc nhập mã Pro.` : "Chưa lưu được, sẽ thử lại khi bạn sửa tiếp (" + m + ")", true);
   }
   saving = false;
   if (again) save();

@@ -228,3 +228,5 @@ revoke all on function public.is_admin(), public.my_plan(), public.new_code(), p
   public.admin_create_codes(text, int, text), public.admin_list_codes(), public.admin_set_revoked(text, boolean) from public, anon;
 grant execute on function public.is_admin(), public.my_plan(), public.redeem_code(text),
   public.admin_create_codes(text, int, text), public.admin_list_codes(), public.admin_set_revoked(text, boolean) to authenticated;
+
+-- Free plan limits (10 photos per album) live in free-limits.sql: run it after this file.
