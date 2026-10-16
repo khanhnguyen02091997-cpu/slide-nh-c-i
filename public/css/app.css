@@ -201,3 +201,6 @@ a.btn{text-decoration:none}
 .tag.off{color:#b4442f}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .filters button[aria-pressed=true]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+#grid .thumb{touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+#grid .thumb.lifting{opacity:.3;outline:2px dashed var(--accent,#a0784a);outline-offset:-2px}
+.thumb.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:grabbing}

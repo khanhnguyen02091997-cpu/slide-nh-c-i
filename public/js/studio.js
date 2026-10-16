@@ -151,23 +151,68 @@ function renderPhotos() {
   const grid = $("grid"); grid.innerHTML = "";
   photos.forEach((p, i) => {
     const d = document.createElement("div"); d.className = "thumb";
-    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="l" aria-label="Đưa lên trước">‹</button><button data-a="f" aria-label="Chỉnh vùng cắt ảnh">✥</button><button data-a="c" aria-label="Tạo ảnh chibi từ ảnh này">✨</button><button data-a="x" aria-label="Xóa ảnh">✕</button><button data-a="r" aria-label="Đưa ra sau">›</button></div>`;
+    d.innerHTML = `<img alt="" src="${p.thumb}"><span class="n">${i + 1}</span><div class="tools"><button data-a="f" aria-label="Chỉnh vùng cắt ảnh">✥</button><button data-a="c" aria-label="Tạo ảnh chibi từ ảnh này">✨</button><button data-a="x" aria-label="Xóa ảnh">✕</button></div>`;
+    d.photo = p;
     const im = d.querySelector("img"); im.alt = p.name; im.title = "Bấm để chỉnh vùng cắt";
-    im.style.objectPosition = `${(p.ph.fx ?? .5) * 100}% ${(p.ph.fy ?? .5) * 100}%`; im.onclick = () => openCrop(p);
+    im.style.objectPosition = `${(p.ph.fx ?? .5) * 100}% ${(p.ph.fy ?? .5) * 100}%`; im.draggable = false;
+    im.onclick = () => { if (!dragJustEnded) openCrop(p); };
+    dragSort(d);
     d.querySelectorAll("button").forEach((b) => b.onclick = () => {
       const a = b.dataset.a;
       if (a === "c") return chibiPick(p);
       if (a === "f") return openCrop(p);
       if (a === "x") { if (p.path) removed.photos.push(p); else if (!p.sample && p.thumb.startsWith("blob:")) URL.revokeObjectURL(p.thumb); photos.splice(i, 1); }
-      if (a === "l" && i > 0) [photos[i - 1], photos[i]] = [photos[i], photos[i - 1]];
-      if (a === "r" && i < photos.length - 1) [photos[i + 1], photos[i]] = [photos[i], photos[i + 1]];
       renderPhotos(); refresh(); changed();
     });
     grid.appendChild(d);
   });
   $("count").textContent = photos.length + " ảnh";
-  $("photoHint").textContent = photos.some((p) => p.sample) ? "Đang có ảnh mẫu. Thêm ảnh của bạn là ảnh mẫu tự biến mất. Kéo thả ảnh vào khung cũng được." : "Dùng ‹ › để đổi thứ tự, ✕ để xóa. Kéo thả thêm ảnh vào khung.";
+  $("photoHint").textContent = photos.some((p) => p.sample) ? "Đang có ảnh mẫu. Thêm ảnh của bạn là ảnh mẫu tự biến mất. Kéo thả ảnh vào khung cũng được." : "Giữ chuột (hoặc giữ ngón tay) rồi kéo ảnh để đổi thứ tự, ✕ để xóa. Kéo thả thêm ảnh vào khung.";
 }
+/* Reorder by dragging a thumbnail. Mouse: drag past a few pixels. Touch: hold briefly first so the page can still scroll. */
+let drag = null, dragJustEnded = false;
+function dragSort(el) {
+  el.addEventListener("pointerdown", (e) => {
+    if (e.button || e.target.closest("button") || drag) return;
+    const st = { el, id: e.pointerId, x: e.clientX, y: e.clientY, on: false, touch: e.pointerType !== "mouse" };
+    drag = st;
+    if (st.touch) st.timer = setTimeout(() => begin(st), 260);
+  });
+}
+function begin(st) {
+  st.on = true; const r = st.el.getBoundingClientRect();
+  st.dx = st.x - r.left; st.dy = st.y - r.top;
+  st.ghost = st.el.cloneNode(true); st.ghost.className = "thumb ghost"; st.ghost.style.width = r.width + "px";
+  document.body.appendChild(st.ghost); st.el.classList.add("lifting"); place(st, st.x, st.y);
+  navigator.vibrate?.(15);
+}
+function place(st, x, y) {
+  st.ghost.style.transform = `translate(${x - st.dx}px,${y - st.dy}px) rotate(-2deg)`;
+  const grid = $("grid"), over = document.elementFromPoint(x, y)?.closest("#grid .thumb");
+  if (!over || over === st.el) return;
+  const r = over.getBoundingClientRect(), after = x > r.left + r.width / 2;
+  grid.insertBefore(st.el, after ? over.nextSibling : over);
+}
+addEventListener("pointermove", (e) => {
+  const st = drag; if (!st || e.pointerId !== st.id) return;
+  if (!st.on) {
+    if (Math.hypot(e.clientX - st.x, e.clientY - st.y) < 6) return;
+    if (st.touch) { clearTimeout(st.timer); drag = null; return; } // a swipe: let the page scroll
+    begin(st);
+  }
+  e.preventDefault(); place(st, e.clientX, e.clientY);
+}, { passive: false });
+addEventListener("touchmove", (e) => { if (drag?.on) e.preventDefault(); }, { passive: false });
+const endDrag = (e) => {
+  const st = drag; if (!st || e.pointerId !== st.id) return;
+  clearTimeout(st.timer); drag = null; if (!st.on) return;
+  st.ghost.remove(); st.el.classList.remove("lifting");
+  dragJustEnded = true; setTimeout(() => dragJustEnded = false, 50);
+  const order = [...$("grid").children].map((d) => d.photo);
+  if (order.some((p, i) => p !== photos[i])) { photos = order; renderPhotos(); refresh(); changed(); }
+};
+addEventListener("pointerup", endDrag); addEventListener("pointercancel", endDrag);
+
 async function addFiles(files) {
   const imgs = [...files].filter((f) => f.type.startsWith("image/")); if (!imgs.length) return;
   // Order by capture time when every photo has it (phones and cameras mixed), otherwise by file name.
