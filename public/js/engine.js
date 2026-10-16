@@ -455,6 +455,7 @@ function Engine(canvas,o){
     if(prev&&t<T){fitBufs();const A=bufs[0],B=bufs[1];draw(A.getContext("2d"),prev,prevT+t);draw(B.getContext("2d"),cur,t);ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);trans(ctx,A,B,ease(t/T),W,H,cur.k,nm)}
     else{if(cur.type==="gallery")fitBufs();draw(ctx,cur,t)}
     if(s.overlay)s.overlay(ctx,W,H,time);
+    if(o.mark)mark(ctx,W,H,o.mark);
     ctx.restore();
   }
   function go(n){
@@ -467,6 +468,8 @@ function Engine(canvas,o){
   function step(dt){time+=dt;t+=dt;const sc=o.scenes[idx];if(o.auto&&sc&&sc.dur&&t>=sc.dur)go(idx+1)}
   return{step,render,go,next:()=>go(idx+1),prev:()=>go(idx-1),get idx(){return idx},get scene(){return o.scenes[idx]},get scenes(){return o.scenes},opts:o};
 }
+// Small credit line in the corner (free plan).
+function mark(c,W,H,text){const u=U(W,H),fs=Math.max(11,17*u);c.save();c.font="500 "+fs+"px "+F.sans;c.textAlign="right";c.textBaseline="bottom";c.shadowColor="rgba(0,0,0,.55)";c.shadowBlur=6*u;c.fillStyle="rgba(255,255,255,.72)";c.fillText(text,W-22*u,H-18*u);c.restore()}
 function total(sc){return sc.reduce((s,x)=>s+x.dur,0)}
 
 /* ---------- fullscreen player ---------- */
@@ -494,7 +497,7 @@ function Player(p){
   function size(){const dpr=Math.min(2,window.devicePixelRatio||1);let w=ov.clientWidth*dpr,h=ov.clientHeight*dpr;const k=Math.min(1,2560/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k)}
   size();const ro=new ResizeObserver(size);ro.observe(ov);
   const mk=()=>build(p.mode,p.photos.length,p.cfg);
-  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
+  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,mark:p.cfg.mark,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
   function label(i,sc){lbl.textContent=(i+1)+"/"+eng.scenes.length+" · "+sc.name}
   label(0,eng.scene);
   // music
@@ -533,5 +536,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,prep,focus,autoTrans,build,Engine,Player,total,STY};
+G.SlideEngine={ready,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
 })(window);

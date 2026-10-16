@@ -6,6 +6,7 @@ let photos = [];   // {id?, path?, thumb, ph, sample?, name, w, h}
 let tracks = [];   // {id?, path?, name, url, file?}
 const removed = { photos: [], tracks: [] };
 let loading = true;
+let plan = { pro: true };
 
 /* ----- sample photos for an empty album ----- */
 function sample(i) {
@@ -271,7 +272,7 @@ function fitted(mode) {
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
-function cfg() { const f = fitted(val("mode")); return { trans: "auto", trs: transList(), frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function cfg() { const f = fitted(val("mode")); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
 function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, book: +$("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
@@ -300,7 +301,7 @@ async function exportBook() {
   const size = +$("bookSize").value;
   $("go").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
   try {
-    const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { sizeCm: size, px: size >= 30 ? 2400 : 2000,
+    const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { sizeCm: size, px: size >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK,
       onPage: (i, n) => { $("vbar").style.width = (i / n * 100) + "%"; $("vtxt").textContent = `Đang tạo trang ${i} / ${n}`; } });
     saveFile(blob, slug() + "-album.pdf");
     $("goNote").textContent = `Đã tải album PDF (${(blob.size / 1048576).toFixed(1)} MB, ${bookPages.length} trang ${size} × ${size} cm). Gửi file này cho tiệm in là được.`;
@@ -314,7 +315,7 @@ function startPreview() {
   if (mode === "album") { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
-  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, trans: c.trans, trs: c.trs, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
+  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
@@ -428,7 +429,7 @@ async function exportVideo() {
   const vertical = $("vfmt").value === "v", W = vertical ? 1080 : 1920, H = vertical ? 1920 : 1080;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cfg(), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
+  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
   eng.render();
   const stream = cv.captureStream(30); let ac = null;
   $("go").disabled = true; $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
@@ -497,7 +498,7 @@ const bootSrc = `(async function(){
   await SE.ready;
   let raf=0,last=performance.now(),eng=null;
   function size(){const d=Math.min(2,devicePixelRatio||1);bg.width=innerWidth*d;bg.height=innerHeight*d}
-  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,sec:D.cfg.sec,trans:D.cfg.trans,trs:D.cfg.trs,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
+  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,mark:D.cfg.mark,sec:D.cfg.sec,trans:D.cfg.trans,trs:D.cfg.trs,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
   function f(n){eng.step(Math.min(.1,(n-last)/1000));last=n;eng.render();raf=requestAnimationFrame(f)}
   addEventListener("resize",size);idle();
   go.disabled=false;go.textContent=D.tracks.length?"▶ Xem slide cùng nhạc":"▶ Xem slide";
@@ -562,7 +563,7 @@ $("chGo").onclick = async () => {
     } else {
       $("chOutEmpty").textContent = "Chưa tạo được";
       $("chNote").textContent =
-        r.status === 429 ? `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt AI, mai thử lại nhé.` :
+        r.status === 429 ? `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt AI, mai thử lại nhé.${plan.pro ? "" : " Nhập mã Pro ở trang Album của tôi để có thêm lượt."}` :
         r.status === 401 ? "Phiên đăng nhập hết hạn, tải lại trang rồi thử." :
         j.error === "need_billing" ? "Key Gemini miễn phí không được tạo ảnh. Cần bật thanh toán cho key trong Google AI Studio." :
         j.error === "ai_busy" ? "AI đang quá tải, đợi 1-2 phút rồi thử lại nhé." :
@@ -602,7 +603,7 @@ function setupAI(enabled) {
         body: JSON.stringify({ query: q, mode: val("mode"), style: val("style"), photos: photos.length }),
       });
       const j = await r.json().catch(() => ({}));
-      if (r.status === 429) $("aiNote").textContent = `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt tìm nhạc, mai thử lại nhé.`;
+      if (r.status === 429) $("aiNote").textContent = `Hôm nay bạn đã dùng hết ${j.limit || ""} lượt tìm nhạc, mai thử lại nhé.${plan.pro ? "" : " Nhập mã Pro ở trang Album của tôi để có thêm lượt."}`;
       else if (r.status === 401) $("aiNote").textContent = "Phiên đăng nhập hết hạn, tải lại trang rồi thử.";
       else if (j.error === "ai_busy") $("aiNote").textContent = "AI miễn phí đang quá tải, đợi 1-2 phút rồi bấm Tìm nhạc lại nhé.";
       else if (!r.ok) $("aiNote").textContent = "AI đang bận, thử lại sau nhé." + (j.detail ? " (Chi tiết: " + j.detail + ")" : "");
@@ -635,6 +636,8 @@ function setupAI(enabled) {
   if (!albumId) return location.replace("/albums.html");
   user = await requireUser();
   client = await sb();
+  plan = await myPlan();
+  $("planNote").hidden = plan.pro;
   $("email").textContent = user.email || "";
   $("out").onclick = signOut;
   fetch("/api/config").then((r) => r.json()).then((c) => { setupAI(c.aiEnabled); if (c.chibiEnabled) setupChibi(); }).catch(() => {});
