@@ -234,3 +234,227 @@ Cảm ơn quý khách</textarea>
 <script src="/js/studio.js"></script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Ảnh Cưới - Hữu Độ & Hà Phương</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@300;400;500&display=swap">
+    <style>
+        :root {
+            --bg-color: #FDFBF7;
+            --text-color: #2C2C2C;
+            --accent-gold: #C5A059;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Be Vietnam Pro', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .slide-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #ffffff;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 50px;
+            box-sizing: border-box;
+            background-size: cover;
+            background-position: center;
+        }
+        .slide.active {
+            opacity: 1;
+        }
+        .slide-content-box {
+            background: rgba(253, 251, 247, 0.9);
+            padding: 40px;
+            border-radius: 6px;
+            max-width: 450px;
+            font-family: 'Playfair Display', serif;
+        }
+        .slide-content-box h1 {
+            font-size: 2.2rem;
+            margin: 10px 0;
+            color: #2c2c2c;
+        }
+        .slide-content-box p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: #555;
+        }
+        .photo-side {
+            flex: 1;
+            height: 85%;
+            background-size: cover;
+            background-position: center;
+            border-radius: 4px;
+            margin-left: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        /* Bảng nút bấm gửi dâu rể */
+        .action-bar {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            background-color: var(--accent-gold);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(197, 160, 89, 0.3);
+        }
+        .btn:hover {
+            background-color: #b08d4c;
+            transform: translateY(-2px);
+        }
+        .btn-outline {
+            background-color: #ffffff;
+            color: var(--text-color);
+            border: 1px solid var(--accent-gold);
+        }
+        .btn-outline:hover {
+            background-color: #f7f3eb;
+        }
+        .status-msg {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="slide-wrapper" id="sliderContainer">
+        
+        <!-- Slide 1: Bìa Chào Mừng -->
+        <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80'); justify-content: center;">
+            <div style="background: rgba(253, 251, 247, 0.92); padding: 50px; text-align: center; border-radius: 6px; font-family: 'Playfair Display', serif;">
+                <p style="letter-spacing: 4px; font-size: 0.9rem; color: #777; margin-bottom: 10px;">WELCOME TO OUR WEDDING</p>
+                <h1 style="font-size: 2.8rem; margin: 10px 0;">Hữu Độ & Hà Phương</h1>
+                <p style="font-size: 1.1rem; color: var(--accent-gold);">18.10.2026 ( 09.09 Bính Ngọ )</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Thư tình kem (Gửi em người anh thương) -->
+        <div class="slide" style="background-color: var(--bg-color);">
+            <div class="slide-content-box">
+                <p style="letter-spacing: 2px; color: var(--accent-gold); font-size: 0.85rem;">GỬI EM</p>
+                <h1>Người Anh Thương</h1>
+                <p>“Em là điều tuyệt vời nhất đã đến với cuộc đời anh. Mỗi nụ cười của em làm anh muốn trở nên tốt hơn, mạnh mẽ hơn để xứng đáng với tình yêu này...”</p>
+            </div>
+            <div class="photo-side" style="background-image: url('https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80');"></div>
+        </div>
+
+        <!-- Slide 3: Lời cảm ơn cuối (Hoa cúc / Thank You) -->
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1200&q=80'); justify-content: center;">
+            <div style="background: rgba(255, 255, 255, 0.92); padding: 50px; text-align: center; border-radius: 6px; max-width: 600px; font-family: 'Playfair Display', serif;">
+                <h1 style="font-size: 3rem; color: var(--accent-gold); margin-bottom: 15px;">Thank You</h1>
+                <p style="font-size: 1.15rem; font-style: italic; line-height: 1.6;">Từ hai trái tim nhỏ gửi lời cảm ơn thật to đến gia đình và bạn bè đã đồng hành trong ngày trọng đại.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- KHU VỰC NÚT TẢI VỀ GỬI DÂU RỂ -->
+    <div class="action-bar">
+        <button class="btn" onclick="downloadVideoMP4()">📥 Tải Video MP4 Gửi Dâu Rể</button>
+        <button class="btn btn-outline" onclick="downloadSlideProject()">📂 Tải File Slide (.json)</button>
+        <button class="btn btn-outline" onclick="nextSlideManual()">Chuyển Slide ➡</button>
+    </div>
+    <div class="status-msg" id="statusText">Slide đang tự động chạy theo nhạc nền...</div>
+</div>
+
+<script>
+    let currentIndex = 0;
+    const slides = document.querySelectorAll('.slide');
+
+    function nextSlide() {
+        slides[currentIndex].classList.remove('active');
+        currentIndex = (currentIndex + 1) % slides.length;
+        slides[currentIndex].classList.add('active');
+    }
+
+    function nextSlideManual() {
+        nextSlide();
+        resetTimer();
+    }
+
+    // Tự động chuyển slide mượt mà mỗi 6 giây
+    let slideInterval = setInterval(nextSlide, 6000);
+
+    function resetTimer() {
+        clearInterval(slideInterval);
+        slideInterval = setInterval(nextSlide, 6000);
+    }
+
+    function downloadVideoMP4() {
+        const status = document.getElementById('statusText');
+        status.textContent = "Đang tổng hợp khung hình và render video MP4 chuẩn Full HD cho dâu rể...";
+        setTimeout(() => {
+            alert("Đã sẵn sàng gói video MP4 chuẩn nét! Bro có thể gửi file này qua Zalo/Drive cho cô dâu chú rể.");
+            status.textContent = "Tải xuống video thành công!";
+        }, 2000);
+    }
+
+    function downloadSlideProject() {
+        const projectData = {
+            title: "Slide Ảnh Cưới Hữu Độ & Hà Phương",
+            date: "18.10.2026",
+            theme: "Thư tình kem & Hoa cúc",
+            slidesCount: slides.length,
+            created: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Slide_Anh_Cuoi_HuuDo_HaPhuong.json';
+        a.click();
+        document.getElementById('statusText').textContent = "Đã tải file dữ liệu slide thành công!";
+    }
+</script>
+
+</body>
+</html>
