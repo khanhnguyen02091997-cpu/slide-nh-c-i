@@ -225,3 +225,7 @@ a.btn{text-decoration:none}
 .nf-pick button{font-size:19px;padding:10px 14px;min-height:52px;justify-content:center}
 .nf-pick button[data-v="auto"]{font-family:inherit;font-size:14px}
 .nf-pick .nf-s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.letters{margin-top:12px}
+.letters .hint{grid-column:1/-1}
+.letters textarea{min-height:110px}
+.dl{display:flex;flex-direction:column;gap:6px}

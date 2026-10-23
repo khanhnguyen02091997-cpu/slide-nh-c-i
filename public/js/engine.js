@@ -2,7 +2,7 @@
 (function(G){
 "use strict";
 const F={play:'"Playfair Display",Georgia,serif',corm:'"Cormorant Garamond",Georgia,serif',sans:'"Be Vietnam Pro",system-ui,sans-serif',mont:'Montserrat,"Be Vietnam Pro",system-ui,sans-serif'};
-const ready=document.fonts?Promise.all(['italic 500 40px "Playfair Display"','italic 400 40px "Playfair Display"','italic 500 40px "Cormorant Garamond"','italic 400 40px "Cormorant Garamond"','300 40px "Be Vietnam Pro"','400 40px "Be Vietnam Pro"','800 40px Montserrat','600 40px Montserrat'].map(f=>document.fonts.load(f,"Ắ").catch(()=>{}))).then(()=>{}):Promise.resolve();
+const ready=document.fonts?Promise.all(['italic 500 40px "Playfair Display"','italic 400 40px "Playfair Display"','italic 500 40px "Cormorant Garamond"','italic 400 40px "Cormorant Garamond"','300 40px "Be Vietnam Pro"','400 40px "Be Vietnam Pro"','800 40px Montserrat','400 40px "Great Vibes"','600 40px Montserrat'].map(f=>document.fonts.load(f,"Ắ").catch(()=>{}))).then(()=>{}):Promise.resolve();
 /* Couple-name fonts the user can pick; "auto" keeps each style's own. All have Vietnamese glyphs. */
 const NAMEF={vibes:["Great Vibes",1.4],dancing:["Dancing Script",1.15,600],pinyon:["Pinyon Script",1.3],alex:["Alex Brush",1.4],playball:["Playball",1.15],charm:["Charm",1.1,700],corinthia:["Corinthia",1.7],pacifico:["Pacifico",1],lobster:["Lobster",1.05],patrick:["Patrick Hand",1.2]};
 const loadName=k=>NAMEF[k]&&document.fonts?document.fonts.load(`${NAMEF[k][2]||400} 40px "${NAMEF[k][0]}"`,"Ắ").catch(()=>{}):Promise.resolve();
@@ -347,6 +347,87 @@ STY.garden={T:1.6,
   overlay(c,W,H,t){falling(c,W,H,t,9,["#8aa37c","#a9bf98"],11,true)}
 };
 
+/* ---------- "Thư tình" cream template: each photo on its own blurred copy, script names, love letters ---------- */
+const SCR='"Great Vibes","Pinyon Script",cursive';
+const ED={paper:"#f6f2e4",ink:"#4a3a2c",soft:"#8b7560",text:"#3f3a33",gold:"#b08d57",head:"#5a4636"};
+function hearts(c,x,y,s,col){c.save();c.strokeStyle=col;c.lineWidth=Math.max(1,s*.05);heartPath(c,x-s*.2,y,s);c.stroke();heartPath(c,x+s*.2,y+s*.06,s*.82);c.stroke();c.restore()}
+function squares(c,x,y,u){c.fillStyle="#5a4636";c.fillRect(x,y,15*u,15*u);c.fillStyle="#9b8574";c.fillRect(x+27*u,y,15*u,15*u)}
+function daisy(c,x,y,r,rot){c.save();c.translate(x,y);c.rotate(rot);c.shadowColor="rgba(120,100,60,.2)";c.shadowBlur=r*.25;c.fillStyle="#fffdf6";
+  for(let k=0;k<16;k++){c.rotate(.3927);c.beginPath();c.ellipse(0,-r*.55,r*.13,r*.45,0,0,6.283);c.fill()}
+  c.shadowBlur=0;const g=c.createRadialGradient(0,0,0,0,0,r*.24);g.addColorStop(0,"#f4cf5d");g.addColorStop(1,"#d39a2a");c.fillStyle=g;c.beginPath();c.arc(0,0,r*.22,0,6.283);c.fill();c.restore()}
+function twinkle(c,x,y,r,a){c.save();c.globalAlpha*=a;c.fillStyle="#fff3c8";c.shadowColor="rgba(255,236,170,.9)";c.shadowBlur=r;c.beginPath();c.moveTo(x,y-r);c.quadraticCurveTo(x,y,x+r,y);c.quadraticCurveTo(x,y,x,y+r);c.quadraticCurveTo(x,y,x-r,y);c.quadraticCurveTo(x,y,x,y-r);c.fill();c.restore()}
+// Wrap keeping the writer's own line breaks.
+function paras(c,text,maxW){const out=[];text.split(/\n+/).forEach(p=>{p=p.trim();if(p)out.push(...wrap(c,p,maxW))});return out}
+STY.editorial={T:1.2,
+  base(c,W,H){c.fillStyle=ED.paper;c.fillRect(0,0,W,H);const g=c.createRadialGradient(W/2,H*.4,0,W/2,H*.4,Math.hypot(W,H)*.6);g.addColorStop(0,"rgba(255,254,247,.7)");g.addColorStop(1,"rgba(226,214,186,.3)");c.fillStyle=g;c.fillRect(0,0,W,H)},
+  blur(c,W,H,ph){c.fillStyle="#000";c.fillRect(0,0,W,H);cover(c,ph.b,0,0,W,H,1.12);c.fillStyle="rgba(246,242,228,.1)";c.fillRect(0,0,W,H)},
+  cap(c,W,H,info,u){const g=c.createLinearGradient(0,H*.68,0,H);g.addColorStop(0,"rgba(30,22,14,0)");g.addColorStop(1,"rgba(30,22,14,.55)");c.fillStyle=g;c.fillRect(0,H*.68,W,H*.32);
+    c.save();c.textAlign="center";c.textBaseline="middle";c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=12*u;c.fillStyle="#fffaf0";c.font=`400 ${66*u}px ${SCR}`;c.fillText(info.names,W/2,H-96*u);
+    c.font=`400 ${15*u}px ${F.sans}`;c.fillStyle="rgba(255,250,240,.88)";spaced(c,info.date,W/2,H-44*u,6*u);c.restore()},
+  photo(c,W,H,ph,p,i,info,t){
+    const u=U(W,H),r=fit(ph.ar,0,0,W,H),e=easeOut(t/1.3),q={x:r.x+(i%2?1:-1)*(1-e)*70*u,y:r.y,w:r.w,h:r.h};
+    this.blur(c,W,H,ph);
+    if(r.w<W*.96){c.save();c.shadowColor="rgba(0,0,0,.35)";c.shadowBlur=50*u;c.fillStyle="#000";c.fillRect(q.x,q.y,q.w,q.h);c.restore()}
+    shot(c,ph,q,p,i,.06);
+    if(info.cap)this.cap(c,W,H,info,u);
+  },
+  card(c,W,H,cd,t,ph){
+    if(cd.role==="end")return this.thanks(c,W,H,cd,t);
+    const u=U(W,H),land=W>H*1.15,a=clamp(t/1.2),e=easeOut(t/1.8);let o={},kick=cd.kicker;
+    if(ph&&cd.role==="title"){this.base(c,W,H);kick="Welcome to our wedding";
+      if(land){const pw=W*.46;c.save();c.globalAlpha=a;c.beginPath();c.rect(0,0,pw,H);c.clip();cover(c,ph.c,0,0,pw,H,1.08-.06*e);c.restore();
+        const g=c.createLinearGradient(pw-140*u,0,pw,0);g.addColorStop(0,"rgba(246,242,228,0)");g.addColorStop(1,"rgba(246,242,228,1)");c.fillStyle=g;c.fillRect(pw-140*u,0,141*u,H);
+        o={cx:pw+(W-pw)/2,maxW:(W-pw)*.8}}
+      else{const h=H*.5;c.save();c.globalAlpha=a;c.beginPath();c.rect(0,0,W,h);c.clip();cover(c,ph.c,0,0,W,h,1.08-.06*e);c.restore();
+        const g=c.createLinearGradient(0,h-140*u,0,h);g.addColorStop(0,"rgba(246,242,228,0)");g.addColorStop(1,"rgba(246,242,228,1)");c.fillStyle=g;c.fillRect(0,h-140*u,W,141*u);
+        o={cy:h+(H-h)/2,maxW:W*.84}}
+    }else if(ph){this.blur(c,W,H,ph);const bw=Math.min(W*.82,1150*u),bh=Math.min(H*.72,640*u);c.save();c.globalAlpha=.92*a;c.fillStyle=ED.paper;c.fillRect(W/2-bw/2,H/2-bh/2,bw,bh);c.restore();o={maxW:bw*.84}}
+    else this.base(c,W,H);
+    card2(c,W,H,Object.assign({},cd,{kicker:kick}),t,Object.assign({top:(cx,u)=>({h:90*u,f(y){hearts(c,cx,y,58*u,ED.gold)}}),
+      kick:[u=>`500 ${26*u}px ${F.play}`,ED.ink,4],big:[`400 {s}px ${SCR}`,ED.ink,128,104],amp:[u=>`400 ${66*u}px ${SCR}`,ED.gold],
+      sub:[u=>`400 ${17*u}px ${F.sans}`,ED.soft,5],msg:[u=>`italic 400 ${27*u}px ${F.corm}`,ED.soft]},o));
+  },
+  thanks(c,W,H,cd,t){this.base(c,W,H);const u=U(W,H),a=clamp(t/1.4);
+    // daisies along the bottom and in the top corners, swaying a little
+    for(let k=0;k<28;k++){const top=k>=20,x=top?(k%2?W*(.01+hash(k)*.15):W*(.84+hash(k)*.15)):(k+hash(k))/20*W,y=top?H*hash(k+40)*.2:H*(1.02-hash(k+50)*.24),r=(46+hash(k+9)*48)*u*(top?.75:1),sw=Math.sin(t*.7+k)*.06;
+      leaf(c,x,y,r*1.5,-1.9+hash(k+2)+sw,"rgba(131,150,108,.75)");leaf(c,x,y,r*1.2,-.9-hash(k+4)+sw,"rgba(155,172,128,.7)");daisy(c,x,y,r,hash(k+3)*6+sw)}
+    for(let k=0;k<16;k++)twinkle(c,hash(k+70)*W,(.06+hash(k+90)*.62)*H,(7+hash(k+5)*11)*u,(.25+.75*Math.abs(Math.sin(t*1.3+k*1.7)))*a);
+    const nm=cd.big.join(" & "),items=[
+      {h:190*u,f(y){c.font=`400 ${180*u}px ${SCR}`;c.fillStyle=ED.ink;c.fillText("Thank You",W/2,y)}},
+      {h:96*u,f(y){c.font=`400 ${86*u}px ${SCR}`;c.fillStyle=ED.gold;c.fillText("For Everything",W/2,y)}},
+      {h:70*u,f(y){hearts(c,W/2,y,40*u,ED.gold)}},
+      {h:44*u,f(y){c.font=`500 ${22*u}px ${F.play}`;c.fillStyle=ED.ink;c.fillText(nm,W/2,y)}}];
+    if(cd.msg){c.font=`italic 400 ${27*u}px ${F.corm}`;wrap(c,cd.msg,Math.min(W*.7,900*u)).forEach((l,j)=>items.push({h:(j?36:52)*u,f(y){c.font=`italic 400 ${27*u}px ${F.corm}`;c.fillStyle=ED.soft;c.fillText(l,W/2,y+(j?0:8*u))}}))}
+    stack(c,items,H*.44,a);
+  },
+  letter(c,W,H,L,t,ph,dur){this.base(c,W,H);const u=U(W,H),land=W>H*1.15,right=!!L.side;let P,B;
+    if(land){const pw=W*.37;P={x:right?W-pw:0,y:0,w:pw,h:H};B={x:right?W*.07:pw+W*.07,y:H*.11,w:W-pw-W*.14,h:H*.78}}
+    else{P={x:0,y:0,w:W,h:H*.4};B={x:W*.08,y:H*.45,w:W*.84,h:H*.5}}
+    if(ph){const e=easeOut(t/1.5);c.save();c.beginPath();c.rect(P.x,P.y,P.w,P.h);c.clip();c.globalAlpha=clamp(t/.8);cover(c,ph.c,P.x,P.y,P.w,P.h,1.1-.08*e);c.restore()}
+    const a=clamp(t/1);c.save();c.globalAlpha=a;squares(c,B.x+B.w-42*u,B.y-34*u,u);squares(c,right||!land?B.x:B.x+B.w-42*u,B.y+B.h+22*u,u);c.restore();
+    const hs=[L.head,L.sub].filter(Boolean).map(s=>s.toUpperCase());let hf=78*u;c.font=`800 ${hf}px ${F.mont}`;
+    while(hf>22*u&&Math.max(...hs.map(s=>c.measureText(s).width))>B.w){hf*=.92;c.font=`800 ${hf}px ${F.mont}`}
+    const hh=hf*1.22*hs.length,sig=L.sign?70*u:0,room=B.h-hh-40*u-sig,text=(L.text||"").trim();
+    let fs=36*u,lines=[];for(let k=0;k<16;k++){c.font=`400 ${fs}px ${F.sans}`;lines=paras(c,text,B.w);if(lines.length*fs*1.65<=room)break;fs*=.93}
+    // typewriter: the whole letter is written out a few seconds before the scene ends
+    const total=lines.reduce((s,l)=>s+l.length,0),cps=total/Math.max(2.5,(dur||12)-4.5);let left=Math.floor(Math.max(0,t-.8)*cps);
+    c.save();c.textAlign="left";c.textBaseline="top";c.fillStyle=ED.text;c.font=`400 ${fs}px ${F.sans}`;
+    lines.forEach((l,j)=>{if(left<=0)return;const s=l.slice(0,left);left-=l.length;c.fillText(s,B.x,B.y+j*fs*1.65)});c.restore();
+    if(L.sign){const sa=clamp((Math.max(0,t-.8)*cps-total)/(cps*.8));c.save();c.globalAlpha=sa;c.textAlign="right";c.textBaseline="middle";c.font=`400 ${54*u}px ${SCR}`;c.fillStyle=ED.gold;c.fillText(L.sign,B.x+B.w,B.y+lines.length*fs*1.65+sig*.55);c.restore()}
+    const he=easeOut(t/1.4);c.save();c.globalAlpha=a;c.textAlign=right||!land?"right":"left";c.textBaseline="alphabetic";c.font=`800 ${hf}px ${F.mont}`;c.fillStyle=ED.head;
+    c.shadowColor="rgba(60,40,20,.35)";c.shadowOffsetY=3*u;c.shadowBlur=5*u;const hx=(right||!land?B.x+B.w:B.x)+(right||!land?1:-1)*(1-he)*40*u;
+    hs.forEach((s,j)=>c.fillText(s,hx,B.y+B.h-(hs.length-1-j)*hf*1.22));c.restore();
+  },
+  collage(c,W,H,phs,cap,t){this.base(c,W,H);const u=U(W,H),land=W>H*1.15,list=phs.slice(0,land?3:2),n=list.length,g=6*u;
+    list.forEach((ph,j)=>{const e=easeOut((t-j*.22)/1.1);if(e<=0)return;
+      const r=land?{x:j*(W+g)/n,y:0,w:(W+g)/n-g,h:H}:{x:0,y:j*(H+g)/n,w:W,h:(H+g)/n-g},off=(1-e)*(land?H*.12:W*.12);
+      c.save();c.globalAlpha=e;c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();cover(c,ph.c,r.x+(land?0:off),r.y+(land?off:0),r.w,r.h,1.06+t*.005);c.restore()});
+    if(cap){const a=clamp((t-.9)/1);let fs=170*u;c.font=`400 ${fs}px ${SCR}`;while(c.measureText(cap).width>W*.9&&fs>40*u){fs*=.9;c.font=`400 ${fs}px ${SCR}`}
+      c.save();c.globalAlpha=a;c.textAlign="center";c.textBaseline="middle";c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=26*u;c.fillStyle="#fffaf0";c.fillText(cap,W/2,H/2+(1-easeOut(a))*24*u);c.restore()}
+  },
+  trans(c,A,B,x,W,H){c.drawImage(A,0,0);c.globalAlpha=x;const s=1.04-.04*x;c.save();c.translate(W/2,H/2);c.scale(s,s);c.drawImage(B,-W/2,-H/2);c.restore();c.globalAlpha=1}
+};
+
 /* ---------- transitions the user can pick (A = old frame, B = new frame, e = 0..1) ---------- */
 function heartPath(c,x,y,w){const t=w/2;c.beginPath();c.moveTo(x,y+t*.75);c.bezierCurveTo(x-t*1.25,y-t*.05,x-t*.62,y-t*1.15,x,y-t*.42);c.bezierCurveTo(x+t*.62,y-t*1.15,x+t*1.25,y-t*.05,x,y+t*.75);c.closePath()}
 function veil(c,A,B,e,W,H,col){if(e<.5){c.drawImage(A,0,0);c.fillStyle=col+(e*2)+")";c.fillRect(0,0,W,H)}else{c.drawImage(B,0,0);c.fillStyle=col+((1-e)*2)+")";c.fillRect(0,0,W,H)}}
@@ -363,12 +444,13 @@ const TR={
   heart(c,A,B,e,W,H){reveal(c,A,B,()=>heartPath(c,W/2,H*.55,Math.hypot(W,H)*2.4*e*e))},
   zoom(c,A,B,e,W,H){const s=1+e*.3;c.save();c.translate(W/2,H/2);c.scale(s,s);c.drawImage(A,-W/2,-H/2);c.restore();c.globalAlpha=e;const s2=1.25-.25*e;c.save();c.translate(W/2,H/2);c.scale(s2,s2);c.drawImage(B,-W/2,-H/2);c.restore();c.globalAlpha=1},
   flip(c,A,B,e,W,H){c.fillStyle="#000";c.fillRect(0,0,W,H);const k=e<.5?1-e*2:e*2-1,S=e<.5?A:B;c.save();c.translate(W/2,H/2);c.scale(Math.max(.001,k),1);c.drawImage(S,-W/2,-H/2);c.restore()},
+  tiles(c,A,B,e,W,H){const s=Math.max(W,H)/9,cols=Math.ceil(W/s),rows=Math.ceil(H/s);reveal(c,A,B,()=>{c.beginPath();for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const k=clamp((e-hash(x*13+y*7+1)*.6)/.4);if(k>0){const w=s*k+1;c.rect(x*s+(s-w)/2,y*s+(s-w)/2,w,w)}}})},
   blinds(c,A,B,e,W,H){const n=9,w=W/n;reveal(c,A,B,()=>{c.beginPath();for(let j=0;j<n;j++)c.rect(j*w,0,w*clamp(e*1.6-j/n*.6),H)})},
 };
 const MIX=["fade","heart","slide","white","circle","zoom","wipe","flip","diag","blinds","up"];
 // Varied per-photo transitions that suit each style, no kind twice in a row.
 const POOL={lux:["fade","white","zoom","circle","heart"],korea:["fade","white","slide","heart","zoom"],cinema:["black","fade","zoom","wipe"],modern:["slide","wipe","circle","zoom","diag","blinds","flip","up"],
-  vintage:["fade","black","flip","zoom"],floral:["heart","fade","white","circle","zoom"],red:["fade","white","heart","circle","zoom"],mono:["up","wipe","slide","fade","diag"],garden:["fade","slide","white","circle","heart"]};
+  vintage:["fade","black","flip","zoom"],floral:["heart","fade","white","circle","zoom"],red:["fade","white","heart","circle","zoom"],mono:["up","wipe","slide","fade","diag"],garden:["fade","slide","white","circle","heart"],editorial:["fade","tiles","slide","zoom","white"]};
 function autoTrans(style,n,seed=0){const pool=POOL[style]||MIX,out=[];let prev="";for(let i=0;i<n;i++){const k=Math.floor(hash(i*7.13+seed*31.7+1)*pool.length);let t=pool[k];if(t===prev)t=pool[(k+1)%pool.length];out.push(t);prev=t}return out}
 function pickTrans(name,k){if(!name||name==="auto")return null;if(name==="mix")return TR[MIX[k%MIX.length]];return TR[name]||null}
 
@@ -382,6 +464,7 @@ const PAL={
   red:{acc:"#e8be6e",bg(c,W,H){STY.red.base(c,W,H)},cap(c,W,y,info,t,u){c.font=`italic 500 ${42*u}px ${F.play}`;const w=c.measureText(info.names).width;c.fillStyle=gold(c,W/2-w/2,W/2+w/2,t);c.fillText(info.names,W/2,y-14*u);c.font=`400 ${14*u}px ${F.sans}`;c.fillStyle="#f0cf8a";spaced(c,info.date,W/2,y+24*u,6*u)}},
   mono:{acc:"#111111",bg(c,W,H){STY.mono.base(c,W,H)},cap(c,W,y,info,t,u){caption(c,W,y,u,info,`500 ${36*u}px ${F.play}`,"#111",`300 ${13*u}px ${F.sans}`,"#666",5)}},
   garden:{acc:"#7d9471",bg(c,W,H){STY.garden.base(c,W,H)},cap(c,W,y,info,t,u){caption(c,W,y,u,info,`italic 500 ${42*u}px ${F.corm}`,"#3f5538",`400 ${13*u}px ${F.sans}`,"#6f8466",6)}},
+  editorial:{acc:"#b08d57",bg(c,W,H,ph){if(ph)STY.editorial.blur(c,W,H,ph);else STY.editorial.base(c,W,H)},cap(c,W,y,info,t,u){c.save();c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=10*u;caption(c,W,y,u,info,`400 ${60*u}px ${SCR}`,"#fffaf0",`400 ${13*u}px ${F.sans}`,"rgba(255,250,240,.9)",6);c.restore()}},
   modern:{acc:"#ff5470",bg(c,W,H){c.fillStyle="#121214";c.fillRect(0,0,W,H)},cap(c,W,y,info,t,u){c.font=`800 ${34*u}px ${F.mont}`;c.fillStyle="#f4f1ea";c.fillText(info.names.toUpperCase(),W/2,y-10*u);c.font=`600 ${15*u}px ${F.mont}`;c.fillStyle="#ff5470";spaced(c,info.date,W/2,y+24*u,4*u)}},
 };
 function framed(style,c,W,H,ph,p,i,info,t,frame){
@@ -418,6 +501,15 @@ function framed(style,c,W,H,ph,p,i,info,t,frame){
 }
 
 /* ---------- scenes ---------- */
+// Love letters (first after the opening, second halfway) and photo collages every 6 photos, for templates that have them.
+const COLLAGE=["Love Story","Save the Date","Happy Wedding Day","Forever & Always"];
+const nCollage=n=>n>=6?Math.floor((n-1)/6):0;
+function extras(s,ord,j,cfg){
+  const n=ord.length,L=cfg.ldur||[],mid=Math.max(1,Math.floor(n/2));
+  if(j===0&&L[0])s.push({type:"letter",j:0,p:ord[Math.min(1,n-1)],name:"Thư tay 1",dur:L[0]});
+  if(j===mid&&L[1])s.push({type:"letter",j:1,p:ord[Math.min(mid+1,n-1)],name:"Thư tay 2",dur:L[1]});
+  if(cfg.collage&&j>0&&j%6===0)s.push({type:"collage",is:[ord[j-3],ord[j-2],ord[j-1]],cap:COLLAGE[(j/6-1)%COLLAGE.length],name:"Ghép ảnh",dur:Math.max(5,cfg.sec)});
+}
 function build(mode,n,cfg){
   const sec=cfg.sec,ord=[...Array(n).keys()],s=[];
   if(cfg.shuffle)for(let i=n-1;i>0;i--){const j=Math.random()*(i+1)|0;[ord[i],ord[j]]=[ord[j],ord[i]]}
@@ -426,10 +518,10 @@ function build(mode,n,cfg){
     (cfg.cues||[]).forEach((c,j)=>{if(/^\[.*ảnh.*\]$/i.test(c))s.push({type:"gallery",name:"Trình chiếu ảnh",dur:sec*Math.min(4,Math.max(1,n))});else s.push({type:"cue",text:c,i:j,name:c,dur:5})});
   }else if(mode==="party"){
     s.push({type:"title",name:"Màn hình tên",dur:Math.max(7,sec)});
-    ord.forEach((i,j)=>{if(cfg.every&&j>0&&j%cfg.every===0)s.push({type:"title",name:"Màn hình tên",dur:Math.max(6,sec)});s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
+    ord.forEach((i,j)=>{if(cfg.every&&j>0&&j%cfg.every===0)s.push({type:"title",name:"Màn hình tên",dur:Math.max(6,sec)});extras(s,ord,j,cfg);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
   }else{
     s.push({type:"title",name:"Mở đầu",dur:Math.max(6,sec)});
-    ord.forEach(i=>s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec}));
+    ord.forEach((i,j)=>{extras(s,ord,j,cfg);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
     s.push({type:"end",name:"Lời cảm ơn",dur:7});
   }
   // Fit to music: every scene lasts a whole number of beats, so cuts land on the beat.
@@ -460,8 +552,10 @@ function Engine(canvas,o){
     if(!o.photos.length&&sc.type!=="cue"){s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
     else if(sc.type==="photo")photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);
     else if(sc.type==="gallery")drawPhotoGallery(c,lt);
-    else if(sc.type==="title")s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[0]);
-    else if(sc.type==="end")s.card(c,W,H,{kicker:"Trân trọng cảm ơn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[Math.min(1,o.photos.length-1)]);
+    else if(sc.type==="title")s.card(c,W,H,{role:"title",kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[0]);
+    else if(sc.type==="end")s.card(c,W,H,{role:"end",kicker:"Trân trọng cảm ơn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[Math.min(1,o.photos.length-1)]);
+    else if(sc.type==="letter"){const L=(I.letters||[])[sc.j]||{head:"",text:""},P=photoAt({i:sc.p});if(s.letter)s.letter(c,W,H,L,lt,P,sc.dur);else s.card(c,W,H,{kicker:L.head,big:[L.sub||L.head],msg:L.text},lt,P)}
+    else if(sc.type==="collage"){const ps=sc.is.map(i=>photoAt({i}));if(s.collage)s.collage(c,W,H,ps,sc.cap,lt);else photo(c,W,H,ps[0],clamp(lt/sc.dur),sc.is[0],I,lt)}
     else if(sc.type==="cue")s.card(c,W,H,{kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt(sc));
     c.restore();
   }
@@ -553,5 +647,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,names,loadName,NAMEF,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
+G.SlideEngine={ready,names,nCollage,loadName,NAMEF,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
 })(window);

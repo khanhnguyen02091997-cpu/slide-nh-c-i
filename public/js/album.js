@@ -12,6 +12,7 @@ const STY = {
   red: { bg: "#8e1116", ink: "#f3d48c", soft: "#e3b86a", acc: "#e8be6e", title: `italic 500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}`, line: true },
   mono: { bg: "#f7f6f3", ink: "#111111", soft: "#777777", acc: "#111111", title: `500 {s}px ${F.play}`, body: `300 {s}px ${F.sans}` },
   garden: { bg: "#e8eee2", ink: "#2f4229", soft: "#6f8466", acc: "#7d9471", title: `italic 500 {s}px ${F.corm}`, body: `300 {s}px ${F.sans}`, mat: true },
+  editorial: { bg: "#f6f2e4", ink: "#4a3a2c", soft: "#8b7560", acc: "#b08d57", title: `400 {s}px "Great Vibes",cursive`, body: `300 {s}px ${F.sans}`, mat: true },
   modern: { bg: "#f4f1ea", ink: "#121214", soft: "#6b6660", acc: "#ff5470", title: `800 {s}px ${F.mont}`, body: `400 {s}px ${F.sans}`, upper: true, bar: true },
 };
 const font = (t, s) => t.replace("{s}", Math.round(s));

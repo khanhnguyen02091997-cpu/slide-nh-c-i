@@ -11,6 +11,7 @@ const STYLE_NAME = {
   red: "truyền thống, đỏ vàng, lễ gia tiên",
   mono: "tối giản, đen trắng",
   garden: "sân vườn, xanh lá, tự nhiên",
+  editorial: "thư tình, kem thanh lịch, nhẹ nhàng sâu lắng",
 };
 const MODE_NAME = {
   party: "chiếu ảnh liên tục ở tiệc cưới",

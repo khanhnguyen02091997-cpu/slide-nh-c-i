@@ -259,6 +259,7 @@ Cảm ơn quý khách</textarea>
           <label class="opt"><input type="radio" name="style" value="red"><div class="sw"><i style="background:#8e1116"></i><i style="background:#e8be6e"></i><i style="background:#f6d48b"></i></div><b>Truyền thống đỏ Song Hỷ</b><span>Nền đỏ, viền vàng, chữ Hỷ, hợp lễ gia tiên, ăn hỏi.</span></label>
           <label class="opt"><input type="radio" name="style" value="mono"><div class="sw"><i style="background:#f7f6f3"></i><i style="background:#777"></i><i style="background:#111"></i></div><b>Tối giản đen trắng</b><span>Ảnh đen trắng, chữ kiểu tạp chí, nhiều khoảng trắng.</span></label>
           <label class="opt"><input type="radio" name="style" value="garden"><div class="sw"><i style="background:#eef2e8"></i><i style="background:#8aa37c"></i><i style="background:#2f4229"></i></div><b>Xanh sân vườn</b><span>Xanh lá dịu, cành lá ở góc, khung vòm, lá bay.</span></label>
+          <label class="opt"><input type="radio" name="style" value="editorial"><div class="sw"><i style="background:#f6f2e4"></i><i style="background:#b08d57"></i><i style="background:#5a4636"></i></div><b>Thư tình, kem thanh lịch</b><span>Ảnh trên nền mờ của chính nó, tên chữ ký, thư tay gõ từng chữ, ghép 3 ảnh, kết thúc hoa cúc.</span></label>
         </div>
       </section>
 
@@ -357,6 +358,11 @@ Cảm ơn quý khách</textarea>
           <label class="f">Ngày cưới<input type="date" id="date"></label>
           <label class="f wide">Lời nhắn<input type="text" id="msg" placeholder="Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi"></label>
         </div>
+        <div class="fields letters" id="letters" hidden>
+          <p class="hint wide">Mẫu Thư tình có 2 trang thư tay, chữ hiện ra từng chữ như đang viết. Để trống thì bỏ trang đó.</p>
+          <label class="f wide">Chú rể gửi cô dâu (Gửi em, người anh thương)<textarea id="letB" rows="4" placeholder="Em là điều tuyệt vời nhất đã đến với cuộc đời anh..."></textarea></label>
+          <label class="f wide">Cô dâu gửi chú rể (Gửi anh, người em thương)<textarea id="letG" rows="4" placeholder="Cảm ơn anh đã đến và ở lại..."></textarea></label>
+        </div>
         <details class="fold nf-fold">
           <summary>Kiểu chữ tên <span class="hint" id="nfSum">Theo phong cách</span></summary>
           <div class="pick nf-pick" data-for-select="nameFont" role="group"><button type="button" data-v="auto"><span class="nf-s">Theo phong cách</span></button><button type="button" data-v="vibes" style='font-family:&quot;Great Vibes&quot;,cursive'><span class="nf-s">Great Vibes</span></button><button type="button" data-v="dancing" style='font-family:&quot;Dancing Script&quot;,cursive'><span class="nf-s">Dancing Script</span></button><button type="button" data-v="pinyon" style='font-family:&quot;Pinyon Script&quot;,cursive'><span class="nf-s">Pinyon Script</span></button><button type="button" data-v="alex" style='font-family:&quot;Alex Brush&quot;,cursive'><span class="nf-s">Alex Brush</span></button><button type="button" data-v="playball" style='font-family:&quot;Playball&quot;,cursive'><span class="nf-s">Playball</span></button><button type="button" data-v="charm" style='font-family:&quot;Charm&quot;,cursive'><span class="nf-s">Charm</span></button><button type="button" data-v="corinthia" style='font-family:&quot;Corinthia&quot;,cursive'><span class="nf-s">Corinthia</span></button><button type="button" data-v="pacifico" style='font-family:&quot;Pacifico&quot;,cursive'><span class="nf-s">Pacifico</span></button><button type="button" data-v="lobster" style='font-family:&quot;Lobster&quot;,cursive'><span class="nf-s">Lobster</span></button><button type="button" data-v="patrick" style='font-family:&quot;Patrick Hand&quot;,cursive'><span class="nf-s">Patrick Hand</span></button></div>
@@ -408,6 +414,10 @@ Cảm ơn quý khách</textarea>
         <button class="go" id="go"></button>
       </div>
       <div class="row" data-for="deliver"><button id="tryDeliver">Xem thử như khách</button></div>
+      <div class="dl" data-for="party stage deliver">
+        <span class="hint">Tải slide về máy để copy, gửi Zalo, Messenger:</span>
+        <div class="row"><button id="dlVideo">⬇ Video MP4</button><button id="dlHtml">⬇ File slide .html</button></div>
+      </div>
       <div id="vprog" hidden>
         <div class="prog"><i id="vbar"></i></div>
         <div class="pv-meta"><span id="vtxt"></span><button id="vcancel">Hủy</button></div>

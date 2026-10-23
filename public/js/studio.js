@@ -135,6 +135,7 @@ async function load() {
   if (s.vfmt) $("vfmt").value = s.vfmt;
   if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
+  $("letB").value = s.letB || ""; $("letG").value = s.letG || "";
   $("fitMusic").checked = s.fit !== false;
   if (s.book) $("bookSize").value = String(s.book);
   tSeed = s.tseed || 0;
@@ -285,8 +286,17 @@ async function trackFile(t) { if (!t.file) t.file = await (await fetch(t.url)).b
 const val = (n) => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
 function info() {
   const g = ($("groom").value.trim() || "Chú rể").normalize("NFC"), b = ($("bride").value.trim() || "Cô dâu").normalize("NFC");
-  return { groom: g, bride: b, names: g + " & " + b, nameFont: $("nameFont").value, date: fmtDate($("date").value), msg: $("msg").value.trim().normalize("NFC"), cap: $("cap").checked };
+  return { groom: g, bride: b, names: g + " & " + b, nameFont: $("nameFont").value, date: fmtDate($("date").value), msg: $("msg").value.trim().normalize("NFC"), cap: $("cap").checked, letters: letters(g, b) };
 }
+// Love letters, only in the "Thư tình" template; an empty box drops its page.
+const LETTER_STYLES = ["editorial"];
+function letters(g, b) {
+  if (!LETTER_STYLES.includes(val("style"))) return [];
+  return [{ head: "Gửi em", sub: "Người anh thương", text: $("letB").value, sign: g, side: true }, { head: "Gửi anh", sub: "Người em thương", text: $("letG").value, sign: b, side: false }]
+    .map((l) => ({ ...l, text: l.text.trim().normalize("NFC") })).filter((l) => l.text);
+}
+// Each letter stays long enough to be read as it is typed out.
+const letterDur = () => letters("", "").map((l) => Math.min(24, Math.max(10, l.text.length / 22 + 5)));
 /* ----- fit to music: length and beat of each track, measured in the browser ----- */
 const ana = new Map(); // url -> Promise<{dur, bpm, beat0}|null>
 function analyze(t) {
@@ -338,17 +348,18 @@ function fitted(mode) {
   let sec = base;
   if (mode === "video" || mode === "deliver") {
     // Opening max(6,sec) + n photos + 7 s thank-you = length of the music.
-    const M = fitInfo.dur; sec = (M - 13) / n; if (sec >= 6) sec = (M - 7) / (n + 1);
+    const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0;
+    const M = fitInfo.dur - L; sec = (M - 13) / (n + C); if (sec >= 6) sec = (M - 7) / (n + 1 + C);
     sec = Math.min(15, Math.max(2.5, sec));
   }
   if (!fitInfo.bpm) return { sec, auto: true };
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
-function cfg() { const f = fitted(val("mode")); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -403,7 +414,7 @@ new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (val
 
 /* ----- per-photo transitions: the app picks (auto) or the user edits each photo (manual) ----- */
 let tSeed = 0;
-const TNAME = { fade: "Mờ dần", white: "Lóe sáng trắng", black: "Tối dần", heart: "Mở trái tim", circle: "Mở vòng tròn", zoom: "Phóng to", slide: "Trượt ngang", up: "Đẩy lên", wipe: "Quét ngang", diag: "Quét chéo", blinds: "Rèm dọc", flip: "Lật ảnh" };
+const TNAME = { fade: "Mờ dần", white: "Lóe sáng trắng", black: "Tối dần", heart: "Mở trái tim", circle: "Mở vòng tròn", zoom: "Phóng to", slide: "Trượt ngang", up: "Đẩy lên", wipe: "Quét ngang", diag: "Quét chéo", blinds: "Rèm dọc", flip: "Lật ảnh", tiles: "Ô vuông" };
 function transList() { const auto = SE.autoTrans(val("style"), photos.length, tSeed); return val("tmode") === "manual" ? photos.map((p, i) => p.tr || freeTr(auto[i], i)) : auto; }
 function previewPhoto(i) {
   if (!pvEng) return; const sc = pvEng.scenes, j = sc.findIndex((x) => x.type === "photo" && x.i === i); if (j < 0) return;
@@ -471,6 +482,7 @@ function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
   syncPick("frame"); syncPick("nameFont"); renderTrans();
+  $("letters").hidden = !LETTER_STYLES.includes(val("style"));
   const optText = (id) => $(id).selectedOptions[0]?.textContent || "";
   $("frSum").textContent = "· " + optText("frame"); $("nfSum").textContent = "· " + optText("nameFont");
   const nm = info().names;
@@ -505,6 +517,10 @@ function openPlayer(mode) {
 }
 $("go").onclick = () => { const m = val("mode"); if (proNeed(m)) return fail(proNeed(m)); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (m === "album") exportBook(); else exportDeliver(); };
 $("tryDeliver").onclick = () => openPlayer("deliver");
+// Download from the Slide part without switching tabs: an MP4 to send anywhere, or the self-contained .html slideshow.
+const busy = (b) => { $("dlVideo").disabled = $("dlHtml").disabled = b; };
+$("dlVideo").onclick = () => { const n = proNeed("video"); if (n) return fail(n); exportVideo(); };
+$("dlHtml").onclick = () => { const n = proNeed("deliver"); if (n) return fail(n); exportDeliver(); };
 function fail(t) { $("goNote").textContent = t; $("goNote").classList.add("err"); }
 const slug = () => { const i = info(); return ("slide-cuoi-" + i.groom + "-" + i.bride).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^a-zA-Z0-9]+/g, "-").replace(/-+$/, "").toLowerCase(); };
 
@@ -516,11 +532,11 @@ async function exportVideo() {
   const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
   const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-  const c = cfg(), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
+  const c = cfg("video"), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
   const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
   eng.render();
   const stream = cv.captureStream(30); let ac = null;
-  $("go").disabled = true; $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
+  $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
   if (tracks.length) {
     ac = new AudioContext(); const dest = ac.createMediaStreamDestination(), gain = ac.createGain(); gain.connect(dest);
     const bufs = []; for (const t of tracks) { try { bufs.push(await ac.decodeAudioData(await (await trackFile(t)).arrayBuffer())); } catch {} }
@@ -538,7 +554,7 @@ async function exportVideo() {
   let iv = 0, t0 = 0, lastE = 0;
   function finish() { clearInterval(iv); if (rec.state !== "inactive") rec.stop(); }
   rec.onstop = () => {
-    stream.getTracks().forEach((t) => t.stop()); ac && ac.close(); pvHold = false; $("go").disabled = false; $("vprog").hidden = true;
+    stream.getTracks().forEach((t) => t.stop()); ac && ac.close(); pvHold = false; $("go").disabled = false; busy(false); $("vprog").hidden = true;
     if (cancelled) { refresh(); return; }
     const ext = mime.startsWith("video/mp4") ? "mp4" : "webm", blob = new Blob(chunks, { type: mime.split(";")[0] });
     saveFile(blob, slug() + (vertical ? "-doc" : "") + "." + ext);
@@ -560,10 +576,10 @@ function jpeg(ph) { const c = ph.c, k = Math.min(1, 1920 / Math.max(c.width, c.h
 const dataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
 let engineSrc = null;
 async function exportDeliver() {
-  $("go").disabled = true; $("goNote").textContent = "Đang đóng gói ảnh và nhạc...";
+  $("go").disabled = true; busy(true); $("goNote").textContent = "Đang đóng gói ảnh và nhạc...";
   try {
     if (!engineSrc) engineSrc = await (await fetch("/js/engine.js")).text();
-    const I = info(), data = { style: val("style"), info: I, cfg: cfg(), photos: photos.map((p) => jpeg(p.ph)), focus: photos.map((p) => [p.ph.fx ?? .5, p.ph.fy ?? .5]), tracks: [] };
+    const I = info(), data = { style: val("style"), info: I, cfg: cfg("deliver"), photos: photos.map((p) => jpeg(p.ph)), focus: photos.map((p) => [p.ph.fx ?? .5, p.ph.fy ?? .5]), tracks: [] };
     for (const t of tracks) data.tracks.push(await dataURL(await trackFile(t)));
     const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const fonts = document.querySelector("link[data-fonts]").outerHTML;
@@ -578,7 +594,7 @@ ${fonts}
     saveFile(blob, slug() + ".html");
     $("goNote").textContent = "Đã tải file (" + (blob.size / 1048576).toFixed(1) + " MB). Gửi file .html này cho khách, khách mở bằng trình duyệt là xem được" + (tracks.length ? ", có cả nhạc." : ".");
   } catch (e) { fail("Chưa tạo được file (" + (e.message || "lỗi") + ")."); }
-  $("go").disabled = false;
+  $("go").disabled = false; busy(false);
 }
 const bootSrc = `(async function(){
   const D=window.__SLIDE,SE=window.SlideEngine,bg=document.getElementById("bg"),go=document.getElementById("go"),cv=document.getElementById("cv");
