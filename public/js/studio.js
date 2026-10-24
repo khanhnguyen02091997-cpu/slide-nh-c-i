@@ -138,6 +138,8 @@ async function load() {
   $("letB").value = s.letB || ""; $("letG").value = s.letG || "";
   $("fitMusic").checked = s.fit !== false;
   if (s.book) $("bookSize").value = String(s.book);
+  if (PhotoBook.LAYOUT[s.bookLay]) bookLay = s.bookLay;
+  if (PhotoBook.TYPO[s.bookTypo]) bookTypo = s.bookTypo;
   tSeed = s.tseed || 0;
   const legacy = s.trans && s.trans !== "auto" && s.trans !== "mix" ? s.trans : null; // single kind chosen before per-photo existed
   document.querySelector(`input[name=tmode][value="${s.tmode || (legacy ? "manual" : "auto")}"]`).checked = true;
@@ -359,18 +361,19 @@ function fitted(mode) {
 function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
 const pv = $("pv"); let pvEng = null, pvLast = 0, pvHold = false;
 function sizePv() { const r = pv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1); pv.width = Math.max(320, Math.round(r.width * dpr)); pv.height = Math.max(180, Math.round(r.height * dpr)); }
 /* ----- photo book ----- */
-let bookPages = [], bookPage = 0, bookSeed = 0;
+let bookPages = [], bookPage = 0, bookSeed = 0, bookLay = "auto", bookTypo = "none";
+const bookDesign = () => ({ layout: bookLay, typo: bookTypo });
 // Album page size in cm from the size picker: "20", "25", "30" are square, "30x20" is landscape, "20x30" portrait.
 function bookDim(v = $("bookSize").value) { const [w, h] = String(v).split("x").map(Number); return { w, h: h || w, label: h ? `${w} × ${h}` : `${w} × ${w}`, sq: !h }; }
 const bookFree = (v = $("bookSize").value) => String(v) === String(FREE.book);
-function layoutBook() { const d = bookDim(); bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, d.w / d.h); bookPage = Math.min(bookPage, bookPages.length - 1); }
+function layoutBook() { const d = bookDim(); bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, d.w / d.h, bookDesign()); bookPage = Math.min(bookPage, bookPages.length - 1); }
 function renderBook() {
   if (val("mode") !== "album") return;
   const ctx = pv.getContext("2d");
@@ -457,6 +460,67 @@ document.querySelectorAll(".pick[data-for-select]").forEach((g) => g.querySelect
   if (pvEng && photos.length) pvEng.go(1);
 }));
 
+/* ----- album resource library: layouts, title typography and ready designs, previewed with the user's photos ----- */
+const { LAYOUT, TYPO, DESIGN } = PhotoBook;
+let libTab = "all";
+const isDesign = (d) => val("style") === d.style && bookLay === d.layout && bookTypo === d.typo;
+function libSum() { const d = Object.values(DESIGN).find(isDesign); return (d ? d.name + " · " : "") + LAYOUT[bookLay].name + " · " + TYPO[bookTypo].name; }
+// Thumbnail: the first photo page that carries a title (or page 1) of the album as it would look with these choices.
+function libThumb(style, lay, typo) {
+  const d = bookDim(), w = 300, cv = document.createElement("canvas"); cv.width = w; cv.height = Math.round(w * d.h / d.w);
+  if (!photos.length) return cv;
+  const pages = PhotoBook.layout(photos.map((p) => p.ph.ar), 0, d.w / d.h, { layout: lay, typo });
+  const n = Math.max(1, pages.findIndex((p) => p.t)), i = pages[n] && pages[n].type === "photos" ? n : 0;
+  PhotoBook.render(cv.getContext("2d"), { W: cv.width, H: cv.height }, pages, i, photos.map((p) => p.ph), style, info());
+  return cv;
+}
+function libCard(kind, id, it, on, pro) {
+  const b = document.createElement("button"); b.type = "button"; b.className = "lib-item"; b.setAttribute("aria-pressed", String(on));
+  const st = kind === "design" ? it.style : val("style");
+  // a typography card needs a layout with title space; a layout card shows its titles with the chosen typography (or a sample one)
+  const lay = kind === "design" ? it.layout : kind === "layout" ? id : bookLay === "auto" ? "strip" : bookLay;
+  const ty = kind === "design" ? it.typo : kind === "typo" ? id : bookTypo === "none" ? "mag" : bookTypo;
+  b.append(libThumb(st, lay, ty));
+  b.insertAdjacentHTML("beforeend", `${it.isNew ? '<em class="new-tag">NEW</em>' : ""}${pro ? '<em class="pro-tag">PRO</em>' : ""}<b></b><small></small>`);
+  b.querySelector("b").textContent = it.name;
+  b.querySelector("small").textContent = kind === "design" ? `${LAYOUT[it.layout].name} · ${TYPO[it.typo].name}` : it.desc;
+  b.onclick = () => {
+    if (kind === "design") { document.querySelector(`input[name=style][value="${it.style}"]`).checked = true; bookLay = it.layout; bookTypo = it.typo; }
+    else if (kind === "layout") bookLay = id; else bookTypo = id;
+    bookSeed = 0; bookPage = Math.min(1, bookPages.length - 1);
+    refresh(); changed(); renderLib();
+    bookPage = Math.min(1, bookPages.length - 1); renderBook();
+  };
+  return b;
+}
+function renderLib() {
+  const body = $("libBody"); body.innerHTML = "";
+  document.querySelectorAll(".lib-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.t === libTab)));
+  const group = (kind, title) => {
+    if (libTab !== "all" && libTab !== kind) return;
+    if (libTab === "all") body.insertAdjacentHTML("beforeend", `<h3>${title}</h3>`);
+    const g = document.createElement("div"); g.className = "lib-grid";
+    const src = { design: DESIGN, layout: LAYOUT, typo: TYPO }[kind];
+    for (const [id, it] of Object.entries(src))
+      g.append(libCard(kind, id, it, kind === "design" ? isDesign(it) : kind === "layout" ? bookLay === id : bookTypo === id, kind === "design" && !plan.pro && !FREE.styles.includes(it.style)));
+    body.append(g);
+  };
+  group("design", "Mẫu thiết kế"); group("layout", "Layout"); group("typo", "Typo");
+}
+async function openLib(tab) {
+  libTab = tab || "all"; $("lib").hidden = false; renderLib(); $("libX").focus();
+  // script and serif fonts come from Google Fonts; draw again once they are in
+  await Promise.all(['400 40px "Great Vibes"', 'italic 400 40px "Cormorant Garamond"', '500 40px "Playfair Display"', '600 40px "Playfair Display"'].map((f) => document.fonts.load(f).catch(() => {})));
+  if (!$("lib").hidden) renderLib();
+  renderBook();
+}
+const closeLib = () => { $("lib").hidden = true; };
+document.querySelectorAll(".lib-btn").forEach((b) => b.onclick = () => openLib(b.dataset.lib));
+document.querySelectorAll(".lib-tabs button").forEach((b) => b.onclick = () => { libTab = b.dataset.t; renderLib(); });
+$("libX").onclick = closeLib;
+$("lib").addEventListener("click", (e) => { if (e.target === $("lib")) closeLib(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("lib").hidden) closeLib(); });
+
 /* ----- parts: slide (party / stage / deliver), video, album ----- */
 const partOf = (mode) => mode === "video" || mode === "album" ? mode : "slide";
 let lastSlide = "party";
@@ -485,6 +549,7 @@ function refresh() {
   $("letters").hidden = !LETTER_STYLES.includes(val("style"));
   const optText = (id) => $(id).selectedOptions[0]?.textContent || "";
   $("frSum").textContent = "· " + optText("frame"); $("nfSum").textContent = "· " + optText("nameFont");
+  $("libSum").textContent = libSum();
   const nm = info().names;
   document.querySelectorAll(".nf-pick button").forEach((b) => { if (b.dataset.v !== "auto") { b.querySelector(".nf-s").textContent = nm; b.title = b.querySelector(".nf-s").title = SE.NAMEF[b.dataset.v][0]; } });
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
@@ -493,7 +558,7 @@ function refresh() {
     party: `Một vòng chiếu khoảng ${fmtDur(SE.total(sc))}, chạy lặp lại tới khi bạn thoát. Màn hình tự phóng to, giữ sáng và ẩn chuột.`,
     stage: `${c.cues.length} màn theo chương trình. Bấm → hoặc bút trình chiếu để chuyển, B để che đen. Khung xem trước tự chạy để bạn xem từng màn.`,
     video: `Video dài khoảng ${fmtDur(SE.total(sc))}. Video dựng theo thời gian thật nên mất đúng chừng đó thời gian, giữ tab này mở trong lúc xuất.` + (tracks.length ? "" : " Chưa có nhạc, video sẽ không có tiếng."),
-    album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h).length} trang ${bookDim().sq ? "vuông " : ""}${bookDim().label} cm. Ảnh xếp theo thời gian chụp, mỗi trang tự dàn 1 đến 4 ảnh. Không ưng thì bấm Đổi bố cục.`,
+    album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().sq ? "vuông " : ""}${bookDim().label} cm. Ảnh xếp theo thời gian chụp, ${bookLay === "auto" ? "mỗi trang tự dàn 1 đến 4 ảnh" : "bố cục " + PhotoBook.LAYOUT[bookLay].name}. Không ưng thì bấm Đổi bố cục hoặc chọn mẫu khác trong Thư viện mẫu.`,
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
   const need = proNeed(mode);

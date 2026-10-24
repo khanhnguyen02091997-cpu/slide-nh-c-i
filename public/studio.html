@@ -176,6 +176,9 @@
           <label class="f" data-for="album">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option></select>
           </label>
+          <div class="f wide lib-open" data-for="album">Mẫu thiết kế album
+            <div class="row"><button type="button" class="lib-btn" data-lib="design">📚 Thư viện mẫu <em class="new-tag">NEW</em></button><span class="hint" id="libSum">Tự động · Không chữ</span></div>
+          </div>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
           </label>
@@ -205,6 +208,7 @@ Cảm ơn quý khách</textarea>
       <div class="row book-nav" data-for="album">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
+        <button type="button" class="lib-btn" data-lib="all">📚 Thư viện mẫu</button>
       </div>
       <div class="row">
         <button class="go" id="go"></button>
@@ -224,6 +228,19 @@ Cảm ơn quý khách</textarea>
   </div>
 </div>
 
+
+<div class="crop lib" id="lib" hidden role="dialog" aria-modal="true" aria-labelledby="libTitle">
+  <div class="crop-card lib-card">
+    <div class="lib-h">
+      <div><b id="libTitle">Thư viện tài nguyên</b><span>Đã cập nhật kho mẫu album mới. Bấm một mẫu để dùng, ảnh trong mẫu là ảnh của bạn.</span></div>
+      <button id="libX" aria-label="Đóng">✕</button>
+    </div>
+    <div class="lib-tabs" role="tablist" aria-label="Loại mẫu">
+      <button role="tab" data-t="all" aria-selected="true">Tất cả</button><button role="tab" data-t="layout" aria-selected="false">Layout</button><button role="tab" data-t="typo" aria-selected="false">Typo</button><button role="tab" data-t="design" aria-selected="false">Mẫu thiết kế</button>
+    </div>
+    <div class="lib-body" id="libBody"></div>
+  </div>
+</div>
 
 <div class="crop" id="crop" hidden role="dialog" aria-modal="true" aria-labelledby="cropTitle">
   <div class="crop-card">
