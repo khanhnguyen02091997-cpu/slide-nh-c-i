@@ -185,7 +185,7 @@
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
           </label>
           <label class="f" data-for="album story">Cỡ album
-            <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option></select>
+            <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option><option value="25x35">Dọc 25 × 35 cm</option></select>
           </label>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
@@ -202,6 +202,7 @@ Cảm ơn quý khách</textarea>
           </label>
         </div>
         <div class="checks">
+          <label class="check" data-for="album story"><input type="checkbox" id="spread"><span>Trang đôi (spread)<small>Xem hai trang cạnh nhau như album mở ra, PDF xuất mỗi tờ là một trang đôi để in album lay-flat. Bìa vẫn để riêng.</small></span></label>
           <label class="check" data-for="party stage video deliver"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
           <label class="check" data-for="party video deliver"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
           <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
@@ -212,10 +213,12 @@ Cảm ơn quý khách</textarea>
 
     <aside class="side">
       <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
+      <p class="hint" data-for="album story" id="dragHint">Mẹo: kéo một ảnh trong khung xem trước thả lên ảnh khác để đổi chỗ hai ảnh.</p>
       <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
       <div class="row book-nav" data-for="album story">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
+        <button type="button" id="pgFrame" data-for="story" title="Đổi khung ảnh của riêng trang này, các trang khác giữ nguyên">🔁 Đổi khung trang này</button>
         <button type="button" class="lib-btn" data-lib="all" data-for="story">📚 Thư viện mẫu</button>
       </div>
       <div class="book-text" data-for="story">

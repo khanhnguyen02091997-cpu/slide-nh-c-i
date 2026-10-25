@@ -140,6 +140,9 @@ async function load() {
   if (s.book) $("bookSize").value = String(s.book);
   if (PhotoBook.LAYOUT[s.bookLay] || s.bookLay === "mix") bookLay = s.bookLay;
   if (s.bookAuto && typeof s.bookAuto === "object") bookAuto = { ...bookAuto, ...s.bookAuto };
+  if (s.bookOver && typeof s.bookOver === "object") bookOver = s.bookOver;
+  if (Array.isArray(s.bookSwap)) bookSwap = s.bookSwap;
+  $("spread").checked = !!s.spread;
   if (PhotoBook.TYPO[s.bookTypo]) bookTypo = s.bookTypo;
   if (s.bookText && typeof s.bookText === "object") bookText = s.bookText;
   if (PhotoBook.COVER[s.bookCover]) bookCover = s.bookCover;
@@ -364,7 +367,7 @@ function fitted(mode) {
 function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, spread: $("spread").checked, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -374,22 +377,53 @@ function sizePv() { const r = pv.getBoundingClientRect(), dpr = Math.min(2, wind
 let bookPages = [], bookPage = 0, bookSeed = 0, bookLay = "auto", bookTypo = "none", bookCover = "classic", bookText = {};
 // Auto Design: photos per page range, wished page count (0 = free), layouts to draw from (empty = all), gutter (% of page side)
 let bookAuto = { min: 1, max: 6, pages: 0, pool: [], gut: 2.2 };
+// Hand edits on top of the automatic pages: pinned frame per page (first photo index -> template id) and photo swaps (pairs of photo keys).
+let bookOver = {}, bookSwap = [];
+const photoKey = (p, i) => p.path || "i" + i;
 // Album part: automatic pages, no titles. Wedding story part: the library's layouts and titles, with the user's own words.
 const isBook = (m) => m === "album" || m === "story";
-const bookDesign = () => val("mode") !== "story" ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, gut: bookAuto.gut / 100,
+const bookDesign = () => val("mode") !== "story" ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, gut: bookAuto.gut / 100, over: bookOver,
   ...(bookLay === "mix" ? { min: bookAuto.min, max: bookAuto.max, pages: bookAuto.pages, pool: bookAuto.pool } : {}) };
 // Album page size in cm from the size picker: "20", "25", "30" are square, "30x20" is landscape, "20x30" portrait.
 function bookDim(v = $("bookSize").value) { const [w, h] = String(v).split("x").map(Number); return { w, h: h || w, label: h ? `${w} × ${h}` : `${w} × ${w}`, sq: !h }; }
 const bookFree = (v = $("bookSize").value) => String(v) === String(FREE.book);
-function layoutBook() { const d = bookDim(); bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, d.w / d.h, bookDesign()); if (val("mode") === "story") bookPages.text = bookText; bookPage = Math.min(bookPage, bookPages.length - 1); }
+function layoutBook() {
+  const d = bookDim(); bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, d.w / d.h, bookDesign());
+  if (val("mode") === "story") bookPages.text = bookText;
+  // swaps: which photo shows in each slot, starting from the book order
+  const idx = new Map(photos.map((p, i) => [photoKey(p, i), i])), show = photos.map((_, i) => i);
+  for (const [a, b] of bookSwap) { const ia = idx.get(a), ib = idx.get(b); if (ia == null || ib == null) continue; const pa = show.indexOf(ia), pb = show.indexOf(ib); [show[pa], show[pb]] = [show[pb], show[pa]]; }
+  for (const pg of bookPages) { if (pg.type === "cover") pg.photo = show[pg.photo]; if (pg.items) pg.items.forEach((it) => it.photo = show[it.photo]); }
+  bookPage = Math.min(bookPage, bookPages.length - 1);
+}
+const isSpread = () => $("spread").checked;
+// Sheets on screen: one page, or a spread (cover alone, then pairs). sheetOf(n) is the sheet holding page n.
+const sheets = () => isSpread() ? PhotoBook.spreads(bookPages) : bookPages.map((_, i) => [i]);
+const sheetOf = (n) => { const sh = sheets(); return Math.max(0, sh.findIndex((s) => s.includes(n))); };
+// Where each page of the sheet sits on the preview canvas.
+function sheetRects() {
+  const sh = sheets()[sheetOf(bookPage)] || [0];
+  if (sh.length === 1 && !isSpread()) return [{ n: sh[0], x: 0, W: pv.width, H: pv.height }];
+  const W = pv.width / 2; return sh.length === 1 ? [{ n: sh[0], x: W, W, H: pv.height }] : sh.map((n, k) => ({ n, x: k * W, W, H: pv.height }));
+}
 function renderBook() {
   if (!isBook(val("mode"))) return;
   const ctx = pv.getContext("2d");
   ctx.clearRect(0, 0, pv.width, pv.height);
-  if (photos.length) PhotoBook.render(ctx, { W: pv.width, H: pv.height }, bookPages, bookPage, photos.map((p) => p.ph), val("style"), info());
+  for (const r of sheetRects()) {
+    ctx.save(); ctx.translate(r.x, 0); ctx.beginPath(); ctx.rect(0, 0, r.W, r.H); ctx.clip();
+    if (r.n == null) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, r.W, r.H); }
+    else if (photos.length) PhotoBook.render(ctx, { W: r.W, H: r.H }, bookPages, r.n, photos.map((p) => p.ph), val("style"), info());
+    if (isSpread() && r.n === bookPage && sheets()[sheetOf(bookPage)].length > 1) { ctx.strokeStyle = "rgba(139,94,46,.55)"; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, r.W - 3, r.H - 3); }
+    ctx.restore();
+  }
+  if (isSpread()) { ctx.fillStyle = "rgba(0,0,0,.12)"; ctx.fillRect(pv.width / 2 - 1, 0, 2, pv.height); } // fold
+  if (drag2 && drag2.to) { const r = drag2.to; ctx.save(); ctx.strokeStyle = "#e0a040"; ctx.lineWidth = 4; ctx.setLineDash([10, 6]); ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore(); }
   const pg = bookPages[bookPage], label = !pg ? "" : pg.type === "cover" ? "Bìa" : pg.type === "end" ? "Trang cuối" : "Trang " + bookPage;
-  $("pvScene").textContent = "Xem trước · " + label; $("pgNum").textContent = (bookPage + 1) + " / " + bookPages.length;
-  $("pgPrev").disabled = bookPage <= 0; $("pgNext").disabled = bookPage >= bookPages.length - 1;
+  const sh = sheets(), si = sheetOf(bookPage);
+  $("pvScene").textContent = "Xem trước · " + label; $("pgNum").textContent = isSpread() ? `Tờ ${si + 1} / ${sh.length}` : (bookPage + 1) + " / " + bookPages.length;
+  $("pgPrev").disabled = si <= 0; $("pgNext").disabled = si >= sh.length - 1;
+  $("pgFrame").disabled = !(pg && pg.tid && bookPages.pool && frameAlts(pg).length > 1);
   if (val("mode") === "story") renderBookText(pg);
 }
 /* ----- wedding story: write your own words on the page shown ----- */
@@ -410,16 +444,53 @@ function renderBookText(pg) {
 const typeText = () => { const key = textKey(bookPages[bookPage]); if (key == null) return; bookText[key] = [$("btA").value.normalize("NFC"), $("btB").value.normalize("NFC")]; bookPages.text = bookText; renderBook(); changed(); };
 $("btA").addEventListener("input", typeText); $("btB").addEventListener("input", typeText);
 $("btReset").onclick = () => { const key = textKey(bookPages[bookPage]); delete bookText[key]; renderBook(); changed(); };
-$("pgPrev").onclick = () => { bookPage = Math.max(0, bookPage - 1); renderBook(); };
-$("pgNext").onclick = () => { bookPage = Math.min(bookPages.length - 1, bookPage + 1); renderBook(); };
-$("pgShuffle").onclick = () => { bookSeed++; layoutBook(); renderBook(); refresh(); };
+const goSheet = (d) => { const sh = sheets(), si = Math.min(sh.length - 1, Math.max(0, sheetOf(bookPage) + d)); bookPage = sh[si].find((n) => n != null); renderBook(); };
+$("pgPrev").onclick = () => goSheet(-1);
+$("pgNext").onclick = () => goSheet(1);
+/* ----- hand edits: another frame for one page, drag a photo onto another to swap them ----- */
+// Templates from any library layout with as many photos as this page, so the pages after it stay the same.
+const frameAlts = (pg) => Object.keys(PhotoBook.LAYOUT).filter((k) => PhotoBook.LAYOUT[k].pages).flatMap((k) => PhotoBook.LAYOUT[k].pages.map((t, i) => [k + ":" + i, t])).filter(([, t]) => t.cells.length === pg.items.length).map(([id]) => id);
+$("pgFrame").onclick = () => {
+  const pg = bookPages[bookPage]; if (!pg || !pg.tid) return;
+  const alts = frameAlts(pg); bookOver[pg.at] = alts[(alts.indexOf(pg.tid) + 1) % alts.length];
+  layoutBook(); renderBook(); changed();
+};
+let drag2 = null;
+function hitAt(e) {
+  const b = pv.getBoundingClientRect(), x = (e.clientX - b.left) * pv.width / b.width, y = (e.clientY - b.top) * pv.height / b.height;
+  for (const r of sheetRects()) {
+    if (r.n == null || x < r.x || x > r.x + r.W) continue;
+    const c = PhotoBook.hits({ W: r.W, H: r.H }, bookPages, r.n).find((h) => x - r.x >= h.x && x - r.x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
+    return { n: r.n, cell: c && { ...c, x: c.x + r.x } };
+  }
+  return null;
+}
+pv.addEventListener("pointerdown", (e) => {
+  if (!isBook(val("mode"))) return;
+  const h = hitAt(e); if (!h) return;
+  if (h.n !== bookPage) { bookPage = h.n; renderBook(); }
+  if (h.cell) { drag2 = { from: h.cell, to: null, x: e.clientX, y: e.clientY }; pv.setPointerCapture(e.pointerId); }
+});
+pv.addEventListener("pointermove", (e) => {
+  if (!drag2) return; if (Math.hypot(e.clientX - drag2.x, e.clientY - drag2.y) < 6 && !drag2.to) return;
+  const h = hitAt(e), to = h && h.cell && h.cell.photo !== drag2.from.photo ? h.cell : null;
+  if ((to && to.photo) !== (drag2.to && drag2.to.photo)) { drag2.to = to; renderBook(); }
+  pv.style.cursor = "grabbing";
+});
+const dropSwap = () => {
+  const d = drag2; drag2 = null; pv.style.cursor = ""; if (!d) return;
+  if (d.to) { bookSwap.push([photoKey(photos[d.from.photo], d.from.photo), photoKey(photos[d.to.photo], d.to.photo)]); layoutBook(); changed(); }
+  renderBook();
+};
+pv.addEventListener("pointerup", dropSwap); pv.addEventListener("pointercancel", dropSwap);
+$("pgShuffle").onclick = () => { bookSeed++; bookOver = {}; layoutBook(); renderBook(); refresh(); changed(); };
 async function exportBook() {
   if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
   await Promise.all([SE.loadName($("nameFont").value), PhotoBook.fonts()]);
   const d = bookDim();
   $("go").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
   try {
-    const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { wCm: d.w, hCm: d.h, px: Math.max(d.w, d.h) >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK,
+    const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { wCm: d.w, hCm: d.h, px: Math.max(d.w, d.h) >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK, spread: isSpread(),
       onPage: (i, n) => { $("vbar").style.width = (i / n * 100) + "%"; $("vtxt").textContent = `Đang tạo trang ${i} / ${n}`; } });
     saveFile(blob, slug() + (val("mode") === "story" ? "-phong-su-cuoi.pdf" : "-album.pdf"));
     $("goNote").textContent = `Đã tải album PDF (${(blob.size / 1048576).toFixed(1)} MB, ${bookPages.length} trang ${d.label} cm). Gửi file này cho tiệm in là được.`;
@@ -430,8 +501,8 @@ async function exportBook() {
 function startPreview() {
   const mode = val("mode"), c = cfg();
   $("pvBox").classList.toggle("sq", isBook(mode));
-  const bd = bookDim(); $("pvBox").style.aspectRatio = isBook(mode) ? `${bd.w} / ${bd.h}` : "";
-  $("pvBox").style.maxWidth = isBook(mode) ? `min(100%, ${(70 * bd.w / bd.h).toFixed(1)}vh)` : "";
+  const bd = bookDim(), k = isBook(mode) && isSpread() ? 2 : 1; $("pvBox").style.aspectRatio = isBook(mode) ? `${bd.w * k} / ${bd.h}` : "";
+  $("pvBox").style.maxWidth = isBook(mode) ? `min(100%, ${(70 * k * bd.w / bd.h).toFixed(1)}vh)` : "";
   if (isBook(mode)) { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
@@ -516,7 +587,7 @@ function libCard(kind, id, it, on, pro) {
   b.onclick = () => {
     if (kind === "design") { document.querySelector(`input[name=style][value="${it.style}"]`).checked = true; bookLay = it.layout; bookTypo = it.typo; bookCover = it.cover; }
     else if (kind === "layout") bookLay = id; else if (kind === "cover") bookCover = id; else bookTypo = id;
-    bookSeed = 0;
+    bookSeed = 0; if (kind === "design" || kind === "layout") bookOver = {};
     refresh(); changed(); if (!$("lib").hidden) renderLib();
     bookPage = kind === "cover" ? 0 : Math.min(1, bookPages.length - 1); renderBook();
   };
@@ -588,7 +659,7 @@ $("auto").addEventListener("click", (e) => { if (e.target === $("auto")) $("auto
 $("autoGo").onclick = () => {
   const { ds, lay, a } = autoDraft();
   if (ds) { document.querySelector(`input[name=style][value="${ds.style}"]`).checked = true; bookTypo = ds.typo; bookCover = ds.cover; }
-  bookLay = lay; bookAuto = a; bookSeed = 0; bookPage = 1; $("auto").hidden = true; refresh(); changed();
+  bookLay = lay; bookAuto = a; bookSeed = 0; bookOver = {}; bookPage = 1; $("auto").hidden = true; refresh(); changed();
 };
 document.querySelectorAll(".lib-tabs button").forEach((b) => b.onclick = () => { libTab = b.dataset.t; renderLib(); });
 $("libX").onclick = closeLib;

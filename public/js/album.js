@@ -50,7 +50,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
   const gut = d.gut != null ? d.gut : GUT;
   // "mix" draws from every library layout (or the ones in d.pool); a range d.min..d.max limits photos per page
   const pool = d.layout === "mix" ? (d.pool && d.pool.length ? d.pool : Object.keys(LAYOUT)).filter((k) => LAYOUT[k] && LAYOUT[k].pages) : lay && lay.pages ? [d.layout] : null;
-  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages), { typo, cover, gut });
+  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -93,7 +93,9 @@ const LAYOUT = {
       { pol: true, t: [0, .7, 1, .3], cells: [[.04, .04, .44, .6, -4], [.52, .02, .44, .62, 5]] }] },
   mosaic: { name: "Lưới so le", desc: "8 ảnh nhỏ cao thấp xen kẽ", isNew: true,
     pages: [{ t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .3], [0, .4, 1 / 3, .3], [0, .7, 1 / 3, .3], [1 / 3, .1, 1 / 3, .22], [1 / 3, .32, 1 / 3, .36], [1 / 3, .68, 1 / 3, .32], [2 / 3, .1, 1 / 3, .45], [2 / 3, .55, 1 / 3, .45]] },
-      { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .45], [0, .55, 1 / 3, .45], [1 / 3, .1, 1 / 3, .3], [1 / 3, .4, 1 / 3, .3], [1 / 3, .7, 1 / 3, .3], [2 / 3, .1, 1 / 3, .22], [2 / 3, .32, 1 / 3, .36], [2 / 3, .68, 1 / 3, .32]] }] },
+      { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .45], [0, .55, 1 / 3, .45], [1 / 3, .1, 1 / 3, .3], [1 / 3, .4, 1 / 3, .3], [1 / 3, .7, 1 / 3, .3], [2 / 3, .1, 1 / 3, .22], [2 / 3, .32, 1 / 3, .36], [2 / 3, .68, 1 / 3, .32]] },
+      { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .55], [0, .65, 1 / 3, .35], [1 / 3, .1, 1 / 3, .35], [1 / 3, .45, 1 / 3, .55], [2 / 3, .1, 1 / 3, .55], [2 / 3, .65, 1 / 3, .35]] },
+      { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .25], [0, .35, 1 / 3, .4], [0, .75, 1 / 3, .25], [1 / 3, .1, 1 / 3, .4], [1 / 3, .5, 1 / 3, .25], [1 / 3, .75, 1 / 3, .25], [2 / 3, .1, 1 / 3, .25], [2 / 3, .35, 1 / 3, .25], [2 / 3, .6, 1 / 3, .4]] }] },
   // shape: arch or circle frames; bleed: cells and title box are fractions of the whole page, no margins; onPh: title sits on a photo
   arch: { name: "Khung vòm", desc: "Ảnh trong khung vòm kiểu cửa sổ nhà thờ", isNew: true,
     pages: [{ shape: "arch", t: [0, 0, 1, .26], cells: [[0, .3, 1 / 3, .7], [1 / 3, .3, 1 / 3, .7], [2 / 3, .3, 1 / 3, .7]] },
@@ -107,7 +109,8 @@ const LAYOUT = {
       { bleed: true, onPh: true, t: [.04, .62, .92, .3], cells: [[0, 0, .5, 1], [.5, 0, .5, 1]] }] },
   collage: { name: "Ghép 5 ảnh", desc: "Một ảnh lớn, bốn ảnh nhỏ và ô chữ", isNew: true,
     pages: [{ t: [.62, 0, .38, .3], cells: [[0, 0, .6, .62], [.62, .32, .38, .3], [0, .64, .29, .36], [.31, .64, .29, .36], [.62, .64, .38, .36]] },
-      { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] }] },
+      { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] },
+      { t: [0, 0, 1, .12], cells: [[0, .14, .5, .5], [.5, .14, .25, .25], [.75, .14, .25, .25], [.5, .39, .5, .25], [0, .64, .5, .36], [.5, .64, .5, .36]] }] },
 };
 
 const SCR = '"Great Vibes",cursive';
@@ -238,8 +241,9 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
 
 /* Pages for library layouts. One layout: its templates in order. Mix (Auto Design): for each page the template whose cells
    best fit the next photos' shapes and the wished photos per page, kept in min..max, rarely the same template twice in a row. */
-function layoutLib(ars, seed, A, pool, min, max, mix, target) {
-  const pages = [{ type: "cover", photo: 0 }], tps = pool.flatMap((k) => LAYOUT[k].pages), box = inner(A);
+function layoutLib(ars, seed, A, pool, min, max, mix, target, over) {
+  // each template carries an id "layout:index" so a page can be pinned to one (over: first photo of the page -> id)
+  const pages = [{ type: "cover", photo: 0 }], tps = pool.flatMap((k) => LAYOUT[k].pages.map((t, n) => Object.assign({ id: k + ":" + n }, t))), box = inner(A);
   const fitCost = (t, at) => { let c = 0; t.cells.forEach((cl, j) => { const car = (cl[2] * box.w) / (cl[3] * box.h); c += Math.abs(Math.log(car / ars[at + j])); }); return c / t.cells.length; };
   const jitter = (a, b) => ((Math.sin((a + 1) * 12.9898 + (b + 1) * 78.233 + seed * 37.719) * 43758.5453) % 1 + 1) % 1;
   let i = ars.length > 1 ? 1 : 0, r = seed, ph = 0, prev = null;
@@ -247,7 +251,10 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target) {
   const want = target ? Math.max(1, (ars.length - i) / target) : (min + Math.min(max, 9)) / 2;
   while (i < ars.length) {
     const left = ars.length - i; let t = null;
-    if (mix) {
+    const [pk, pn] = String(over[i] || "").split(":"), pt = LAYOUT[pk] && LAYOUT[pk].pages && LAYOUT[pk].pages[pn];
+    const pin = pt && pt.cells.length <= left ? Object.assign({ id: over[i] }, pt) : null; // a pinned frame may come from any layout
+    if (pin) { t = pin; if (!mix) r++; } // keep the template rotation of the pages after it
+    else if (mix) {
       let top = Infinity;
       tps.forEach((x, n) => {
         const k = x.cells.length; if (k > left || k < Math.min(min, left) || k > max) return;
@@ -264,7 +271,7 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target) {
       const k = Math.max(1, Math.min(4, left, max)), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
-    pages.push({ type: "photos", t: t.t, pol: t.pol, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
     i += t.cells.length; prev = t;
   }
   pages.push({ type: "end" });
@@ -300,6 +307,21 @@ function text(ctx, st, s, f, size, x, y, color, align = "center") {
   ctx.font = font(f, size); ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
   ctx.fillText(st.upper && f === st.title ? s.toUpperCase() : s, x, y);
 }
+
+// Pixel rectangle of a cell: a bleed page measures cells on the whole page, others on the inner box with gutters.
+const cellBox = (c, pg, b, W, H, S, g) => pg.bleed ? { x: c[0] * W, y: c[1] * H, w: c[2] * W, h: c[3] * H }
+  : { x: (b.x + c[0] * b.w) * S + g * S / 2, y: (b.y + c[1] * b.h) * S + g * S / 2, w: c[2] * b.w * S - g * S, h: c[3] * b.h * S - g * S };
+/* Photo cells of page n in pixels (rotation ignored), for picking a photo with the pointer. */
+function hits(dims, pages, n) {
+  const pg = pages[n], W = dims.W, H = dims.H, S = Math.min(W, H);
+  if (!pg) return [];
+  if (pg.type === "cover") return [{ photo: pg.photo, x: W * .14, y: H * .12, w: W * .72, h: H * .56 }];
+  if (pg.type !== "photos") return [];
+  const b = inner(W / H), g = pages.gut != null ? pages.gut : DGUT;
+  return pg.items.map((it) => ({ photo: it.photo, ...cellBox(it.cell, pg, b, W, H, S, g) }));
+}
+/* Pages grouped two by two for a lay-flat book: the cover alone, then pairs (null = blank half). */
+const spreads = (pages) => { const out = [[0]]; for (let i = 1; i < pages.length; i += 2) out.push([i, i + 1 < pages.length ? i + 1 : null]); return out; };
 
 /* Draw page n onto a context: dims is the side of a square page, or {W, H} in pixels. */
 function render(ctx, dims, pages, n, photos, style, info, mark) {
@@ -350,8 +372,7 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
   } else {
     const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null, GUT = pages.gut != null ? pages.gut : DGUT;
     // a bleed page measures cells on the whole page; others on the inner box with gutters
-    const box = (c) => pg.bleed ? { x: c[0] * W, y: c[1] * H, w: c[2] * W, h: c[3] * H }
-      : { x: (b.x + c[0] * b.w) * S + GUT * S / 2, y: (b.y + c[1] * b.h) * S + GUT * S / 2, w: c[2] * b.w * S - GUT * S, h: c[3] * b.h * S - GUT * S };
+    const box = (c) => cellBox(c, pg, b, W, H, S, GUT);
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
       const c = it.cell, { x, y, w, h } = box(c);
@@ -374,21 +395,28 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
 }
 
 /* Minimal PDF: one JPEG per page. Pages are sizeCm square, or wCm x hCm; px is the long side. */
-async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, onPage, mark } = {}) {
-  const ptW = wCm / 2.54 * 72, ptH = hCm / 2.54 * 72, pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm), enc = new TextEncoder(), parts = [], offs = [];
+async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, onPage, mark, spread } = {}) {
+  // spread: the cover on its own page, then two pages side by side on a sheet twice as wide
+  const sheets = spread ? spreads(pages) : pages.map((_, i) => [i]);
+  const pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm), enc = new TextEncoder(), parts = [], offs = [];
   let len = 0; const put = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
   const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
-  const cv = document.createElement("canvas"); cv.width = pxW; cv.height = pxH; const ctx = cv.getContext("2d");
-  const N = pages.length, kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(" ");
+  const page = document.createElement("canvas"); page.width = pxW; page.height = pxH; const pctx = page.getContext("2d");
+  const N = sheets.length, kids = sheets.map((_, i) => `${3 + i * 3} 0 R`).join(" ");
   put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
   obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
   obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`));
   for (let i = 0; i < N; i++) {
-    render(ctx, { W: pxW, H: pxH }, pages, i, photos, style, info, mark);
+    const sh = sheets[i], wide = sh.length === 2, cv = wide ? document.createElement("canvas") : page;
+    if (wide) {
+      cv.width = pxW * 2; cv.height = pxH; const c = cv.getContext("2d");
+      sh.forEach((n, k) => { if (n == null) { c.fillStyle = (STY[style] || STY.lux).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
+        render(pctx, { W: pxW, H: pxH }, pages, n, photos, style, info, mark); c.drawImage(page, k * pxW, 0); });
+    } else render(pctx, { W: pxW, H: pxH }, pages, sh[0], photos, style, info, mark);
     const jpg = new Uint8Array(await (await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .9))).arrayBuffer());
-    const p = 3 + i * 3, content = `q ${ptW.toFixed(2)} 0 0 ${ptH.toFixed(2)} 0 0 cm /Im0 Do Q`;
+    const ptW = wCm / 2.54 * 72 * (wide ? 2 : 1), ptH = hCm / 2.54 * 72, p = 3 + i * 3, content = `q ${ptW.toFixed(2)} 0 0 ${ptH.toFixed(2)} 0 0 cm /Im0 Do Q`;
     obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW.toFixed(2)} ${ptH.toFixed(2)}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));
-    obj(p + 1, () => { put(`<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put("\nendstream"); });
+    obj(p + 1, () => { put(`<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put("\nendstream"); });
     obj(p + 2, () => put(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`));
     onPage && onPage(i + 1, N);
     await new Promise((ok) => setTimeout(ok, 0));
@@ -425,5 +453,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, LAYOUT, TYPO, COVER, DESIGN };
+G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, DESIGN };
 })(window);
