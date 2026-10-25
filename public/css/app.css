@@ -274,3 +274,5 @@ body[data-mode="story"] .style-sec .sw{flex:none;margin:0}
 .auto-card .row{display:flex;justify-content:flex-end;gap:8px}
 body[data-mode="story"] .style-sec .sw i{width:12px;height:12px}
 body[data-mode="story"] .style-sec .sw{gap:2px}
+.lib-item .mine-tag{background:var(--accent);color:var(--accent-fg)}
+.lib-del{position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:12px;display:grid;place-items:center;cursor:pointer}

@@ -50,7 +50,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
   const gut = d.gut != null ? d.gut : GUT;
   // "mix" draws from every library layout (or the ones in d.pool); a range d.min..d.max limits photos per page
   const pool = d.layout === "mix" ? (d.pool && d.pool.length ? d.pool : Object.keys(LAYOUT)).filter((k) => LAYOUT[k] && LAYOUT[k].pages) : lay && lay.pages ? [d.layout] : null;
-  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool });
+  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool, pattern: d.pattern });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -65,7 +65,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
     i += pick.k;
   }
   pages.push({ type: "end" });
-  return Object.assign(pages, { typo, cover, gut });
+  return Object.assign(pages, { typo, cover, gut, pattern: d.pattern });
 }
 
 
@@ -107,6 +107,14 @@ const LAYOUT = {
     pages: [{ bleed: true, onPh: true, t: [.08, .6, .84, .3], cells: [[0, 0, 1, 1]] },
       { bleed: true, t: [.1, .73, .8, .22], cells: [[0, 0, 1, .7]] },
       { bleed: true, onPh: true, t: [.04, .62, .92, .3], cells: [[0, 0, .5, 1], [.5, 0, .5, 1]] }] },
+  single: { name: "Một ảnh giữa trang", desc: "Một ảnh, nhiều khoảng trắng, chữ phía dưới", isNew: true,
+    pages: [{ lift: true, t: [0, .78, 1, .22], cells: [[.12, .02, .76, .72]] }, { lift: true, t: [0, 0, 1, .22], cells: [[.2, .26, .6, .74]] }] },
+  offset: { name: "Lệch tầng", desc: "Ảnh chồng lệch lên nhau, viền trắng đổ bóng", isNew: true,
+    pages: [{ lift: true, t: [.44, .74, .56, .26], cells: [[0, 0, .62, .6], [.34, .32, .44, .4], [.02, .64, .4, .36]] },
+      { lift: true, t: [0, 0, .4, .32], cells: [[.4, 0, .6, .56], [.16, .34, .42, .38], [.58, .62, .42, .38]] }] },
+  film: { name: "Cuộn phim", desc: "Dải phim tối có lỗ, ảnh nằm trong khung phim", isNew: true,
+    pages: [{ film: true, t: [0, 0, 1, .34], cells: [[.02, .44, .24, .34], [.26, .44, .24, .34], [.5, .44, .24, .34], [.74, .44, .24, .34]] },
+      { film: true, t: [0, .7, 1, .3], cells: [[.02, .14, .32, .42], [.34, .14, .32, .42], [.66, .14, .32, .42]] }] },
   collage: { name: "Ghép 5 ảnh", desc: "Một ảnh lớn, bốn ảnh nhỏ và ô chữ", isNew: true,
     pages: [{ t: [.62, 0, .38, .3], cells: [[0, 0, .6, .62], [.62, .32, .38, .3], [0, .64, .29, .36], [.31, .64, .29, .36], [.62, .64, .38, .36]] },
       { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] },
@@ -135,7 +143,40 @@ const TYPO = {
     phr: [["Wedding Day", "Chapter 01"], ["Two of us", "Chapter 02"], ["The Party", "Chapter 03"], ["Always", "Chapter 04"]] },
   hand: { name: "Viết tay", desc: "Nét bút viết tay vui tươi", isNew: true,
     phr: [["Ngày vui của chúng mình", "Thương nhau trọn đời"], ["Yêu thương", "Ngày đầu tiên"], ["Bên nhau", "Hạnh phúc giản đơn"], ["Cảm ơn em", "Đã đến bên anh"]] },
+  engrave: { name: "Chữ khắc", desc: "Chữ in hoa viền nét, chữ ký lồng lên trên", isNew: true,
+    phr: [["Love", "forever"], ["Vows", "always"], ["Joy", "together"], ["Bliss", "& grace"]] },
+  frame: { name: "Khung chữ", desc: "Chữ serif nằm trong khung mảnh có góc", isNew: true,
+    phr: [["Our Wedding", "Vol. 01"], ["Hạnh Phúc", "Chương hai"], ["Forever Us", "Vol. 03"], ["Bên Nhau", "Chương bốn"]] },
 };
+
+// Background patterns, drawn in the style's accent color over the page color.
+const PATTERN = {
+  none: { name: "Trơn", desc: "Nền một màu như phong cách" },
+  paper: { name: "Giấy mỹ thuật", desc: "Vân giấy nhẹ, như in giấy mỹ thuật", isNew: true },
+  dots: { name: "Chấm bi", desc: "Chấm nhỏ thưa, dịu mắt", isNew: true },
+  lines: { name: "Kẻ sọc mảnh", desc: "Sọc dọc rất mảnh", isNew: true },
+  grid: { name: "Lưới mảnh", desc: "Ô lưới mờ kiểu sổ tay", isNew: true },
+  corners: { name: "Hoa văn góc", desc: "Họa tiết lá ở bốn góc", isNew: true },
+};
+function pattern(ctx, st, id, W, H, S) {
+  if (!id || id === "none") return;
+  ctx.save(); ctx.fillStyle = st.acc; ctx.strokeStyle = st.acc;
+  if (id === "paper") { // fixed pseudo-random speckles so every render looks the same
+    ctx.globalAlpha = .07; let r = 7; for (let i = 0; i < 2600; i++) { r = (r * 16807) % 2147483647; const x = r % 10000 / 10000 * W; r = (r * 16807) % 2147483647; const y = r % 10000 / 10000 * H; ctx.fillRect(x, y, S * .0016, S * .0016); }
+  } else if (id === "dots") { ctx.globalAlpha = .13; const g = S * .045; for (let y = g / 2; y < H; y += g) for (let x = (y / g) % 2 ? g : g / 2; x < W; x += g) { ctx.beginPath(); ctx.arc(x, y, S * .0028, 0, 7); ctx.fill(); } }
+  else if (id === "lines") { ctx.globalAlpha = .1; ctx.lineWidth = Math.max(1, S * .001); for (let x = S * .02; x < W; x += S * .022) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } }
+  else if (id === "grid") { ctx.globalAlpha = .1; ctx.lineWidth = Math.max(1, S * .001); const g = S * .04; for (let x = g; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = g; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } }
+  else if (id === "corners") {
+    ctx.globalAlpha = .35; ctx.lineWidth = Math.max(1, S * .0022);
+    for (const [ox, oy, sx, sy] of [[0, 0, 1, 1], [W, 0, -1, 1], [0, H, 1, -1], [W, H, -1, -1]]) {
+      ctx.save(); ctx.translate(ox, oy); ctx.scale(sx, sy);
+      ctx.beginPath(); ctx.moveTo(S * .02, S * .2); ctx.quadraticCurveTo(S * .03, S * .03, S * .2, S * .02); ctx.stroke();
+      for (let k = 0; k < 5; k++) { const t = .2 + k * .16, px = S * (.02 + .17 * t * t), py = S * (.2 - .18 * t); ctx.save(); ctx.translate(px, py); ctx.rotate(-.8 + k * .35); ctx.beginPath(); ctx.ellipse(S * .012, 0, S * .014, S * .005, 0, 0, 7); ctx.fill(); ctx.restore(); }
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
 
 // Cover pages.
 const COVER = {
@@ -144,6 +185,8 @@ const COVER = {
   split: { name: "Chia đôi", desc: "Ảnh nửa trang, tên và ngày bên cạnh", isNew: true },
   mono: { name: "Chữ lồng", desc: "Chữ cái đầu hai tên lồng nhau, ảnh tròn nhỏ", isNew: true },
   arch: { name: "Vòm cổ điển", desc: "Ảnh trong khung vòm lớn", isNew: true },
+  duo: { name: "Hai ảnh", desc: "Hai ảnh cạnh nhau, tên bên dưới", isNew: true },
+  text: { name: "Chỉ có chữ", desc: "Bìa chữ thanh lịch, không ảnh", isNew: true },
 };
 
 // Designs = cover + layout + typography + style, applied in one tap.
@@ -164,6 +207,14 @@ const DESIGN = {
   golden: { name: "Golden Day", style: "lux", layout: "bleed", typo: "gold", cover: "bleed", isNew: true },
   songhy: { name: "Song Hỷ", style: "red", layout: "arch", typo: "viet", cover: "arch", isNew: true },
   editorial2: { name: "Editorial", style: "mono", layout: "collage", typo: "sans", cover: "split", isNew: true },
+  purelove: { name: "Pure Love", style: "korea", layout: "single", typo: "engrave", cover: "text", pattern: "paper", isNew: true },
+  filmdiary: { name: "Film Diary", style: "vintage", layout: "film", typo: "hand", cover: "duo", pattern: "paper", isNew: true },
+  modernframe: { name: "Modern Frame", style: "mono", layout: "offset", typo: "frame", cover: "split", pattern: "lines", isNew: true },
+  hoacuoi: { name: "Hoa Cưới", style: "floral", layout: "arch", typo: "viet", cover: "arch", pattern: "corners", isNew: true },
+  noir: { name: "Noir", style: "cinema", layout: "film", typo: "sans", cover: "bleed", isNew: true },
+  vuonxuan: { name: "Vườn Xuân", style: "garden", layout: "offset", typo: "script", cover: "mono", pattern: "dots", isNew: true },
+  hongphan: { name: "Hồng Phấn", style: "floral", layout: "single", typo: "gold", cover: "duo", pattern: "dots", isNew: true },
+  dovang: { name: "Đỏ Vàng Song Hỷ", style: "red", layout: "collage", typo: "viet", cover: "text", pattern: "corners", isNew: true },
 };
 
 // Default words for a title slot: "cover", "end", or the title's order among photo pages.
@@ -235,6 +286,17 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
     const s = fit(ctx, `600 {s}px "Dancing Script",${SCR}`, b.h * .42, a, b.w * .92); ctx.fillStyle = acc; ctx.textAlign = "center";
     const y = b.y + b.h * .48 + s * .2; ctx.fillText(a, cx, y);
     const s3 = fit(ctx, `italic 400 {s}px ${F.corm}`, s * .46, s2, b.w * .8); ctx.fillStyle = ink; ctx.fillText(s2, cx, y + s3 * 1.3);
+  } else if (id === "engrave") {
+    const A = a.toUpperCase(), s = fit(ctx, `500 {s}px ${F.play}`, b.h * .72, A, b.w * .9), y = b.y + b.h * .5 + s * .35;
+    ctx.textAlign = "center"; ctx.lineWidth = Math.max(1, s * .02); ctx.strokeStyle = ink; ctx.strokeText(A, cx, y);
+    const s3 = fit(ctx, `400 {s}px ${SCR}`, s * .42, s2, b.w * .6); ctx.fillStyle = acc; ctx.fillText(s2, cx + b.w * .1, y + s3 * .55);
+  } else if (id === "frame") {
+    const s = fit(ctx, `500 {s}px ${F.play}`, b.h * .3, a.toUpperCase(), b.w * .6), s3 = s * .36, fw = Math.min(b.w * .9, ctx.measureText(a.toUpperCase()).width + s * 2.2), fh = s * 2.6;
+    const fx = cx - fw / 2, fy = b.y + (b.h - fh) / 2, k = s * .35, lw = Math.max(1, s * .03);
+    ctx.strokeStyle = acc; ctx.lineWidth = lw; ctx.strokeRect(fx, fy, fw, fh);
+    ctx.lineWidth = lw * 2.4; for (const [px, py, dx, dy] of [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]]) { ctx.beginPath(); ctx.moveTo(px, py + dy * k); ctx.lineTo(px, py); ctx.lineTo(px + dx * k, py); ctx.stroke(); }
+    ctx.fillStyle = ink; spaced(ctx, a.toUpperCase(), cx, fy + fh * .55, s * .12);
+    ctx.font = font(`italic 400 {s}px ${F.corm}`, s3 * 1.4); ctx.fillStyle = soft; ctx.textAlign = "center"; ctx.fillText(s2, cx, fy + fh * .82);
   }
   ctx.restore();
 }
@@ -271,7 +333,7 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target, over) {
       const k = Math.max(1, Math.min(4, left, max)), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
-    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, lift: t.lift, film: t.film, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
     i += t.cells.length; prev = t;
   }
   pages.push({ type: "end" });
@@ -328,14 +390,24 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
   if (G.SlideEngine) G.SlideEngine.names(ctx, info);
   const W = typeof dims === "number" ? dims : dims.W, H = typeof dims === "number" ? dims : dims.H, S = Math.min(W, H), cx = W / 2;
   const st = STY[style] || STY.lux, pg = pages[n];
-  ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, W, H); pattern(ctx, st, pages.pattern, W, H, S);
   if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, W - 2 * p, H - 2 * p); }
   if (st.bar && pg.type !== "photos") { ctx.fillStyle = st.acc; ctx.fillRect(S * M, S * .06, S * .08, S * .012); }
   const names = info.names || "", date = info.date || "", foot = H - S * M * .6, own = pages.text || {};
   if (pg.type === "cover") {
     const src = photos[pg.photo] && photos[pg.photo].c, cv = pages.cover || "classic", ty = pages.typo && pages.typo !== "none" ? pages.typo : "";
     const nameFit = (x, y, maxW, color, k = 1) => { ctx.font = font(st.title, S * (st.upper ? .052 : .068) * k); const w = ctx.measureText(st.upper ? names.toUpperCase() : names).width; text(ctx, st, names, st.title, S * (st.upper ? .052 : .068) * k * Math.min(1, maxW / w), x, y, color); };
-    if (cv === "bleed") {
+    if (cv === "duo") {
+      const s2 = photos[1] && photos[1].c;
+      if (src) framed(ctx, st, S, src, W * .1, H * .12, W * .39, H * .56, false);
+      if (s2) framed(ctx, st, S, s2, W * .51, H * .12, W * .39, H * .56, false);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .5, w: W * .76, h: H * .16 }, 0, 0, true, own.cover);
+      nameFit(cx, H * .8, W * .84, st.ink); if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
+    } else if (cv === "text") {
+      ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .12, H * .3, S * .24, Math.max(1, S * .0015)); ctx.fillRect(cx - S * .12, H * .72, S * .24, Math.max(1, S * .0015));
+      if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .33, w: W * .76, h: H * .2 }, 0, 0, false, own.cover);
+      nameFit(cx, H * (ty ? .62 : .52), W * .8, st.ink, ty ? .9 : 1.2); if (date) text(ctx, st, date, st.body, S * .026, cx, H * (ty ? .68 : .6), st.soft);
+    } else if (cv === "bleed") {
       if (src) coverImg(ctx, src, 0, 0, W, H);
       const g = ctx.createLinearGradient(0, H * .45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.6)"); ctx.fillStyle = g; ctx.fillRect(0, H * .45, W, H * .55);
       if (ty) drawTypo(ctx, st, ty, { x: W * .1, y: H * .5, w: W * .8, h: H * .2 }, 0, 0, true, own.cover);
@@ -373,9 +445,15 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null, GUT = pages.gut != null ? pages.gut : DGUT;
     // a bleed page measures cells on the whole page; others on the inner box with gutters
     const box = (c) => cellBox(c, pg, b, W, H, S, GUT);
+    if (pg.film) { // dark film band behind the frames, with sprocket holes along both edges
+      const bx = pg.items.map((it) => box(it.cell)), y0 = Math.min(...bx.map((r) => r.y)), y1 = Math.max(...bx.map((r) => r.y + r.h)), m = (y1 - y0) * .16;
+      ctx.fillStyle = "#1c1a18"; ctx.fillRect(0, y0 - m, W, y1 - y0 + 2 * m); ctx.fillStyle = "#f3eee4";
+      for (let x = S * .015; x < W; x += S * .035) { ctx.fillRect(x, y0 - m * .72, S * .016, m * .42); ctx.fillRect(x, y1 + m * .3, S * .016, m * .42); }
+    }
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
       const c = it.cell, { x, y, w, h } = box(c);
+      if (pg.lift) { const p = S * .012; ctx.save(); ctx.shadowColor = "rgba(30,20,10,.28)"; ctx.shadowBlur = S * .02; ctx.shadowOffsetY = S * .006; ctx.fillStyle = "#fffdf8"; ctx.fillRect(x - p, y - p, w + 2 * p, h + 2 * p); ctx.restore(); coverImg(ctx, src, x, y, w, h); continue; }
       if (pg.bleed) { coverImg(ctx, src, x, y, w, h); continue; }
       if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol, pg.shape); continue; }
       ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(c[4] * Math.PI / 180);
@@ -453,5 +531,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, DESIGN };
+G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
 })(window);
