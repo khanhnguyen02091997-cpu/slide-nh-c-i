@@ -8,7 +8,7 @@ const removed = { photos: [], tracks: [] };
 let loading = true;
 let plan = { pro: true };
 // Free plan: try everything in the preview, limits apply when showing or exporting.
-const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20, trans: ["fade", "white", "black"] };
+const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20, trans: ["fade", "white", "black"], tfx: ["auto", "rise", "type", "hand"], looks: ["none", "korea", "warm", "bw"] };
 // Manual transitions on the free plan: keep the app's pick when it is free, otherwise rotate the free ones.
 const freeTr = (t, i) => plan.pro || FREE.trans.includes(t) ? t : FREE.trans[i % FREE.trans.length];
 function proNeed(mode) {
@@ -18,12 +18,15 @@ function proNeed(mode) {
   if (!FREE.styles.includes(val("style"))) why.push("phong cách này");
   if (isBook(mode) && !bookFree()) why.push(`khổ ${bookDim().label} cm`);
   if (!isBook(mode) && val("tmode") === "manual" && transList().some((t) => !FREE.trans.includes(t))) why.push("hiệu ứng có chữ Pro ở phần tự chỉnh");
+  if (!isBook(mode) && mode !== "vows" && !FREE.tfx.includes($("tfx").value)) why.push("mẫu chữ chuyển động này");
+  if (!isBook(mode) && mode !== "vows" && [$("look").value, ...photos.map((p) => p.look)].some((k) => k && !FREE.looks.includes(k))) why.push("bộ lọc màu có chữ Pro");
   return why.length ? `Bản miễn phí chưa dùng được ${why.join(", ")}. Bạn vẫn xem thử thoải mái ở khung bên cạnh; để ${mode === "video" ? "xuất video" : isBook(mode) ? "tải album" : mode === "vows" ? "tải thiệp" : mode === "deliver" ? "tạo file gửi khách" : "trình chiếu"} thì đổi lại hoặc nhập mã Pro.` : "";
 }
 function markPro() {
   if (plan.pro) return;
   document.querySelectorAll('input[name="style"]').forEach((r) => { if (!FREE.styles.includes(r.value)) r.closest("label").querySelector("b").insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
   $("tAll").querySelectorAll("button").forEach((b) => { if (b.dataset.v !== "app" && !FREE.trans.includes(b.dataset.v)) b.insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
+  document.querySelectorAll('.pick[data-for-select="tfx"] button').forEach((b) => { if (!FREE.tfx.includes(b.dataset.v)) b.insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
   [...$("bookSize").options].forEach((o) => { if (!bookFree(o.value)) o.textContent += " (Pro)"; });
   $("vfmt").insertAdjacentHTML("afterend", '<span class="hint">Bản miễn phí xuất video 720p, Pro xuất Full HD 1080p.</span>');
   $("planNote").innerHTML = `Bản miễn phí: tối đa ${FREE.photos} ảnh, 3 phong cách (Sang trọng, Hàn Quốc, Hiện đại), video 720p, album in 20 cm, có dòng chữ nhỏ ở góc. Các mục có chữ PRO vẫn xem thử được. <a href="/albums.html#pro">Nhập mã Pro</a> để mở hết.`;
@@ -158,6 +161,9 @@ async function load() {
   const legacy = s.trans && s.trans !== "auto" && s.trans !== "mix" ? s.trans : null; // single kind chosen before per-photo existed
   document.querySelector(`input[name=tmode][value="${s.tmode || (legacy ? "manual" : "auto")}"]`).checked = true;
   if (s.frame) $("frame").value = s.frame;
+  if (s.tfx && (s.tfx === "auto" || SE.TFX[s.tfx])) $("tfx").value = s.tfx;
+  if (SE.LOOK[s.look]) $("look").value = s.look;
+  $("chap").value = s.chap || ""; $("subs").value = s.subs || "";
   $("shuffle").checked = !!s.shuffle; $("cap").checked = s.cap !== false; $("stageMusic").checked = !!s.stageMusic;
   
   const [{ data: ps }, { data: ts }] = await Promise.all([
@@ -179,6 +185,7 @@ async function load() {
     photos = loaded.filter(Boolean);
     const fm = s.focus || {}; for (const p of photos) if (fm[p.path]) SE.focus(p.ph, fm[p.path][0], fm[p.path][1]);
     const pt = s.ptrans || {}; for (const p of photos) { if (pt[p.path]) p.tr = pt[p.path]; else if (legacy) p.tr = legacy; }
+    const pl = s.plook || {}; for (const p of photos) if (pl[p.path] && (pl[p.path] === "none" || SE.LOOK[pl[p.path]])) p.look = pl[p.path];
   } else {
     for (let i = 0; i < 6; i++) photos.push(sample(i));
   }
@@ -372,10 +379,16 @@ function fitted(mode) {
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
   return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
-function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
+function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean), ...fxCfg() }; }
+// Title template, colour looks (whole slide and per photo), chapter cards keyed by photo index, one subtitle line per photo.
+function fxCfg() {
+  const chap = {}; for (const l of $("chap").value.split("\n")) { const m = l.match(/^\s*(\d+)\s*[:.)\-]\s*(.+)$/); if (m && +m[1] >= 1) chap[+m[1] - 1] = m[2].trim().normalize("NFC"); }
+  return { tfx: $("tfx").value, look: $("look").value, looks: photos.map((p) => p.look || ""), chap, subs: $("subs").value.split("\n").map((s) => s.trim().normalize("NFC")) };
+}
+function lookMap() { const m = {}; for (const p of photos) if (p.path && p.look) m[p.path] = p.look; return m; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, spread: $("spread").checked, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, spread: $("spread").checked, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -519,7 +532,7 @@ function startPreview() {
   if (mode === "vows") { const v = VOW_SIZE[$("vowSize").value]; $("pvBox").classList.remove("v"); $("pvBox").classList.add("sq"); $("pvBox").style.aspectRatio = `${v.w} / ${v.h}`; $("pvBox").style.maxWidth = `min(100%, ${(70 * v.w / v.h).toFixed(1)}vh)`; sizePv(); pvEng = null; renderVows(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
-  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
+  pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
@@ -568,8 +581,46 @@ document.querySelectorAll(".pick[data-for-select]").forEach((g) => g.querySelect
   const id = g.dataset.forSelect; $(id).value = b.dataset.v; syncPick(id); refresh(); changed();
   // name font: show the title card once the font has loaded; frame: move the preview to the first photo
   if (id === "nameFont") return SE.loadName(b.dataset.v).then(() => { refresh(); if (pvEng) { pvHold = false; pvEng.go(0); } });
+  if (id === "tfx") return; // the restarted preview opens on the title card
   if (pvEng && photos.length) pvEng.go(1);
 }));
+
+/* ----- colour looks: a swatch of the first photo per look, and per-photo overrides ----- */
+const LOOKS = [["none", "Màu gốc"], ...Object.entries(SE.LOOK).map(([k, l]) => [k, l.name])];
+$("look").innerHTML = LOOKS.map(([k, n]) => `<option value="${k}">${n}</option>`).join("");
+let lookSrc = null;
+function renderLooks() {
+  const src = photos[0] && photos[0].ph.c, box = $("lookPick");
+  if (src !== lookSrc || !box.children.length) {
+    lookSrc = src; box.innerHTML = "";
+    let mini = null;
+    if (src) { const k = 150 / Math.max(src.width, src.height); mini = document.createElement("canvas"); mini.width = Math.round(src.width * k); mini.height = Math.round(src.height * k); mini.getContext("2d").drawImage(src, 0, 0, mini.width, mini.height); }
+    for (const [k, n] of LOOKS) {
+      const b = document.createElement("button"); b.type = "button"; b.dataset.v = k;
+      const cv = mini ? (k === "none" ? mini : SE.gradeC(mini, SE.LOOK[k])) : null;
+      if (cv) { const im = document.createElement("img"); im.alt = ""; im.src = cv.toDataURL("image/jpeg", .8); b.append(im); }
+      b.insertAdjacentHTML("beforeend", `<span></span>${plan.pro || FREE.looks.includes(k) ? "" : '<em class="pro-tag">PRO</em>'}`); b.querySelector("span").textContent = n;
+      b.onclick = () => { $("look").value = k; refresh(); changed(); if (pvEng && photos.length) previewPhoto(0); };
+      box.append(b);
+    }
+  }
+  box.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === $("look").value)));
+  const own = photos.filter((p) => p.look).length;
+  $("lookSum").textContent = "· " + $("look").selectedOptions[0].textContent; $("lookPer").textContent = own ? `· ${own} ảnh chỉnh riêng` : "";
+  const ul = $("lookList"); ul.innerHTML = "";
+  const opts = `<option value="">Theo cả slide</option>` + LOOKS.map(([k, n]) => `<option value="${k}">${n}${plan.pro || FREE.looks.includes(k) ? "" : " (Pro)"}</option>`).join("");
+  photos.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<img alt=""><span>Ảnh ${i + 1}</span><select aria-label="Màu của ảnh ${i + 1}">${opts}</select><button type="button" aria-label="Xem ảnh ${i + 1}">▶</button>`;
+    li.querySelector("img").src = p.thumb; const sel = li.querySelector("select"); sel.value = p.look || "";
+    sel.onchange = (e) => { e.stopPropagation(); p.look = sel.value; refresh(); changed(); previewPhoto(i); };
+    li.querySelector("button").onclick = () => previewPhoto(i);
+    ul.appendChild(li);
+  });
+  const c = fxCfg(), nc = Object.keys(c.chap).length, ns = c.subs.filter(Boolean).length;
+  $("subSum").textContent = nc || ns ? `· ${nc} chương, ${ns} phụ đề` : "";
+  $("tfxSum").textContent = "· " + $("tfx").selectedOptions[0].textContent;
+}
 
 /* ----- album resource library: layouts, title typography and ready designs, previewed with the user's photos ----- */
 const { LAYOUT, TYPO, COVER, PATTERN, TONE, DESIGN } = PhotoBook;
@@ -779,7 +830,7 @@ const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
-  syncPick("frame"); syncPick("nameFont"); syncPick("vowTpl"); renderTrans();
+  syncPick("frame"); syncPick("nameFont"); syncPick("vowTpl"); syncPick("tfx"); renderTrans(); renderLooks();
   $("letters").hidden = !LETTER_STYLES.includes(val("style"));
   const optText = (id) => $(id).selectedOptions[0]?.textContent || "";
   $("frSum").textContent = "· " + optText("frame"); $("nfSum").textContent = "· " + optText("nameFont");
@@ -836,7 +887,7 @@ async function exportVideo() {
   const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const c = cfg("video"), scenes = SE.build("video", photos.length, c), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes, auto: true, loop: false });
+  const eng = SE.Engine(cv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false });
   eng.render();
   const stream = cv.captureStream(30); let ac = null;
   $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
@@ -905,7 +956,7 @@ const bootSrc = `(async function(){
   await SE.ready;
   let raf=0,last=performance.now(),eng=null;
   function size(){const d=Math.min(2,devicePixelRatio||1);bg.width=innerWidth*d;bg.height=innerHeight*d}
-  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,mark:D.cfg.mark,sec:D.cfg.sec,trans:D.cfg.trans,trs:D.cfg.trs,frame:D.cfg.frame,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
+  function idle(){size();const mk=()=>SE.build("deliver",photos.length,D.cfg);eng=SE.Engine(bg,{style:D.style,photos,info:D.info,mark:D.cfg.mark,sec:D.cfg.sec,trans:D.cfg.trans,trs:D.cfg.trs,frame:D.cfg.frame,tfx:D.cfg.tfx,subs:D.cfg.subs,look:D.cfg.look,looks:D.cfg.looks,scenes:mk(),auto:true,loop:true,onLoop:mk});last=performance.now();raf=requestAnimationFrame(f)}
   function f(n){eng.step(Math.min(.1,(n-last)/1000));last=n;eng.render();raf=requestAnimationFrame(f)}
   addEventListener("resize",size);idle();
   go.disabled=false;go.textContent=D.tracks.length?"▶ Xem slide cùng nhạc":"▶ Xem slide";
