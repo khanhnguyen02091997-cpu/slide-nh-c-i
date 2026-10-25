@@ -476,23 +476,31 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
 async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, onPage, mark, spread } = {}) {
   // spread: the cover on its own page, then two pages side by side on a sheet twice as wide
   const sheets = spread ? spreads(pages) : pages.map((_, i) => [i]);
-  const pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm), enc = new TextEncoder(), parts = [], offs = [];
-  let len = 0; const put = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
-  const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
+  const pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm);
   const page = document.createElement("canvas"); page.width = pxW; page.height = pxH; const pctx = page.getContext("2d");
-  const N = sheets.length, kids = sheets.map((_, i) => `${3 + i * 3} 0 R`).join(" ");
-  put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
-  obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
-  obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`));
-  for (let i = 0; i < N; i++) {
+  return imgPdf(sheets.length, (i) => {
     const sh = sheets[i], wide = sh.length === 2, cv = wide ? document.createElement("canvas") : page;
     if (wide) {
       cv.width = pxW * 2; cv.height = pxH; const c = cv.getContext("2d");
       sh.forEach((n, k) => { if (n == null) { c.fillStyle = (STY[style] || STY.lux).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
         render(pctx, { W: pxW, H: pxH }, pages, n, photos, style, info, mark); c.drawImage(page, k * pxW, 0); });
     } else render(pctx, { W: pxW, H: pxH }, pages, sh[0], photos, style, info, mark);
+    return { cv, wCm: wCm * (wide ? 2 : 1), hCm };
+  }, onPage);
+}
+/* A PDF with one JPEG per page: sheet(i) returns { cv, wCm, hCm } for page i. */
+async function imgPdf(N, sheet, onPage) {
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let len = 0; const put = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
+  const kids = Array.from({ length: N }, (_, i) => `${3 + i * 3} 0 R`).join(" ");
+  put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`));
+  for (let i = 0; i < N; i++) {
+    const { cv, wCm, hCm } = await sheet(i);
     const jpg = new Uint8Array(await (await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .9))).arrayBuffer());
-    const ptW = wCm / 2.54 * 72 * (wide ? 2 : 1), ptH = hCm / 2.54 * 72, p = 3 + i * 3, content = `q ${ptW.toFixed(2)} 0 0 ${ptH.toFixed(2)} 0 0 cm /Im0 Do Q`;
+    const ptW = wCm / 2.54 * 72, ptH = hCm / 2.54 * 72, p = 3 + i * 3, content = `q ${ptW.toFixed(2)} 0 0 ${ptH.toFixed(2)} 0 0 cm /Im0 Do Q`;
     obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW.toFixed(2)} ${ptH.toFixed(2)}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));
     obj(p + 1, () => { put(`<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put("\nendstream"); });
     obj(p + 2, () => put(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`));
@@ -531,5 +539,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
+G.PhotoBook = { layout, render, pdf, imgPdf, STY, F, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
 })(window);

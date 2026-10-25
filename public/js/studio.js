@@ -14,11 +14,11 @@ const freeTr = (t, i) => plan.pro || FREE.trans.includes(t) ? t : FREE.trans[i %
 function proNeed(mode) {
   if (plan.pro) return "";
   const why = [];
-  if (photos.filter((p) => !p.sample).length > FREE.photos) why.push(`quá ${FREE.photos} ảnh`);
+  if (mode !== "vows" && photos.filter((p) => !p.sample).length > FREE.photos) why.push(`quá ${FREE.photos} ảnh`);
   if (!FREE.styles.includes(val("style"))) why.push("phong cách này");
   if (isBook(mode) && !bookFree()) why.push(`khổ ${bookDim().label} cm`);
   if (!isBook(mode) && val("tmode") === "manual" && transList().some((t) => !FREE.trans.includes(t))) why.push("hiệu ứng có chữ Pro ở phần tự chỉnh");
-  return why.length ? `Bản miễn phí chưa dùng được ${why.join(", ")}. Bạn vẫn xem thử thoải mái ở khung bên cạnh; để ${mode === "video" ? "xuất video" : isBook(mode) ? "tải album" : mode === "deliver" ? "tạo file gửi khách" : "trình chiếu"} thì đổi lại hoặc nhập mã Pro.` : "";
+  return why.length ? `Bản miễn phí chưa dùng được ${why.join(", ")}. Bạn vẫn xem thử thoải mái ở khung bên cạnh; để ${mode === "video" ? "xuất video" : isBook(mode) ? "tải album" : mode === "vows" ? "tải thiệp" : mode === "deliver" ? "tạo file gửi khách" : "trình chiếu"} thì đổi lại hoặc nhập mã Pro.` : "";
 }
 function markPro() {
   if (plan.pro) return;
@@ -143,6 +143,12 @@ async function load() {
   if (s.bookOver && typeof s.bookOver === "object") bookOver = s.bookOver;
   if (Array.isArray(s.bookSwap)) bookSwap = s.bookSwap;
   if (PhotoBook.PATTERN[s.bookPattern]) bookPattern = s.bookPattern;
+  const v = s.vows || {};
+  if (Vows.TPL[v.tpl]) $("vowTpl").value = v.tpl;
+  if (Vows.FONTS[v.font]) $("vowFont").value = v.font;
+  if (VOW_SIZE[v.size]) $("vowSize").value = v.size;
+  $("vowTitle").value = v.title || ""; $("vowG").value = v.groom || ""; $("vowB").value = v.bride || ""; $("vowCover").checked = v.cover !== false;
+  syncVowNames();
   $("spread").checked = !!s.spread;
   if (PhotoBook.TYPO[s.bookTypo]) bookTypo = s.bookTypo;
   if (s.bookText && typeof s.bookText === "object") bookText = s.bookText;
@@ -368,7 +374,7 @@ function fitted(mode) {
 function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, spread: $("spread").checked, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, spread: $("spread").checked, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -505,6 +511,7 @@ function startPreview() {
   const bd = bookDim(), k = isBook(mode) && isSpread() ? 2 : 1; $("pvBox").style.aspectRatio = isBook(mode) ? `${bd.w * k} / ${bd.h}` : "";
   $("pvBox").style.maxWidth = isBook(mode) ? `min(100%, ${(70 * k * bd.w / bd.h).toFixed(1)}vh)` : "";
   if (isBook(mode)) { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
+  if (mode === "vows") { const v = VOW_SIZE[$("vowSize").value]; $("pvBox").classList.remove("v"); $("pvBox").classList.add("sq"); $("pvBox").style.aspectRatio = `${v.w} / ${v.h}`; $("pvBox").style.maxWidth = `min(100%, ${(70 * v.w / v.h).toFixed(1)}vh)`; sizePv(); pvEng = null; renderVows(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const mk = () => SE.build(mode, photos.length, c);
   pvEng = SE.Engine(pv, { style: val("style"), photos: photos.map((p) => p.ph), info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, scenes: mk(), auto: true, loop: true, onLoop: mk,
@@ -512,7 +519,7 @@ function startPreview() {
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
 function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); } requestAnimationFrame(pvFrame); }
-new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (isBook(val("mode"))) { sizePv(); renderBook(); } }).observe(pv);
+new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (isBook(val("mode"))) { sizePv(); renderBook(); } else if (val("mode") === "vows") { sizePv(); renderVows(); } }).observe(pv);
 
 /* ----- per-photo transitions: the app picks (auto) or the user edits each photo (manual) ----- */
 let tSeed = 0;
@@ -688,14 +695,56 @@ $("libX").onclick = closeLib;
 $("lib").addEventListener("click", (e) => { if (e.target === $("lib")) closeLib(); });
 addEventListener("keydown", (e) => { if (e.key !== "Escape") return; if (!$("lib").hidden) closeLib(); $("auto").hidden = true; });
 
+/* ----- vows: a cover and one card per vow, printed as a PDF ----- */
+const VOW_SIZE = { a5: { w: 14.8, h: 21, label: "A5" }, a6: { w: 10.5, h: 14.8, label: "A6" }, "5x7": { w: 12.7, h: 17.8, label: "5 × 7 inch" }, sq: { w: 15, h: 15, label: "vuông 15 cm" } };
+let vowCard = "cover";
+// Style cards show only their name; the description moves to a tooltip.
+document.querySelectorAll("#styles .opt").forEach((o) => { const d = o.querySelector(":scope > span"); if (d) o.title = d.textContent; });
+$("vowG").placeholder = Vows.SAMPLE.groom; $("vowB").placeholder = Vows.SAMPLE.bride;
+const vowCards = () => ($("vowCover").checked ? ["cover"] : []).concat(["groom", "bride"]);
+function vowData() {
+  const i = info(), nf = $("nameFont").value;
+  return { tpl: $("vowTpl").value, style: val("style"), title: $("vowTitle").value.normalize("NFC"), vows: { groom: $("vowG").value.trim(), bride: $("vowB").value.trim() },
+    font: $("vowFont").value, nameF: SE.NAMEF[nf] || null, groom: i.groom, bride: i.bride, date: i.date, mark: plan.pro ? "" : MARK };
+}
+function renderVows() {
+  if (!vowCards().includes(vowCard)) vowCard = vowCards()[0];
+  document.querySelectorAll("[data-card]").forEach((b) => { b.hidden = !vowCards().includes(b.dataset.card); b.setAttribute("aria-pressed", String(b.dataset.card === vowCard)); });
+  Vows.render(pv.getContext("2d"), { W: pv.width, H: pv.height }, vowCard, vowData());
+  $("pvScene").textContent = "Xem trước · " + (vowCard === "cover" ? "Bìa" : Vows.LABEL[vowCard]);
+}
+document.querySelectorAll("[data-card]").forEach((b) => b.onclick = () => { vowCard = b.dataset.card; renderVows(); });
+// The vows part has its own name and date boxes; they edit the album's names and date.
+const VOW_SYNC = [["vGroom", "groom"], ["vBride", "bride"], ["vDate", "date"]];
+function syncVowNames() { VOW_SYNC.forEach(([a, b]) => $(a).value = $(b).value); }
+VOW_SYNC.forEach(([a, b]) => { $(a).addEventListener("input", () => $(b).value = $(a).value); $(b).addEventListener("input", () => $(a).value = $(b).value); });
+const vowFile = () => slug().replace("slide-cuoi-", "vows-");
+$("vowPng").onclick = async () => {
+  await SE.loadName($("nameFont").value);
+  const v = VOW_SIZE[$("vowSize").value], k = 2000 / Math.max(v.w, v.h), cv = document.createElement("canvas"); cv.width = Math.round(v.w * k); cv.height = Math.round(v.h * k);
+  Vows.render(cv.getContext("2d"), { W: cv.width, H: cv.height }, vowCard, vowData());
+  saveFile(await new Promise((ok) => cv.toBlob(ok, "image/png")), `${vowFile()}-${vowCard}.png`);
+};
+async function exportVows() {
+  await Promise.all([SE.loadName($("nameFont").value), PhotoBook.fonts()]);
+  const v = VOW_SIZE[$("vowSize").value], cards = vowCards();
+  $("go").disabled = true;
+  try {
+    const blob = await Vows.pdf(cards, vowData(), { wCm: v.w, hCm: v.h, px: 2000 });
+    saveFile(blob, vowFile() + ".pdf");
+    $("goNote").textContent = `Đã tải thiệp vows PDF (${cards.length} trang ${v.label}). Gửi file này cho tiệm in là được.`;
+  } catch (e) { fail("Chưa tạo được PDF: " + (e.message || e)); }
+  $("go").disabled = false;
+}
+
 /* ----- parts: slide (party / stage / deliver), video, album ----- */
-const partOf = (mode) => mode === "video" || isBook(mode) ? mode : "slide";
+const partOf = (mode) => mode === "video" || mode === "vows" || isBook(mode) ? mode : "slide";
 let lastSlide = "party";
 function showPart(part) {
   document.querySelectorAll(".parts button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.part === part)));
   document.querySelectorAll("section[data-part]").forEach((sec) => sec.hidden = !sec.dataset.part.split(" ").includes(part));
   let n = 0; document.querySelectorAll(".main section").forEach((sec) => { if (!sec.hidden) { const el = sec.querySelector("h2 .n"); if (el) el.textContent = ++n; } });
-  const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới", story: "Phóng Sự Cưới" }[part];
+  const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới", story: "Phóng Sự Cưới", vows: "Vows Cưới" }[part];
   document.querySelector("h1").firstChild.textContent = h + " ";
 }
 document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
@@ -708,31 +757,33 @@ document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
 });
 
 /* ----- mode-dependent action ----- */
-const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in", story: "⬇ Tải phóng sự cưới PDF" };
+const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in", story: "⬇ Tải phóng sự cưới PDF", vows: "⬇ Tải thiệp vows PDF để in" };
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
-  syncPick("frame"); syncPick("nameFont"); renderTrans();
+  syncPick("frame"); syncPick("nameFont"); syncPick("vowTpl"); renderTrans();
   $("letters").hidden = !LETTER_STYLES.includes(val("style"));
   const optText = (id) => $(id).selectedOptions[0]?.textContent || "";
   $("frSum").textContent = "· " + optText("frame"); $("nfSum").textContent = "· " + optText("nameFont");
+  document.querySelectorAll(".vnfSum").forEach((el) => el.textContent = "· " + (optText("nameFont") === "Theo phong cách" ? "Great Vibes" : optText("nameFont")));
   $("libSum").textContent = libSum(); renderStrip();
   const nm = info().names;
   document.querySelectorAll(".nf-pick button").forEach((b) => { if (b.dataset.v !== "auto") { b.querySelector(".nf-s").textContent = nm; b.title = b.querySelector(".nf-s").title = SE.NAMEF[b.dataset.v][0]; } });
-  $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage";
-  const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" ? "party" : mode, n, c);
+  $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage" && mode !== "vows";
+  const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" || mode === "vows" ? "party" : mode, n, c);
   const notes = {
     party: `Một vòng chiếu khoảng ${fmtDur(SE.total(sc))}, chạy lặp lại tới khi bạn thoát. Màn hình tự phóng to, giữ sáng và ẩn chuột.`,
     stage: `${c.cues.length} màn theo chương trình. Bấm → hoặc bút trình chiếu để chuyển, B để che đen. Khung xem trước tự chạy để bạn xem từng màn.`,
     video: `Video dài khoảng ${fmtDur(SE.total(sc))}. Video dựng theo thời gian thật nên mất đúng chừng đó thời gian, giữ tab này mở trong lúc xuất.` + (tracks.length ? "" : " Chưa có nhạc, video sẽ không có tiếng."),
     album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().sq ? "vuông " : ""}${bookDim().label} cm. Ảnh xếp theo thời gian chụp, mỗi trang tự dàn 1 đến 4 ảnh. Không ưng thì bấm Đổi bố cục.`,
     story: `Phóng sự cưới ${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().label} cm. Chọn mẫu trong Thư viện mẫu hoặc bấm Auto Design, rồi gõ chữ của bạn vào ô dưới khung xem trước.`,
+    vows: `${vowCards().length} trang thiệp ${VOW_SIZE[$("vowSize").value].label}: ${vowCards().map((k) => k === "cover" ? "bìa" : k === "groom" ? "lời chú rể" : "lời cô dâu").join(", ")}. Tải PDF gửi tiệm in, hoặc tải ảnh PNG từng trang để gửi Zalo.`,
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
   const need = proNeed(mode);
   $("goNote").textContent = need || notes[mode]; $("goNote").classList.toggle("err", !!need);
   showSec(mode);
-  $("pvInfo").textContent = n + " ảnh" + (tracks.length ? " · " + tracks.length + " bài nhạc" : "");
+  $("pvInfo").textContent = mode === "vows" ? VOW_SIZE[$("vowSize").value].label : n + " ảnh" + (tracks.length ? " · " + tracks.length + " bài nhạc" : "");
   const i = info(); $("titleNames").textContent = i.names; document.title = i.names + " · Slide Ảnh Cưới";
   startPreview();
 }
@@ -748,7 +799,7 @@ function openPlayer(mode) {
   SE.Player({ mode, style: val("style"), photos: photos.map((p) => p.ph), info: info(), cfg: cfg(), tracks: tracks.map((t) => t.url),
     musicOn: mode === "stage" ? $("stageMusic").checked : true, onClose: () => { pvHold = false; sizePv(); } });
 }
-$("go").onclick = () => { const m = val("mode"); if (proNeed(m)) return fail(proNeed(m)); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (isBook(m)) exportBook(); else exportDeliver(); };
+$("go").onclick = () => { const m = val("mode"); if (proNeed(m)) return fail(proNeed(m)); if (m === "party" || m === "stage") openPlayer(m); else if (m === "video") exportVideo(); else if (isBook(m)) exportBook(); else if (m === "vows") exportVows(); else exportDeliver(); };
 $("tryDeliver").onclick = () => openPlayer("deliver");
 // Download from the Slide part without switching tabs: an MP4 to send anywhere, or the self-contained .html slideshow.
 const busy = (b) => { $("dlVideo").disabled = $("dlHtml").disabled = b; };
