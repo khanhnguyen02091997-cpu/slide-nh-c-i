@@ -29,6 +29,7 @@
     <button role="tab" data-part="video" aria-selected="false"><b>🎬 Video có nhạc</b><span>Xuất file video ngang hoặc dọc</span></button>
     <button role="tab" data-part="album" aria-selected="false"><b>📖 Album ảnh in</b><span>Tự dàn trang, tải PDF gửi tiệm in</span></button>
     <button role="tab" data-part="story" aria-selected="false"><b>📰 Phóng sự cưới <em class="new-tag">NEW</em></b><span>Mẫu thiết kế, tự viết chữ, tải PDF in</span></button>
+    <button role="tab" data-part="vows" aria-selected="false"><b>💍 Vows <em class="new-tag">NEW</em></b><span>Thiệp lời thề, tên dâu rể, chọn phông chữ</span></button>
   </div>
 
   <div class="layout">
@@ -41,6 +42,7 @@
           <label class="opt" hidden><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
           <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
+          <label class="opt" hidden><input type="radio" name="mode" value="vows"><b>Vows</b><span>Thiệp lời thề.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="story"><b>Phóng sự cưới</b><span>Chọn mẫu thiết kế, tự viết chữ từng trang, tải PDF in.</span></label>
         </div>
       </section>
@@ -59,6 +61,28 @@
           <label class="opt"><input type="radio" name="style" value="garden"><div class="sw"><i style="background:#eef2e8"></i><i style="background:#8aa37c"></i><i style="background:#2f4229"></i></div><b>Xanh sân vườn</b><span>Xanh lá dịu, cành lá ở góc, khung vòm, lá bay.</span></label>
           <label class="opt"><input type="radio" name="style" value="editorial"><div class="sw"><i style="background:#f6f2e4"></i><i style="background:#b08d57"></i><i style="background:#5a4636"></i></div><b>Thư tình, kem thanh lịch</b><span>Ảnh trên nền mờ của chính nó, tên chữ ký, thư tay gõ từng chữ, ghép 3 ảnh, kết thúc hoa cúc.</span></label>
         </div>
+      </section>
+
+      <section data-part="vows" class="vows-sec">
+        <h2><span class="n">3</span>Lời thề (Vows) <em class="new-tag">NEW</em></h2>
+        <div class="pick" data-for-select="vowTpl" role="group"><button type="button" data-v="classic" aria-pressed="true"><i aria-hidden="true">▣</i>Cổ điển</button><button type="button" data-v="arch" aria-pressed="false"><i aria-hidden="true">⌂</i>Khung vòm</button><button type="button" data-v="floral" aria-pressed="false"><i aria-hidden="true">❦</i>Cành lá</button><button type="button" data-v="minimal" aria-pressed="false"><i aria-hidden="true">≡</i>Tối giản</button></div>
+        <select id="vowTpl" hidden><option value="classic">Cổ điển</option><option value="arch">Khung vòm</option><option value="floral">Cành lá</option><option value="minimal">Tối giản</option></select>
+        <div class="fields">
+          <label class="f">Chú rể<input type="text" id="vGroom" placeholder="Tên chú rể"></label>
+          <label class="f">Cô dâu<input type="text" id="vBride" placeholder="Tên cô dâu"></label>
+          <label class="f">Ngày cưới<input type="date" id="vDate"></label>
+          <label class="f wide">Tiêu đề<input type="text" id="vowTitle" placeholder="Our Vows"></label>
+          <label class="f wide">Lời thề của chú rể<textarea id="vowG" rows="5"></textarea></label>
+          <label class="f wide">Lời thề của cô dâu<textarea id="vowB" rows="5"></textarea></label>
+          <label class="f">Phông chữ lời thề<select id="vowFont"><option value="corm">Cormorant, nghiêng thanh lịch</option><option value="play">Playfair, nghiêng sang</option><option value="sans">Be Vietnam Pro, hiện đại</option><option value="dancing">Dancing Script, viết tay</option><option value="charm">Charm, viết tay đậm</option><option value="patrick">Patrick Hand, chữ tay vui</option></select></label>
+          <label class="f">Khổ thiệp<select id="vowSize"><option value="a5">A5 dọc 14.8 × 21 cm</option><option value="a6">A6 dọc 10.5 × 14.8 cm</option><option value="5x7">5 × 7 inch, 12.7 × 17.8 cm</option><option value="sq">Vuông 15 × 15 cm</option></select></label>
+        </div>
+        <details class="fold nf-fold" open>
+          <summary>Phông chữ tên và tiêu đề <span class="hint vnfSum"></span></summary>
+          <div class="pick nf-pick" data-for-select="nameFont" role="group"><button type="button" data-v="auto"><span class="nf-s">Theo phong cách</span></button><button type="button" data-v="vibes" style='font-family:&quot;Great Vibes&quot;,cursive'><span class="nf-s">Great Vibes</span></button><button type="button" data-v="dancing" style='font-family:&quot;Dancing Script&quot;,cursive'><span class="nf-s">Dancing Script</span></button><button type="button" data-v="pinyon" style='font-family:&quot;Pinyon Script&quot;,cursive'><span class="nf-s">Pinyon Script</span></button><button type="button" data-v="alex" style='font-family:&quot;Alex Brush&quot;,cursive'><span class="nf-s">Alex Brush</span></button><button type="button" data-v="playball" style='font-family:&quot;Playball&quot;,cursive'><span class="nf-s">Playball</span></button><button type="button" data-v="charm" style='font-family:&quot;Charm&quot;,cursive'><span class="nf-s">Charm</span></button><button type="button" data-v="corinthia" style='font-family:&quot;Corinthia&quot;,cursive'><span class="nf-s">Corinthia</span></button><button type="button" data-v="pacifico" style='font-family:&quot;Pacifico&quot;,cursive'><span class="nf-s">Pacifico</span></button><button type="button" data-v="lobster" style='font-family:&quot;Lobster&quot;,cursive'><span class="nf-s">Lobster</span></button><button type="button" data-v="patrick" style='font-family:&quot;Patrick Hand&quot;,cursive'><span class="nf-s">Patrick Hand</span></button></div>
+        </details>
+        <p class="hint">Màu thiệp theo phong cách đã chọn ở trên. Để trống lời thề thì thiệp dùng lời mẫu, bạn sửa lại theo ý mình.</p>
+        <div class="checks"><label class="check"><input type="checkbox" id="vowCover" checked><span>Thêm trang bìa có tên hai bạn</span></label></div>
       </section>
 
       <section data-part="story" class="lib-sec">
@@ -100,7 +124,7 @@
         <select id="frame" hidden><option value="auto">Theo phong cách</option><option value="full">Tràn màn hình</option><option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option><option value="polaroid">Polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option></select>
       </section>
 
-      <section>
+      <section data-part="slide video album story">
         <div class="sec-h">
           <h2><span class="n">3</span>Ảnh</h2>
           <span class="count" id="count"></span>
@@ -157,7 +181,7 @@
         </div>
       </section>
 
-      <section>
+      <section data-part="slide video album story">
         <h2><span class="n">5</span>Thông tin cô dâu chú rể</h2>
         <div class="fields">
           <label class="f">Chú rể<input type="text" id="groom" placeholder="Tên chú rể"></label>
@@ -177,7 +201,7 @@
         <select id="nameFont" hidden><option value="auto">Theo phong cách</option><option value="vibes">Great Vibes</option><option value="dancing">Dancing Script</option><option value="pinyon">Pinyon Script</option><option value="alex">Alex Brush</option><option value="playball">Playball</option><option value="charm">Charm</option><option value="corinthia">Corinthia</option><option value="pacifico">Pacifico</option><option value="lobster">Lobster</option><option value="patrick">Patrick Hand</option></select>
       </section>
 
-      <section>
+      <section data-part="slide video album story">
         <h2><span class="n">6</span>Tùy chọn</h2>
         <div class="fields">
           <label class="f" data-for="party stage video deliver">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
@@ -225,6 +249,10 @@ Cảm ơn quý khách</textarea>
         <b id="btLabel">Chữ trên trang này</b>
         <div class="row" id="btEdit"><input type="text" id="btA" placeholder="Chữ lớn" aria-label="Chữ lớn"><input type="text" id="btB" placeholder="Chữ nhỏ" aria-label="Chữ nhỏ"><button type="button" id="btReset">Về chữ mẫu</button></div>
         <span class="hint" id="btHint"></span>
+      </div>
+      <div class="row book-nav" data-for="vows" role="group" aria-label="Trang thiệp">
+        <button type="button" data-card="cover">Bìa</button><button type="button" data-card="groom">Chú rể</button><button type="button" data-card="bride">Cô dâu</button>
+        <button type="button" id="vowPng">⬇ Ảnh PNG trang này</button>
       </div>
       <div class="row">
         <button class="go" id="go"></button>
@@ -291,6 +319,7 @@ Cảm ơn quý khách</textarea>
 <script src="/js/common.js"></script>
 <script src="/js/engine.js"></script>
 <script src="/js/album.js"></script>
+<script src="/js/vows.js"></script>
 <script src="/js/studio.js"></script>
 </body>
 </html>

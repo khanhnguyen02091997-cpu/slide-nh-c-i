@@ -1,7 +1,7 @@
 // Offline shell for the installed app. Pages and scripts: network first, cache as fallback,
 // so a new deploy shows up on the next open. API calls and Supabase are never cached.
-const CACHE = "slide-cuoi-v17";
-const SHELL = ["/", "/index.html", "/albums.html", "/studio.html", "/css/app.css", "/js/common.js", "/js/engine.js", "/js/album.js", "/js/studio.js", "/js/pwa.js", "/icons/icon-192.png"];
+const CACHE = "slide-cuoi-v18";
+const SHELL = ["/", "/index.html", "/albums.html", "/studio.html", "/css/app.css", "/js/common.js", "/js/engine.js", "/js/album.js", "/js/vows.js", "/js/studio.js", "/js/pwa.js", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
