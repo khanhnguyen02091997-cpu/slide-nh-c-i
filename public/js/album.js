@@ -46,8 +46,8 @@ function best(ars, A) {
 
 /* Group photos (kept in order) into pages, varying 1-4 photos per page, or by a library layout (d.layout) with titles (d.typo). */
 function layout(ars, seed = 0, A = 1, d = {}) {
-  const lay = LAYOUT[d.layout], typo = TYPO[d.typo] ? d.typo : "none";
-  if (lay && lay.pages) return Object.assign(layoutLib(ars, seed, A, lay), { typo });
+  const lay = LAYOUT[d.layout], typo = TYPO[d.typo] ? d.typo : "none", cover = COVER[d.cover] ? d.cover : "classic";
+  if (lay && lay.pages) return Object.assign(layoutLib(ars, seed, A, lay), { typo, cover });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -62,7 +62,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
     i += pick.k;
   }
   pages.push({ type: "end" });
-  return Object.assign(pages, { typo });
+  return Object.assign(pages, { typo, cover });
 }
 
 
@@ -91,6 +91,20 @@ const LAYOUT = {
   mosaic: { name: "Lưới so le", desc: "8 ảnh nhỏ cao thấp xen kẽ", isNew: true,
     pages: [{ t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .3], [0, .4, 1 / 3, .3], [0, .7, 1 / 3, .3], [1 / 3, .1, 1 / 3, .22], [1 / 3, .32, 1 / 3, .36], [1 / 3, .68, 1 / 3, .32], [2 / 3, .1, 1 / 3, .45], [2 / 3, .55, 1 / 3, .45]] },
       { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .45], [0, .55, 1 / 3, .45], [1 / 3, .1, 1 / 3, .3], [1 / 3, .4, 1 / 3, .3], [1 / 3, .7, 1 / 3, .3], [2 / 3, .1, 1 / 3, .22], [2 / 3, .32, 1 / 3, .36], [2 / 3, .68, 1 / 3, .32]] }] },
+  // shape: arch or circle frames; bleed: cells and title box are fractions of the whole page, no margins; onPh: title sits on a photo
+  arch: { name: "Khung vòm", desc: "Ảnh trong khung vòm kiểu cửa sổ nhà thờ", isNew: true,
+    pages: [{ shape: "arch", t: [0, 0, 1, .26], cells: [[0, .3, 1 / 3, .7], [1 / 3, .3, 1 / 3, .7], [2 / 3, .3, 1 / 3, .7]] },
+      { shape: "arch", t: [0, .74, 1, .26], cells: [[.04, 0, .44, .72], [.52, 0, .44, .72]] }] },
+  circle: { name: "Khung tròn", desc: "Ảnh tròn lồng nhau, chữ bên dưới", isNew: true,
+    pages: [{ shape: "circle", t: [0, .8, 1, .2], cells: [[0, 0, .5, .5], [.5, 0, .5, .5], [.25, .34, .5, .5]] },
+      { shape: "circle", t: [0, .74, 1, .26], cells: [[.17, 0, .66, .72]] }] },
+  bleed: { name: "Ảnh tràn trang", desc: "Một ảnh phủ kín trang, chữ nằm trên ảnh", isNew: true,
+    pages: [{ bleed: true, onPh: true, t: [.08, .6, .84, .3], cells: [[0, 0, 1, 1]] },
+      { bleed: true, t: [.1, .73, .8, .22], cells: [[0, 0, 1, .7]] },
+      { bleed: true, onPh: true, t: [.04, .62, .92, .3], cells: [[0, 0, .5, 1], [.5, 0, .5, 1]] }] },
+  collage: { name: "Ghép 5 ảnh", desc: "Một ảnh lớn, bốn ảnh nhỏ và ô chữ", isNew: true,
+    pages: [{ t: [.62, 0, .38, .3], cells: [[0, 0, .6, .62], [.62, .32, .38, .3], [0, .64, .29, .36], [.31, .64, .29, .36], [.62, .64, .38, .36]] },
+      { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] }] },
 };
 
 const SCR = '"Great Vibes",cursive';
@@ -107,19 +121,52 @@ const TYPO = {
     phr: [["The Vows", "Chapter one"], ["Our Day", "Chapter two"], ["Together", "Chapter three"], ["Celebration", "Chapter four"]] },
   love: { name: "Love & Grace", desc: "Chữ ký lồng chữ serif", isNew: true,
     phr: [["Love", "& Grace"], ["Forever", "Yours"], ["Mr & Mrs", "Hello"], ["Sweet", "Moments"]] },
+  viet: { name: "Tiếng Việt cổ điển", desc: "Trăm năm hạnh phúc, chữ mềm có dấu", isNew: true,
+    phr: [["Trăm năm hạnh phúc", "Ngày chung đôi"], ["Mãi bên nhau", "Trọn đời trọn kiếp"], ["Tình yêu", "Của chúng mình"], ["Về chung một nhà", "Hạnh phúc viên mãn"]] },
+  gold: { name: "Chữ ký vàng", desc: "Chữ ký ánh vàng, dòng nhỏ có hoa văn", isNew: true,
+    phr: [["Golden Day", "The wedding of"], ["Our Forever", "Begins today"], ["Cherish", "Every moment"], ["Together", "Hand in hand"]] },
+  sans: { name: "Tối giản hiện đại", desc: "Chữ in hoa giãn rộng, gọn gàng", isNew: true,
+    phr: [["Wedding Day", "Chapter 01"], ["Two of us", "Chapter 02"], ["The Party", "Chapter 03"], ["Always", "Chapter 04"]] },
+  hand: { name: "Viết tay", desc: "Nét bút viết tay vui tươi", isNew: true,
+    phr: [["Ngày vui của chúng mình", "Thương nhau trọn đời"], ["Yêu thương", "Ngày đầu tiên"], ["Bên nhau", "Hạnh phúc giản đơn"], ["Cảm ơn em", "Đã đến bên anh"]] },
 };
 
-// Designs = style + layout + typography, applied in one tap.
-const DESIGN = {
-  vows: { name: "The Vows", style: "korea", layout: "grid", typo: "mag", isNew: true },
-  moment: { name: "Moment in Time", style: "vintage", layout: "strip", typo: "serif", isNew: true },
-  sacred: { name: "The Sacred Vows", style: "mono", layout: "diag", typo: "bold", isNew: true },
-  sweet: { name: "Sweet Memories", style: "lux", layout: "scatter", typo: "script", isNew: true },
-  grace: { name: "Love & Grace", style: "garden", layout: "hero", typo: "love", isNew: true },
-  chapter: { name: "Chapter One", style: "editorial", layout: "mosaic", typo: "mag", isNew: true },
-  vuquy: { name: "Ngày Vu Quy", style: "red", layout: "hero", typo: "script", isNew: true },
-  minimal: { name: "Tối giản", style: "modern", layout: "grid", typo: "bold", isNew: true },
+// Cover pages.
+const COVER = {
+  classic: { name: "Cổ điển", desc: "Ảnh có khung, tên bên dưới" },
+  bleed: { name: "Ảnh tràn bìa", desc: "Ảnh phủ kín bìa, tên nằm trên ảnh", isNew: true },
+  split: { name: "Chia đôi", desc: "Ảnh nửa trang, tên và ngày bên cạnh", isNew: true },
+  mono: { name: "Chữ lồng", desc: "Chữ cái đầu hai tên lồng nhau, ảnh tròn nhỏ", isNew: true },
+  arch: { name: "Vòm cổ điển", desc: "Ảnh trong khung vòm lớn", isNew: true },
 };
+
+// Designs = cover + layout + typography + style, applied in one tap.
+const DESIGN = {
+  vows: { name: "The Vows", style: "korea", layout: "grid", typo: "mag", cover: "classic", isNew: true },
+  moment: { name: "Moment in Time", style: "vintage", layout: "strip", typo: "serif", cover: "split", isNew: true },
+  sacred: { name: "The Sacred Vows", style: "mono", layout: "diag", typo: "bold", cover: "bleed", isNew: true },
+  sweet: { name: "Sweet Memories", style: "lux", layout: "scatter", typo: "script", cover: "mono", isNew: true },
+  grace: { name: "Love & Grace", style: "garden", layout: "hero", typo: "love", cover: "arch", isNew: true },
+  chapter: { name: "Chapter One", style: "editorial", layout: "mosaic", typo: "mag", cover: "split", isNew: true },
+  vuquy: { name: "Ngày Vu Quy", style: "red", layout: "hero", typo: "script", cover: "mono", isNew: true },
+  minimal: { name: "Tối giản", style: "modern", layout: "grid", typo: "bold", cover: "bleed", isNew: true },
+  hanhphuc: { name: "Trăm Năm Hạnh Phúc", style: "korea", layout: "arch", typo: "viet", cover: "arch", isNew: true },
+  cine: { name: "Cinematic", style: "cinema", layout: "bleed", typo: "sans", cover: "bleed", isNew: true },
+  gardenparty: { name: "Garden Party", style: "garden", layout: "circle", typo: "hand", cover: "mono", isNew: true },
+  tinhca: { name: "Tình Ca", style: "floral", layout: "collage", typo: "hand", cover: "classic", isNew: true },
+  letter: { name: "Vintage Letter", style: "vintage", layout: "mosaic", typo: "serif", cover: "split", isNew: true },
+  golden: { name: "Golden Day", style: "lux", layout: "bleed", typo: "gold", cover: "bleed", isNew: true },
+  songhy: { name: "Song Hỷ", style: "red", layout: "arch", typo: "viet", cover: "arch", isNew: true },
+  editorial2: { name: "Editorial", style: "mono", layout: "collage", typo: "sans", cover: "split", isNew: true },
+};
+
+// Default words for a title slot: "cover", "end", or the title's order among photo pages.
+function phrase(typo, key) {
+  if (key === "end") return ["Cảm ơn", ""];
+  const p = (TYPO[typo] || TYPO.none).phr; return p[(key === "cover" ? 0 : +key) % p.length];
+}
+const FONTS = ['400 40px "Great Vibes"', 'italic 400 40px "Cormorant Garamond"', '500 40px "Playfair Display"', 'italic 500 40px "Playfair Display"', '700 40px Charm', '600 40px "Dancing Script"', '600 40px Montserrat', '300 40px "Be Vietnam Pro"'];
+const fonts = () => G.document && document.fonts ? Promise.all(FONTS.map((f) => document.fonts.load(f, "Ắă").catch(() => {}))) : Promise.resolve();
 
 // Biggest font size (up to s) that keeps str within maxW.
 function fit(ctx, f, s, str, maxW) { ctx.font = font(f, s); const w = ctx.measureText(str).width; if (w > maxW) { s *= maxW / w; ctx.font = font(f, s); } return s; }
@@ -128,9 +175,9 @@ function spaced(ctx, str, x, y, sp, align = "center") {
   let cx = align === "center" ? x - tw / 2 : align === "right" ? x - tw : x; ctx.textAlign = "left";
   ch.forEach((c, i) => { ctx.fillText(c, cx, y); cx += ws[i] + sp; });
 }
-function drawTypo(ctx, st, id, b, ph, n, onPhoto) {
+function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
   const ty = TYPO[id]; if (!ty || id === "none") return;
-  const [a, s2] = ty.phr[ph % ty.phr.length], ink = onPhoto ? "#fffaf2" : st.ink, acc = onPhoto ? "#fffaf2" : st.acc, soft = onPhoto ? "rgba(255,250,242,.9)" : st.soft;
+  const [a, s2] = own || ty.phr[ph % ty.phr.length], ink = onPhoto ? "#fffaf2" : st.ink, acc = onPhoto ? "#fffaf2" : st.acc, soft = onPhoto ? "rgba(255,250,242,.9)" : st.soft;
   const S = Math.min(b.w, b.h * 2.4), cx = b.x + b.w / 2;
   ctx.save(); ctx.textBaseline = "alphabetic";
   if (onPhoto) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = b.h * .06; }
@@ -157,6 +204,31 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto) {
     const s = fit(ctx, `400 {s}px ${SCR}`, b.h * .5, a, b.w * .86); ctx.fillStyle = acc; ctx.textAlign = "center";
     const y = b.y + b.h * .46; ctx.fillText(a, cx, y);
     const s3 = fit(ctx, `italic 500 {s}px ${F.play}`, s * .5, s2, b.w * .8); ctx.fillStyle = ink; ctx.fillText(s2, cx + b.w * .08, y + s3 * 1.25);
+  } else if (id === "viet") {
+    const s = fit(ctx, `700 {s}px Charm,${SCR}`, b.h * .42, a, b.w * .92); ctx.fillStyle = ink; ctx.textAlign = "center";
+    const y = b.y + b.h * .5 + s * .2; ctx.fillText(a, cx, y);
+    const s3 = fit(ctx, `400 {s}px ${F.sans}`, Math.min(s * .26, b.h * .09), s2.toUpperCase(), b.w * .7); ctx.fillStyle = acc;
+    spaced(ctx, s2.toUpperCase(), cx, y + s3 * 2.4, s3 * .3);
+    if (s2) { const lw = b.w * .08, gy = y + s3 * 2; ctx.fillRect(cx - b.w * .36 - lw / 2, gy, lw, Math.max(1, s3 * .08)); ctx.fillRect(cx + b.w * .36 - lw / 2, gy, lw, Math.max(1, s3 * .08)); }
+  } else if (id === "gold") {
+    const s3 = Math.min(b.h * .085, b.w * .03), y0 = b.y + b.h * .26; ctx.font = font(`400 {s}px ${F.sans}`, s3); ctx.fillStyle = soft;
+    spaced(ctx, s2.toUpperCase(), cx, y0, s3 * .35);
+    const tw = ctx.measureText(s2.toUpperCase()).width + s3 * .35 * s2.length, lw = b.w * .1;
+    if (s2) { ctx.fillStyle = acc; ctx.fillRect(cx - tw / 2 - lw - s3, y0 - s3 * .35, lw, Math.max(1, s3 * .07)); ctx.fillRect(cx + tw / 2 + s3, y0 - s3 * .35, lw, Math.max(1, s3 * .07)); }
+    const s = fit(ctx, `400 {s}px ${SCR}`, b.h * .55, a, b.w * .92), y = y0 + s * .95, w = ctx.measureText(a).width;
+    const gr = ctx.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0); gr.addColorStop(0, "#a87a2f"); gr.addColorStop(.5, "#f3d48c"); gr.addColorStop(1, "#a87a2f");
+    ctx.fillStyle = onPhoto ? "#fff3d6" : gr; ctx.textAlign = "center"; ctx.fillText(a, cx, y);
+  } else if (id === "sans") {
+    const A = a.toUpperCase(); let s = fit(ctx, `600 {s}px ${F.mont}`, b.h * .26, A, b.w * .8);
+    const tw = ctx.measureText(A).width + s * .35 * ([...A].length - 1); if (tw > b.w * .94) { s *= b.w * .94 / tw; ctx.font = font(`600 {s}px ${F.mont}`, s); }
+    const y = b.y + b.h * .5; ctx.fillStyle = ink;
+    spaced(ctx, A, cx, y, s * .35);
+    ctx.fillStyle = acc; ctx.fillRect(cx - b.w * .04, y + s * .5, b.w * .08, Math.max(1, s * .06));
+    ctx.font = font(`300 {s}px ${F.sans}`, s * .42); ctx.fillStyle = soft; spaced(ctx, s2.toUpperCase(), cx, y + s * 1.25, s * .2);
+  } else if (id === "hand") {
+    const s = fit(ctx, `600 {s}px "Dancing Script",${SCR}`, b.h * .42, a, b.w * .92); ctx.fillStyle = acc; ctx.textAlign = "center";
+    const y = b.y + b.h * .48 + s * .2; ctx.fillText(a, cx, y);
+    const s3 = fit(ctx, `italic 400 {s}px ${F.corm}`, s * .46, s2, b.w * .8); ctx.fillStyle = ink; ctx.fillText(s2, cx, y + s3 * 1.3);
   }
   ctx.restore();
 }
@@ -172,7 +244,7 @@ function layoutLib(ars, seed, A, lay) {
       const k = Math.min(4, left), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
-    pages.push({ type: "photos", t: t.t, pol: t.pol, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    pages.push({ type: "photos", t: t.t, pol: t.pol, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
     i += t.cells.length;
   }
   pages.push({ type: "end" });
@@ -185,8 +257,16 @@ function coverImg(ctx, src, x, y, w, h) {
   ctx.drawImage(src, x + (w - dw) * fx, y + (h - dh) * fy, dw, dh); ctx.restore();
 }
 function containRect(ar, x, y, w, h) { let fw = w, fh = w / ar; if (fh > h) { fh = h; fw = h * ar; } return { x: x + (w - fw) / 2, y: y + (h - fh) / 2, w: fw, h: fh }; }
-function framed(ctx, st, S, src, x, y, w, h, contain, pol) {
+function framed(ctx, st, S, src, x, y, w, h, contain, pol, shape) {
   const r = contain ? containRect(src.width / src.height, x, y, w, h) : { x, y, w, h };
+  if (shape) { // arch window or circle, cut from the cell, with a ring in the page color and a thin accent line
+    const d = Math.min(w, h), c = { x: x + w / 2, y: y + h / 2 }, path = () => { ctx.beginPath();
+      if (shape === "circle") ctx.arc(c.x, c.y, d / 2, 0, Math.PI * 2);
+      else { const R = w / 2; ctx.moveTo(x, y + h); ctx.lineTo(x, y + R); ctx.arc(x + R, y + R, R, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.closePath(); } };
+    ctx.save(); path(); ctx.fillStyle = st.bg; ctx.lineWidth = S * .012; ctx.strokeStyle = st.bg; ctx.stroke(); ctx.clip();
+    if (shape === "circle") coverImg(ctx, src, c.x - d / 2, c.y - d / 2, d, d); else coverImg(ctx, src, x, y, w, h);
+    ctx.restore(); ctx.save(); path(); ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); ctx.stroke(); ctx.restore(); return;
+  }
   if (pol) { // polaroid: white card, wider at the bottom
     const p = Math.min(w, h) * .05; r.x += p; r.y += p; r.w -= 2 * p; r.h -= 3.2 * p;
     ctx.save(); ctx.shadowColor = "rgba(40,30,20,.28)"; ctx.shadowBlur = S * .014; ctx.shadowOffsetY = S * .005; ctx.fillStyle = "#fffdf8"; ctx.fillRect(x, y, w, h); ctx.restore();
@@ -209,17 +289,39 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
   ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, W, H);
   if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, W - 2 * p, H - 2 * p); }
   if (st.bar && pg.type !== "photos") { ctx.fillStyle = st.acc; ctx.fillRect(S * M, S * .06, S * .08, S * .012); }
-  const names = info.names || "", date = info.date || "", foot = H - S * M * .6;
+  const names = info.names || "", date = info.date || "", foot = H - S * M * .6, own = pages.text || {};
   if (pg.type === "cover") {
-    const src = photos[pg.photo] && photos[pg.photo].c;
-    if (src) framed(ctx, st, S, src, W * .14, H * .12, W * .72, H * .56, false);
-    if (src && pages.typo && pages.typo !== "none") drawTypo(ctx, st, pages.typo, { x: W * .16, y: H * .44, w: W * .68, h: H * .22 }, 0, 0, true);
-    text(ctx, st, names, st.title, S * (st.upper ? .052 : .068), cx, H * .8, st.ink);
-    if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
-    if (st.line) { ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .04, H * .885, S * .08, Math.max(1, S * .0015)); }
+    const src = photos[pg.photo] && photos[pg.photo].c, cv = pages.cover || "classic", ty = pages.typo && pages.typo !== "none" ? pages.typo : "";
+    const nameFit = (x, y, maxW, color, k = 1) => { ctx.font = font(st.title, S * (st.upper ? .052 : .068) * k); const w = ctx.measureText(st.upper ? names.toUpperCase() : names).width; text(ctx, st, names, st.title, S * (st.upper ? .052 : .068) * k * Math.min(1, maxW / w), x, y, color); };
+    if (cv === "bleed") {
+      if (src) coverImg(ctx, src, 0, 0, W, H);
+      const g = ctx.createLinearGradient(0, H * .45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.6)"); ctx.fillStyle = g; ctx.fillRect(0, H * .45, W, H * .55);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .1, y: H * .5, w: W * .8, h: H * .2 }, 0, 0, true, own.cover);
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = S * .01; nameFit(cx, H * .85, W * .8, "#fffaf2"); if (date) text(ctx, st, date, st.body, S * .026, cx, H * .9, "rgba(255,250,242,.9)"); ctx.restore();
+    } else if (cv === "split") {
+      if (src) coverImg(ctx, src, 0, 0, W * .5, H);
+      const rx = W * .75, bw = W * .4;
+      if (ty) drawTypo(ctx, st, ty, { x: W * .55, y: H * .2, w: bw, h: H * .24 }, 0, 0, false, own.cover);
+      ctx.fillStyle = st.acc; ctx.fillRect(rx - S * .03, H * .52, S * .06, Math.max(1, S * .0015));
+      nameFit(rx, H * .62, bw, st.ink, .8); if (date) text(ctx, st, date, st.body, S * .024, rx, H * .68, st.soft);
+    } else if (cv === "mono") {
+      const ini = [info.groom, info.bride].map((x) => (x || "").trim().split(/\s+/).pop().charAt(0).toUpperCase()).join(" & ");
+      text(ctx, st, ini, `italic 400 {s}px ${F.corm}`, S * .16, cx, H * .3, st.acc);
+      ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); ctx.beginPath(); ctx.arc(cx, H * .25, S * .2, 0, Math.PI * 2); ctx.stroke();
+      if (src) framed(ctx, st, S, src, cx - S * .11, H * .48, S * .22, S * .22, false, false, "circle");
+      if (ty) drawTypo(ctx, st, ty, { x: W * .15, y: H * .48 + S * .23, w: W * .7, h: H * .1 }, 0, 0, false, own.cover);
+      nameFit(cx, H * .88, W * .8, st.ink, .75); if (date) text(ctx, st, date, st.body, S * .022, cx, H * .925, st.soft);
+    } else {
+      const arch = cv === "arch", fx = arch ? W * .22 : W * .14, fw = arch ? W * .56 : W * .72, fy = arch ? H * .08 : H * .12, fh = arch ? H * .62 : H * .56;
+      if (src) framed(ctx, st, S, src, fx, fy, fw, fh, false, false, arch ? "arch" : "");
+      if (src && ty) drawTypo(ctx, st, ty, { x: fx + fw * .03, y: fy + fh * .57, w: fw * .94, h: fh * .38 }, 0, 0, true, own.cover);
+      nameFit(cx, H * .8, W * .84, st.ink); if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
+      if (st.line) { ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .04, H * .885, S * .08, Math.max(1, S * .0015)); }
+    }
   } else if (pg.type === "end") {
-    text(ctx, st, "Cảm ơn", st.title, S * (st.upper ? .07 : .09), cx, H * .46, st.ink);
-    const msg = info.msg || "Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi";
+    const end = own.end || [];
+    text(ctx, st, end[0] != null ? end[0] : "Cảm ơn", st.title, S * (st.upper ? .07 : .09), cx, H * .46, st.ink);
+    const msg = end[1] || info.msg || "Cảm ơn quý khách đã đến chung vui cùng gia đình chúng tôi";
     ctx.font = font(st.body, S * .026); const words = msg.split(" "), lines = []; let l = "";
     for (const w of words) { const t = l ? l + " " + w : w; if (ctx.measureText(t).width > W * .6 && l) { lines.push(l); l = w; } else l = t; }
     if (l) lines.push(l);
@@ -227,16 +329,22 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     text(ctx, st, names + (date ? " · " + date : ""), st.body, S * .022, cx, H * .86, st.soft);
   } else {
     const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null;
+    // a bleed page measures cells on the whole page; others on the inner box with gutters
+    const box = (c) => pg.bleed ? { x: c[0] * W, y: c[1] * H, w: c[2] * W, h: c[3] * H }
+      : { x: (b.x + c[0] * b.w) * S + GUT * S / 2, y: (b.y + c[1] * b.h) * S + GUT * S / 2, w: c[2] * b.w * S - GUT * S, h: c[3] * b.h * S - GUT * S };
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
-      const c = it.cell, x = (b.x + c[0] * b.w) * S + GUT * S / 2, y = (b.y + c[1] * b.h) * S + GUT * S / 2, w = c[2] * b.w * S - GUT * S, h = c[3] * b.h * S - GUT * S;
-      if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol); continue; }
+      const c = it.cell, { x, y, w, h } = box(c);
+      if (pg.bleed) { coverImg(ctx, src, x, y, w, h); continue; }
+      if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol, pg.shape); continue; }
       ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(c[4] * Math.PI / 180);
       if (!pg.pol) { ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = S * .01; ctx.fillStyle = st.bg; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = "transparent"; }
       framed(ctx, st, S, src, -w / 2, -h / 2, w, h, false, pg.pol); ctx.restore();
     }
     if (pg.t && pages.typo && pages.typo !== "none") {
-      const t = pg.t; drawTypo(ctx, st, pages.typo, { x: (b.x + t[0] * b.w) * S + GUT * S / 2, y: (b.y + t[1] * b.h) * S, w: t[2] * b.w * S - GUT * S, h: t[3] * b.h * S }, pg.ph, n, false);
+      const t = pg.t, tb = pg.bleed ? box(t) : { x: (b.x + t[0] * b.w) * S + GUT * S / 2, y: (b.y + t[1] * b.h) * S, w: t[2] * b.w * S - GUT * S, h: t[3] * b.h * S };
+      if (pg.onPh) { const g = ctx.createLinearGradient(0, tb.y - tb.h * .4, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.45)"); ctx.fillStyle = g; ctx.fillRect(0, tb.y - tb.h * .4, W, H - tb.y + tb.h * .4); }
+      drawTypo(ctx, st, pages.typo, tb, pg.ph, n, !!pg.onPh, own[pg.ph]);
     }
     text(ctx, st, String(n), st.body, S * .018, cx, foot, st.soft);
     if ((n === 1 || n % 6 === 0) && !(lib && pages.typo !== "none")) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, foot, st.soft, "left");
@@ -297,5 +405,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, takenAt, LAYOUT, TYPO, DESIGN };
+G.PhotoBook = { layout, render, pdf, takenAt, phrase, fonts, LAYOUT, TYPO, COVER, DESIGN };
 })(window);
