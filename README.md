@@ -7,6 +7,13 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 - **Video:** xuất video ngang 16:9 hoặc dọc 9:16, có nhạc và hiệu ứng.
 - **Giao khách:** tải một file `.html` chứa sẵn ảnh, nhạc, hiệu ứng; khách mở bằng trình duyệt là xem.
 - **Album ảnh để in:** tự xếp ảnh theo thời gian chụp, tự dàn trang 1 đến 4 ảnh, tải PDF vuông 20, 25 hoặc 30 cm gửi tiệm in. Xuất được 300 DPI, lề xén 3 mm, tách trang đôi thành trang đơn, ảnh JPG từng trang (.zip); dàn lại riêng trang trái hoặc phải, xem cả cuốn một lúc, đóng logo studio.
+- **Sách lật trang:** tải một file `.html` để khách lật từng trang như sách thật (điện thoại vuốt, máy tính bấm), hoặc video MP4 cuốn sách tự lật.
+- **Bản mini:** cùng cuốn album, PDF nhỏ 20, 15 hoặc 10 cm để tặng bố mẹ.
+- **Ảnh cổng / ảnh in lớn:** 40 × 60 đến 60 × 120 cm, tên cô dâu chú rể, ngày dương và ngày âm tự tính, logo studio; xem thử trên giá đỡ hoặc khung treo tường và tải ảnh mockup.
+- **Màu cả cuốn:** một tông màu cho mọi ảnh trong album, giữ nút để so với ảnh gốc.
+- **Tự canh mặt:** tìm mặt người trong ảnh (MediaPipe, chạy ngay trên máy) rồi đặt vùng cắt cho mặt nằm đẹp trong khung.
+- **Intro, outro studio:** video mở đầu bằng logo, tên studio, kết bằng lời cảm ơn, số điện thoại, fanpage.
+- Layout trang trí: giấy xé, đường chỉ khâu, một ảnh chia nhiều khung.
 - **Video từ album:** video chạy các trang album đã dàn (trang đôi trên màn ngang), có thể kèm ảnh mở đầu và ảnh kết.
 - 4 phong cách: vàng champagne, Hàn Quốc, cinematic, hiện đại.
 - Tự khớp ảnh với nhạc: chuyển ảnh đúng nhịp, video dài bằng bài nhạc.
@@ -28,6 +35,9 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `public/studio.html` | Studio làm slide, tự lưu |
 | `public/admin.html` | Quản trị: tạo, copy, khoá mã Pro |
 | `public/js/engine.js` | Bộ dựng slide (dùng chung cho studio và file giao khách) |
+| `public/js/album.js` | Dàn trang album in, xuất PDF và JPG |
+| `public/js/flipbook.js` | Sách lật trang: file `.html` gửi khách và khung hình cho video lật sách |
+| `public/js/gate.js` | Ảnh cổng: mẫu in lớn, đổi ngày dương sang âm lịch, mockup giá đỡ và khung tường |
 | `api/config.js` | Trả cấu hình công khai cho trình duyệt |
 | `api/suggest-music.js` | AI gợi ý nhạc, kiểm tra đăng nhập và giới hạn lượt |
 | `api/clone-layout.js` | AI (Gemini) đọc ảnh một trang album mẫu, trả về vị trí khung ảnh và ô chữ để tạo layout riêng |

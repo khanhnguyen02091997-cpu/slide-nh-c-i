@@ -165,6 +165,10 @@
           <p class="hint" id="photoHint"></p>
           <label class="btn">＋ Thêm ảnh<input id="photoInput" type="file" accept="image/*" multiple></label>
         </div>
+        <div class="row face-row">
+          <button type="button" id="faceAll" title="Tìm mặt người trong mọi ảnh rồi đặt vùng cắt để mặt nằm đẹp trong khung">🙂 Tự canh mặt cho mọi ảnh</button>
+          <label class="check"><input type="checkbox" id="autoFace" checked><span>Tự canh mặt cho ảnh mới thêm</span></label>
+        </div>
         <div class="ai" id="chibi" hidden>
           <h3>✦ Ảnh chibi bằng AI <small>bấm ✨ trên một ảnh, AI vẽ lại thành chibi dễ thương</small></h3>
           <div class="chibi-row">
@@ -242,6 +246,9 @@
           <label class="f" data-for="album story pre">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option><option value="25x35">Dọc 25 × 35 cm</option></select>
           </label>
+          <label class="f" data-for="album story pre">Màu cả cuốn
+            <select id="bookLook"><option value="none">Màu gốc</option></select>
+          </label>
           <label class="f" data-for="album story pre">Độ nét khi xuất
             <select id="bookDpi"><option value="std">Thường, file nhẹ (khoảng 200 DPI)</option><option value="300">In chuẩn 300 DPI, file nặng</option></select>
           </label>
@@ -273,7 +280,7 @@ Cảm ơn quý khách</textarea>
           <label class="check" data-for="stage"><input type="checkbox" id="stageMusic"><span>Phát nhạc trên màn hình sân khấu<small>Thường để MC và ban nhạc lo phần âm thanh, nên mặc định tắt.</small></span></label>
         </div>
         <details class="fold logo-fold" data-for="album story pre video">
-          <summary>Logo studio <span class="hint" id="logoSum">· chưa cài</span></summary>
+          <summary>Logo &amp; thông tin studio <span class="hint" id="logoSum">· chưa cài</span></summary>
           <p class="hint">Cài logo một lần (ảnh PNG nền trong là đẹp nhất), app nhớ trên máy này và đóng lên album, ảnh JPG và video khi bật.</p>
           <div class="logo-row">
             <div class="logo-pv" id="logoPv" aria-hidden="true"></div>
@@ -289,6 +296,13 @@ Cảm ơn quý khách</textarea>
             <label class="f">Cỡ logo <span id="logoSizeV">14%</span><input type="range" id="logoSize" min="5" max="35" value="14"></label>
             <label class="f">Độ đậm <span id="logoOpV">90%</span><input type="range" id="logoOp" min="20" max="100" value="90"></label>
           </div>
+          <p class="hint">Thông tin studio lưu theo tài khoản, dùng cho intro/outro video và ảnh cổng.</p>
+          <div class="fields">
+            <label class="f">Tên studio<input type="text" id="stName" maxlength="40" placeholder="Studio Ánh Dương"></label>
+            <label class="f">Số điện thoại<input type="text" id="stPhone" maxlength="20" placeholder="0901 234 567"></label>
+            <label class="f">Fanpage, web<input type="text" id="stPage" maxlength="60" placeholder="fb.com/studioanhduong"></label>
+          </div>
+          <label class="check" data-for="video"><input type="checkbox" id="stIntro"><span>Thêm intro và outro studio vào video<small>Mở đầu là logo và tên studio, cuối video là lời cảm ơn kèm số điện thoại, fanpage.</small></span></label>
         </details>
       </section>
     </div>
@@ -304,6 +318,7 @@ Cảm ơn quý khách</textarea>
         <button type="button" id="pgLeft" title="Dàn lại riêng trang bên trái của tờ này">🔁 Trang trái</button>
         <button type="button" id="pgRight" title="Dàn lại riêng trang bên phải của tờ này">🔁 Trang phải</button>
         <button type="button" id="pgSheet" title="Xem tất cả các trang một lúc">▦ Xem cả cuốn</button>
+        <button type="button" id="pgRaw" title="Giữ chuột (hoặc giữ ngón tay) để xem ảnh gốc chưa chỉnh màu">👁 Giữ xem ảnh gốc</button>
         <button type="button" class="lib-btn" data-lib="all" data-for="story pre">📚 Thư viện mẫu</button>
         <button type="button" id="cloneOpen" data-for="story pre" title="Up ảnh một trang album bạn thích, AI chép lại khung ảnh và ô chữ thành layout của bạn">📷 Chép bố cục từ ảnh mẫu</button>
         <input type="file" id="cloneFile" accept="image/*" hidden>
@@ -321,6 +336,9 @@ Cảm ơn quý khách</textarea>
         <button class="go" id="go"></button>
       </div>
       <div class="row" data-for="album story pre"><button type="button" id="dlJpg">⬇ Ảnh JPG từng trang (.zip)</button></div>
+      <div class="row" data-for="album story pre"><select id="miniSize" aria-label="Cỡ bản mini"><option value="20">Bản mini cạnh dài 20 cm</option><option value="15">Bản mini cạnh dài 15 cm</option><option value="10">Bản mini cạnh dài 10 cm</option></select><button type="button" id="dlMini">⬇ PDF bản mini tặng bố mẹ</button></div>
+      <div class="row" data-for="album story pre"><button type="button" id="dlFlip" title="Một file .html mở bằng điện thoại hay máy tính, lật từng trang như sách thật">📖 Sách lật trang (.html gửi khách)</button><button type="button" id="dlFlipVid">🎞 Video lật sách</button></div>
+      <div class="row" data-for="album story pre vows"><button type="button" id="gateOpen" title="Ảnh lớn in để ở cổng tiệc cưới hoặc treo tường, có tên, ngày dương và ngày âm">🪧 Ảnh cổng / ảnh in lớn</button></div>
       <div class="row" data-for="deliver"><button id="tryDeliver">Xem thử như khách</button></div>
       <div class="dl" data-for="party stage deliver">
         <span class="hint">Tải slide về máy để copy, gửi Zalo, Messenger:</span>
@@ -357,6 +375,28 @@ Cảm ơn quý khách</textarea>
   </div>
 </div>
 
+<div class="crop" id="gateBox" hidden role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="crop-card gate-card">
+    <div class="sec-h"><b id="gateTitle">🪧 Ảnh cổng / ảnh in lớn</b><button id="gateX" aria-label="Đóng">✕</button></div>
+    <div class="gate-body">
+      <div class="gate-view"><canvas id="gateCv" aria-label="Xem trước ảnh cổng"></canvas>
+        <div class="seg" role="group" aria-label="Kiểu xem"><button type="button" data-gv="print" aria-pressed="true">Bản in</button><button type="button" data-gv="easel" aria-pressed="false">Trên giá đỡ</button><button type="button" data-gv="wall" aria-pressed="false">Khung treo tường</button></div></div>
+      <div class="gate-form">
+        <div class="f">Ảnh chính<div class="gate-pics" id="gatePics"></div></div>
+        <label class="f">Mẫu<select id="gateTpl"></select></label>
+        <label class="f">Cỡ in (cm)<select id="gateSize"><option value="40x60">40 × 60</option><option value="50x75">50 × 75</option><option value="60x90" selected>60 × 90</option><option value="60x120">60 × 120</option><option value="90x60">90 × 60 (ngang)</option></select></label>
+        <label class="f">Dòng tiêu đề<input type="text" id="gateHead" list="gateHeads" value="Lễ Thành Hôn"><datalist id="gateHeads"><option value="Lễ Thành Hôn"><option value="Lễ Vu Quy"><option value="Lễ Tân Hôn"><option value="Tiệc Cưới"><option value="Welcome to our wedding"></datalist></label>
+        <label class="f">Cỡ tên<input type="range" id="gateScale" min="0.8" max="2" step="0.05" value="1.4"></label>
+        <label class="check"><input type="checkbox" id="gateLunar" checked><span>Thêm ngày âm lịch (tự tính)</span></label>
+        <p class="hint" id="gateDate"></p>
+        <label class="check"><input type="checkbox" id="gateLogo" checked><span>Logo studio ở chân ảnh</span></label>
+        <div class="row"><button type="button" id="gatePdf" class="go">⬇ PDF in</button><button type="button" id="gateJpg">⬇ JPG</button><button type="button" id="gateMock">⬇ Ảnh mockup</button></div>
+        <p class="hint">File in 150 DPI, đủ nét cho ảnh cổng xem từ xa. Tên và ngày lấy từ phần Thông tin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="crop" id="auto" hidden role="dialog" aria-modal="true" aria-labelledby="autoTitle">
   <div class="crop-card auto-card">
     <div class="sec-h"><b id="autoTitle">✨ Auto Design · <span id="autoN"></span> ảnh</b><button id="autoX" aria-label="Đóng">✕</button></div>
@@ -390,6 +430,8 @@ Cảm ơn quý khách</textarea>
 <script src="/js/common.js"></script>
 <script src="/js/engine.js"></script>
 <script src="/js/album.js"></script>
+<script src="/js/flipbook.js"></script>
+<script src="/js/gate.js"></script>
 <script src="/js/vows.js"></script>
 <script src="/js/studio.js"></script>
 </body>

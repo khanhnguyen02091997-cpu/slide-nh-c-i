@@ -126,6 +126,19 @@ const LAYOUT = {
     pages: [{ t: [.62, 0, .38, .3], cells: [[0, 0, .6, .62], [.62, .32, .38, .3], [0, .64, .29, .36], [.31, .64, .29, .36], [.62, .64, .38, .36]] },
       { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] },
       { t: [0, 0, 1, .12], cells: [[0, .14, .5, .5], [.5, .14, .25, .25], [.75, .14, .25, .25], [.5, .39, .5, .25], [0, .64, .5, .36], [.5, .64, .5, .36]] }] },
+  // decorations: torn = photos on torn paper, stitch = a sewn dashed line around each photo, split = one photo cut into N panels
+  torn: { name: "Giấy xé", desc: "Ảnh dán trên mảnh giấy xé tay, mép răng cưa", isNew: true,
+    pages: [{ torn: true, t: [0, .74, 1, .26], cells: [[.02, .02, .5, .66, -3], [.5, .08, .46, .58, 4]] },
+      { torn: true, t: [0, 0, 1, .26], cells: [[.12, .3, .76, .7, -2]] },
+      { torn: true, t: [.55, .7, .45, .3], cells: [[.02, .02, .46, .46, 3], [.52, .04, .46, .44, -4], [.04, .52, .46, .46, -2]] }] },
+  stitch: { name: "Đường chỉ khâu", desc: "Viền chỉ khâu nét đứt quanh từng ảnh", isNew: true,
+    pages: [{ stitch: true, t: [0, 0, 1, .24], cells: [[0, .28, .5, .72], [.5, .28, .5, .72]] },
+      { stitch: true, t: [0, .76, 1, .24], cells: [[0, 0, 1 / 3, .72], [1 / 3, 0, 1 / 3, .72], [2 / 3, 0, 1 / 3, .72]] },
+      { stitch: true, t: [.6, 0, .4, .4], cells: [[0, 0, .58, 1], [.6, .44, .4, .56]] }] },
+  split: { name: "Ảnh chia khung", desc: "Một ảnh cắt thành nhiều khung đứng cạnh nhau", isNew: true,
+    pages: [{ split: 3, t: [0, .76, 1, .24], cells: [[0, 0, 1, .72]] },
+      { split: 4, t: [0, 0, 1, .24], cells: [[0, .28, 1, .72]] },
+      { split: 2, t: [0, .8, 1, .2], cells: [[0, 0, .62, .76], [.64, .2, .36, .56]] }] },
   // for: "pre" = made for prewedding (few photos, big type), "psc" = wedding-day reportage (many photos, chapters of the day)
   nine: { name: "Lưới 9 ô chữ giữa", desc: "8 ảnh quanh một ô chữ, kiểu moodboard", for: "pre", isNew: true,
     pages: [{ t: [1 / 3, 1 / 3, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 4) }, { t: [2 / 3, 0, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 2) }, { t: [0, 1 / 3, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 3) }] },
@@ -305,6 +318,9 @@ const DESIGN = {
   noir: { name: "Noir", style: "cinema", layout: "film", typo: "sans", cover: "bleed", isNew: true },
   vuonxuan: { name: "Vườn Xuân", style: "garden", layout: "offset", typo: "script", cover: "mono", pattern: "dots", isNew: true },
   hongphan: { name: "Hồng Phấn", style: "floral", layout: "single", typo: "gold", cover: "duo", pattern: "dots", isNew: true },
+  scrapbook: { name: "Scrapbook Giấy Xé", style: "vintage", layout: "torn", typo: "hand", cover: "duo", pattern: "paper", isNew: true },
+  khauchi: { name: "Khâu Tay", style: "garden", layout: "stitch", typo: "script", cover: "mono", pattern: "dots", isNew: true },
+  chiakhung: { name: "Chia Khung", style: "modern", layout: "split", typo: "sans", cover: "bleed", isNew: true },
   dovang: { name: "Đỏ Vàng Song Hỷ", style: "red", layout: "collage", typo: "viet", cover: "text", pattern: "corners", isNew: true },
   // wedding-day reportage: many photos, the day told in order
   ngaycuoi: { name: "Ngày Cưới Của Chúng Mình", style: "korea", layout: "timeline", typo: "timeline", cover: "reportage", isNew: true },
@@ -511,7 +527,7 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target, over, rate = {}) {
       const k = Math.max(1, Math.min(4, left, max)), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
-    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, gal: t.gal, lift: t.lift, film: t.film, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, gal: t.gal, lift: t.lift, film: t.film, torn: t.torn, stitch: t.stitch, split: t.split, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
     i += t.cells.length; prev = t;
   }
   pages.push({ type: "end" });
@@ -522,6 +538,37 @@ function coverImg(ctx, src, x, y, w, h) {
   const s = Math.max(w / src.width, h / src.height), dw = src.width * s, dh = src.height * s;
   ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); const fx = src.fx == null ? .5 : src.fx, fy = src.fy == null ? .5 : src.fy;
   ctx.drawImage(src, x + (w - dw) * fx, y + (h - dh) * fy, dw, dh); ctx.restore();
+}
+// Torn paper: a white scrap with ragged edges, the photo inside it, both tilted by rot degrees. seed keeps the tears fixed.
+function tornPhoto(ctx, src, x, y, w, h, rot, S, seed) {
+  let r = (seed + 1) * 9301 % 233280; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  const edge = (pad, amp) => { const pts = [], step = S * .012, X0 = -w / 2 - pad, Y0 = -h / 2 - pad, X1 = w / 2 + pad, Y1 = h / 2 + pad;
+    for (let u = X0; u < X1; u += step) pts.push([u, Y0 + (rnd() - .5) * amp]);
+    for (let v = Y0; v < Y1; v += step) pts.push([X1 + (rnd() - .5) * amp, v]);
+    for (let u = X1; u > X0; u -= step) pts.push([u, Y1 + (rnd() - .5) * amp]);
+    for (let v = Y1; v > Y0; v -= step) pts.push([X0 + (rnd() - .5) * amp, v]);
+    ctx.beginPath(); pts.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.closePath(); };
+  ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(rot * Math.PI / 180);
+  ctx.save(); edge(S * .02, S * .012); ctx.shadowColor = "rgba(40,30,20,.3)"; ctx.shadowBlur = S * .014; ctx.shadowOffsetY = S * .004; ctx.fillStyle = "#fbf7ef"; ctx.fill(); ctx.restore();
+  ctx.save(); edge(-S * .004, S * .006); ctx.clip(); coverImg(ctx, src, -w / 2, -h / 2, w, h); ctx.restore();
+  ctx.restore();
+}
+// Sewn edge: a dashed thread a little outside the photo, with a stitch mark at each corner.
+function stitchLine(ctx, st, S, x, y, w, h) {
+  const p = S * .012; ctx.save(); ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0022); ctx.setLineDash([S * .012, S * .008]); ctx.lineCap = "round";
+  ctx.strokeRect(x - p, y - p, w + 2 * p, h + 2 * p); ctx.setLineDash([]);
+  for (const [a, b] of [[x - p, y - p], [x + w + p, y - p], [x - p, y + h + p], [x + w + p, y + h + p]]) { const k = S * .006; ctx.beginPath(); ctx.moveTo(a - k, b - k); ctx.lineTo(a + k, b + k); ctx.moveTo(a + k, b - k); ctx.lineTo(a - k, b + k); ctx.stroke(); }
+  ctx.restore();
+}
+// One photo across n side-by-side panels with thin gaps, each panel nudged up or down a little.
+function splitPhoto(ctx, src, x, y, w, h, n, S) {
+  const g = S * .012, pw = (w - g * (n - 1)) / n, s = Math.max(w / src.width, h / src.height), dw = src.width * s, dh = src.height * s;
+  const fx = src.fx == null ? .5 : src.fx, fy = src.fy == null ? .5 : src.fy, ox = x + (w - dw) * fx, oy = y + (h - dh) * fy;
+  for (let k = 0; k < n; k++) {
+    const px = x + k * (pw + g), dy = (k % 2 ? 1 : -1) * h * .025;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.2)"; ctx.shadowBlur = S * .01; ctx.fillStyle = "#fff"; ctx.fillRect(px, y + dy, pw, h); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(px, y + dy, pw, h); ctx.clip(); ctx.drawImage(src, ox, oy + dy, dw, dh); ctx.restore();
+  }
 }
 function containRect(ar, x, y, w, h) { let fw = w, fh = w / ar; if (fh > h) { fh = h; fw = h * ar; } return { x: x + (w - fw) / 2, y: y + (h - fh) / 2, w: fw, h: fh }; }
 function framed(ctx, st, S, src, x, y, w, h, contain, pol, shape) {
@@ -683,6 +730,9 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
       if (pg.gal) { const p = S * .014; ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0012); ctx.strokeRect(x - p, y - p, w + 2 * p, h + 2 * p); coverImg(ctx, src, x, y, w, h); continue; }
       if (pg.lift) { const p = S * .012; ctx.save(); ctx.shadowColor = "rgba(30,20,10,.28)"; ctx.shadowBlur = S * .02; ctx.shadowOffsetY = S * .006; ctx.fillStyle = "#fffdf8"; ctx.fillRect(x - p, y - p, w + 2 * p, h + 2 * p); ctx.restore(); coverImg(ctx, src, x, y, w, h); continue; }
       if (pg.bleed) { coverImg(ctx, src, x, y, w, h); continue; }
+      if (pg.torn) { tornPhoto(ctx, src, x, y, w, h, c[4] || 0, S, it.photo); continue; }
+      if (pg.stitch) { framed(ctx, st, S, src, x, y, w, h, false); stitchLine(ctx, st, S, x, y, w, h); continue; }
+      if (pg.split && it === pg.items[0]) { splitPhoto(ctx, src, x, y, w, h, pg.split, S); continue; }
       if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol, pg.shape); continue; }
       ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(c[4] * Math.PI / 180);
       if (!pg.pol) { ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = S * .01; ctx.fillStyle = st.bg; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = "transparent"; }
