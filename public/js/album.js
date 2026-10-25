@@ -119,6 +119,32 @@ const LAYOUT = {
     pages: [{ t: [.62, 0, .38, .3], cells: [[0, 0, .6, .62], [.62, .32, .38, .3], [0, .64, .29, .36], [.31, .64, .29, .36], [.62, .64, .38, .36]] },
       { t: [0, 0, .38, .3], cells: [[.4, 0, .6, .62], [0, .32, .38, .3], [0, .64, .38, .36], [.4, .64, .29, .36], [.71, .64, .29, .36]] },
       { t: [0, 0, 1, .12], cells: [[0, .14, .5, .5], [.5, .14, .25, .25], [.75, .14, .25, .25], [.5, .39, .5, .25], [0, .64, .5, .36], [.5, .64, .5, .36]] }] },
+  // for: "pre" = made for prewedding (few photos, big type), "psc" = wedding-day reportage (many photos, chapters of the day)
+  nine: { name: "Lưới 9 ô chữ giữa", desc: "8 ảnh quanh một ô chữ, kiểu moodboard", for: "pre", isNew: true,
+    pages: [{ t: [1 / 3, 1 / 3, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 4) }, { t: [2 / 3, 0, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 2) }, { t: [0, 1 / 3, 1 / 3, 1 / 3], cells: g3(0, 3, 3).filter((_, i) => i !== 3) }] },
+  magsplit: { name: "Tạp chí chia đôi", desc: "Ảnh lớn nửa trang, tiêu đề và ảnh nhỏ bên cạnh", for: "pre", isNew: true,
+    pages: [{ bleed: true, t: [.53, .1, .44, .26], cells: [[0, 0, .5, 1], [.56, .42, .19, .3], [.77, .42, .19, .3]] },
+      { t: [0, 0, 1, .28], cells: [[0, .32, .5, .58], [.5, .32, .5, .58]] },
+      { bleed: true, t: [.04, .12, .42, .26], cells: [[.5, 0, .5, 1], [.08, .44, .34, .46]] }] },
+  stagger: { name: "So le", desc: "Tiêu đề lớn một góc, ảnh dọc xếp so le", for: "pre", isNew: true,
+    pages: [{ t: [0, .06, .58, .24], cells: [[.62, 0, .38, .36], [0, .38, .32, .34], [.34, .38, .32, .34], [.68, .38, .32, .34], [0, .74, .32, .26], [.34, .74, .32, .26]] },
+      { t: [.36, .76, .64, .24], cells: [[0, 0, .32, .36], [.34, 0, .32, .36], [.68, 0, .32, .36], [0, .38, .34, .62], [.36, .38, .64, .36]] }] },
+  poster: { name: "Poster", desc: "Một ảnh lớn như bìa tạp chí, chữ to trên ảnh", for: "pre", isNew: true,
+    pages: [{ bleed: true, onPh: true, t: [.05, .05, .9, .26], cells: [[0, 0, 1, 1]] },
+      { bleed: true, t: [.06, .78, .88, .16], cells: [[.06, .05, .88, .72]] },
+      { bleed: true, onPh: true, t: [.05, .66, .9, .26], cells: [[0, 0, 1, 1]] }] },
+  report: { name: "Phóng sự dày", desc: "6 đến 7 ảnh mỗi trang, kể lại cả ngày cưới", for: "psc", isNew: true,
+    pages: [{ t: [0, 0, .34, .32], cells: [[.36, 0, .64, .48], [0, .34, .34, .3], [.36, .5, .32, .25], [.68, .5, .32, .25], [0, .66, .34, .34], [.36, .75, .32, .25], [.68, .75, .32, .25]] },
+      { t: [0, .84, 1, .16], cells: [[0, 0, .5, .41], [.5, 0, .25, .41], [.75, 0, .25, .41], [0, .41, .25, .41], [.25, .41, .25, .41], [.5, .41, .5, .41]] }] },
+  timeline: { name: "Dòng thời gian", desc: "Giờ và tên từng nghi lễ, ảnh xếp theo diễn biến", for: "psc", isNew: true,
+    pages: [{ t: [0, 0, 1, .15], cells: [[0, .17, 1 / 3, .42], [1 / 3, .17, 1 / 3, .42], [2 / 3, .17, 1 / 3, .42], [0, .59, .5, .41], [.5, .59, .5, .41]] },
+      { t: [0, .32, .3, .36], cells: [[.32, 0, .68, .5], [.32, .5, .34, .5], [.66, .5, .34, .5]] }] },
+  detail: { name: "Ảnh lớn + chi tiết", desc: "Một khoảnh khắc lớn và 3 ảnh chi tiết: nhẫn, hoa, váy", for: "psc", isNew: true,
+    pages: [{ t: [0, .86, 1, .14], cells: [[0, 0, .7, .84], [.7, 0, .3, .28], [.7, .28, .3, .28], [.7, .56, .3, .28]] },
+      { t: [0, 0, 1, .14], cells: [[.3, .16, .7, .84], [0, .16, .3, .28], [0, .44, .3, .28], [0, .72, .3, .28]] }] },
+  pano: { name: "Toàn cảnh", desc: "Ảnh ngang toàn cảnh lễ đường, 4 ảnh nhỏ bên dưới", for: "psc", isNew: true,
+    pages: [{ t: [0, .46, 1, .14], cells: [[0, 0, 1, .44], [0, .62, .25, .38], [.25, .62, .25, .38], [.5, .62, .25, .38], [.75, .62, .25, .38]] },
+      { t: [0, 0, 1, .14], cells: [[0, .16, .25, .38], [.25, .16, .25, .38], [.5, .16, .25, .38], [.75, .16, .25, .38], [0, .56, 1, .44]] }] },
 };
 
 const SCR = '"Great Vibes",cursive';
@@ -147,6 +173,18 @@ const TYPO = {
     phr: [["Love", "forever"], ["Vows", "always"], ["Joy", "together"], ["Bliss", "& grace"]] },
   frame: { name: "Khung chữ", desc: "Chữ serif nằm trong khung mảnh có góc", isNew: true,
     phr: [["Our Wedding", "Vol. 01"], ["Hạnh Phúc", "Chương hai"], ["Forever Us", "Vol. 03"], ["Bên Nhau", "Chương bốn"]] },
+  poster: { name: "Poster serif", desc: "Pure HARMONY, chữ ký lồng chữ in hoa rất lớn", for: "pre", isNew: true,
+    phr: [["Pure", "Harmony"], ["harper", "Arlington"], ["Eternal", "Vows"], ["Maison", "L'amour"], ["Vision", "Wedding"]] },
+  grotesk: { name: "In hoa tạp chí", desc: "AMOUR, WILD VOWS, chữ đậm phủ ngang trang", for: "pre", isNew: true,
+    phr: [["Amour", "de ma vie"], ["Vows", "Laura"], ["Wild", "Vows"], ["Elegance", "Pure blossom"], ["Chapter One", "Let's fall in love"]] },
+  softly: { name: "Chữ thường mềm", desc: "subtle grace, softly sworn, chữ thường hai dòng", for: "pre", isNew: true,
+    phr: [["subtle", "grace"], ["softly", "sworn"], ["hearts", "become one"], ["made of love", "& made to love"]] },
+  savedate: { name: "Save of Date", desc: "SAVE of DATE, chữ ký nhỏ giữa hai chữ in hoa", for: "pre", isNew: true,
+    phr: [["Save", "Date", "of"], ["Maison", "Amour", "de"], ["Love", "Mosaic", "of"], ["Sacred", "Union", "&"]] },
+  timeline: { name: "Giờ và nghi lễ", desc: "07:30 Getting ready, 09:00 Rước dâu... theo diễn biến ngày cưới", for: "psc", isNew: true,
+    phr: [["Getting Ready", "07:30"], ["Rước Dâu", "09:00"], ["Lễ Gia Tiên", "10:00"], ["Lễ Thành Hôn", "11:00"], ["Tiệc Cưới", "18:00"], ["After Party", "21:00"]] },
+  chapter: { name: "Chương nghi lễ", desc: "Chương 01, Lễ Vu Quy... chia album theo từng nghi lễ", for: "psc", isNew: true,
+    phr: [["Lễ Vu Quy", "Chương 01"], ["Rước Dâu", "Chương 02"], ["Lễ Gia Tiên", "Chương 03"], ["Lễ Thành Hôn", "Chương 04"], ["Tiệc Cưới", "Chương 05"]] },
 };
 
 // Background patterns, drawn in the style's accent color over the page color.
@@ -187,6 +225,9 @@ const COVER = {
   arch: { name: "Vòm cổ điển", desc: "Ảnh trong khung vòm lớn", isNew: true },
   duo: { name: "Hai ảnh", desc: "Hai ảnh cạnh nhau, tên bên dưới", isNew: true },
   text: { name: "Chỉ có chữ", desc: "Bìa chữ thanh lịch, không ảnh", isNew: true },
+  magazine: { name: "Bìa tạp chí", desc: "Ảnh tràn bìa, chữ lớn ở đầu trang như tạp chí thời trang", for: "pre", isNew: true },
+  frame: { name: "Khung trắng", desc: "Ảnh lớn viền trắng, chữ to bên dưới", for: "pre", isNew: true },
+  reportage: { name: "Bìa phóng sự", desc: "4 ảnh ghép, dải tên ở giữa", for: "psc", isNew: true },
 };
 
 // Designs = cover + layout + typography + style, applied in one tap.
@@ -215,7 +256,33 @@ const DESIGN = {
   vuonxuan: { name: "Vườn Xuân", style: "garden", layout: "offset", typo: "script", cover: "mono", pattern: "dots", isNew: true },
   hongphan: { name: "Hồng Phấn", style: "floral", layout: "single", typo: "gold", cover: "duo", pattern: "dots", isNew: true },
   dovang: { name: "Đỏ Vàng Song Hỷ", style: "red", layout: "collage", typo: "viet", cover: "text", pattern: "corners", isNew: true },
+  // wedding-day reportage: many photos, the day told in order
+  ngaycuoi: { name: "Ngày Cưới Của Chúng Mình", style: "korea", layout: "timeline", typo: "timeline", cover: "reportage", isNew: true },
+  giatien: { name: "Lễ Gia Tiên", style: "red", layout: "detail", typo: "chapter", cover: "mono", pattern: "corners", isNew: true },
+  documentary: { name: "Documentary", style: "mono", layout: "report", typo: "sans", cover: "reportage", isNew: true },
+  bridaledit: { name: "The Bridal Edit", style: "cinema", layout: "pano", typo: "chapter", cover: "bleed", isNew: true },
+  november: { name: "November Luxury", style: "editorial", layout: "detail", typo: "mag", cover: "classic", isNew: true },
+  winter: { name: "Winter Wedding", style: "mono", layout: "pano", typo: "serif", cover: "reportage", pattern: "paper", isNew: true },
+  tieccuoi: { name: "Tiệc Cưới", style: "floral", layout: "report", typo: "chapter", cover: "duo", isNew: true },
+  ruocdau: { name: "Rước Dâu", style: "lux", layout: "timeline", typo: "timeline", cover: "split", pattern: "paper", isNew: true },
+  // prewedding: concept shoots, few photos per page, fashion-magazine type
+  vision: { kind: "pre", name: "Vision", style: "mono", layout: "poster", typo: "poster", cover: "frame", isNew: true },
+  amour: { kind: "pre", name: "Amour", style: "floral", layout: "poster", typo: "grotesk", cover: "magazine", isNew: true },
+  subtlegrace: { kind: "pre", name: "Subtle Grace", style: "floral", layout: "magsplit", typo: "softly", cover: "frame", isNew: true },
+  savethedate: { kind: "pre", name: "Save the Date", style: "mono", layout: "stagger", typo: "savedate", cover: "frame", isNew: true },
+  harmony: { kind: "pre", name: "Pure Harmony", style: "korea", layout: "magsplit", typo: "poster", cover: "magazine", isNew: true },
+  lauravows: { kind: "pre", name: "Laura Vows", style: "garden", layout: "nine", typo: "grotesk", cover: "magazine", isNew: true },
+  celestia: { kind: "pre", name: "Celestia Bond", style: "lux", layout: "magsplit", typo: "script", cover: "frame", isNew: true },
+  elegance: { kind: "pre", name: "Elegance", style: "cinema", layout: "poster", typo: "poster", cover: "magazine", isNew: true },
+  nicol: { kind: "pre", name: "Nicol Moodboard", style: "korea", layout: "nine", typo: "engrave", cover: "text", pattern: "paper", isNew: true },
+  sacredunion: { kind: "pre", name: "Sacred Union", style: "garden", layout: "grid", typo: "script", cover: "frame", isNew: true },
+  chapterone: { kind: "pre", name: "Chapter One", style: "floral", layout: "stagger", typo: "grotesk", cover: "magazine", isNew: true },
+  maison: { kind: "pre", name: "Maison de L'amour", style: "mono", layout: "scatter", typo: "savedate", cover: "frame", pattern: "lines", isNew: true },
+  alwaysforever: { kind: "pre", name: "Always & Forever", style: "vintage", layout: "nine", typo: "script", cover: "magazine", isNew: true },
+  wildvows: { kind: "pre", name: "Wild Vows", style: "modern", layout: "magsplit", typo: "grotesk", cover: "magazine", isNew: true },
 };
+// Designs without a kind belong to the wedding-day reportage (Phóng sự cưới).
+Object.values(DESIGN).forEach((d) => { d.kind = d.kind || "psc"; });
 
 // Default words for a title slot: "cover", "end", or the title's order among photo pages.
 function phrase(typo, key) {
@@ -297,6 +364,34 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
     ctx.lineWidth = lw * 2.4; for (const [px, py, dx, dy] of [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]]) { ctx.beginPath(); ctx.moveTo(px, py + dy * k); ctx.lineTo(px, py); ctx.lineTo(px + dx * k, py); ctx.stroke(); }
     ctx.fillStyle = ink; spaced(ctx, a.toUpperCase(), cx, fy + fh * .55, s * .12);
     ctx.font = font(`italic 400 {s}px ${F.corm}`, s3 * 1.4); ctx.fillStyle = soft; ctx.textAlign = "center"; ctx.fillText(s2, cx, fy + fh * .82);
+  } else if (id === "poster") { // big uppercase serif, script word laid over its top left
+    const B = s2.toUpperCase(), s = fit(ctx, `400 {s}px ${F.play}`, b.h * .6, B, b.w * .96), y = b.y + b.h * .88;
+    ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(B, cx, y);
+    const s3 = fit(ctx, `400 {s}px ${SCR}`, s * .95, a, b.w * .6); ctx.fillStyle = acc; ctx.fillText(a, cx - b.w * .14, y - s * .62);
+  } else if (id === "grotesk") { // heavy uppercase across the box, script line over its lower right
+    const A = a.toUpperCase(), s = fit(ctx, `800 {s}px ${F.mont}`, b.h * .7, A, b.w * .98), y = b.y + b.h * .5 + s * .36;
+    ctx.fillStyle = acc; ctx.textAlign = "center"; ctx.fillText(A, cx, y);
+    const s3 = fit(ctx, `400 {s}px ${SCR}`, s * .5, s2, b.w * .5); ctx.fillStyle = ink; ctx.textAlign = "right"; ctx.fillText(s2, b.x + b.w * .96, y + s3 * .7);
+  } else if (id === "softly") { // two lowercase lines, the second italic and shifted right
+    const s = Math.min(fit(ctx, `500 {s}px ${F.play}`, b.h * .42, a, b.w * .8), fit(ctx, `italic 400 {s}px ${F.play}`, b.h * .42, s2, b.w * .8));
+    ctx.fillStyle = acc; ctx.textAlign = "left"; ctx.font = font(`500 {s}px ${F.play}`, s); const y = b.y + b.h * .45;
+    ctx.fillText(a, b.x + b.w * .06, y); ctx.font = font(`italic 400 {s}px ${F.play}`, s); ctx.textAlign = "right"; ctx.fillText(s2, b.x + b.w * .94, y + s * .9);
+  } else if (id === "savedate") { // SAVE of DATE on one line
+    const mid = (ty.phr[ph % ty.phr.length] || [])[2] || "of", A = a.toUpperCase(), B = s2.toUpperCase();
+    let s = b.h * .5; const meas = () => { ctx.font = font(`400 {s}px ${F.play}`, s); const wa = ctx.measureText(A).width, wb = ctx.measureText(B).width; ctx.font = font(`400 {s}px ${SCR}`, s * .7); const wm = ctx.measureText(mid).width; return [wa, wm, wb]; };
+    let [wa, wm, wb] = meas(), tw = wa + wm + wb + s * .3; if (tw > b.w * .94) { s *= b.w * .94 / tw; [wa, wm, wb] = meas(); tw = wa + wm + wb + s * .3; }
+    const x0 = cx - tw / 2, y = b.y + b.h * .5 + s * .35; ctx.textAlign = "left";
+    ctx.font = font(`400 {s}px ${F.play}`, s); ctx.fillStyle = ink; ctx.fillText(A, x0, y); ctx.fillText(B, x0 + wa + wm + s * .3, y);
+    ctx.font = font(`400 {s}px ${SCR}`, s * .7); ctx.fillStyle = acc; ctx.fillText(mid, x0 + wa + s * .15, y + s * .12);
+  } else if (id === "timeline") { // the time large and light, a rule, the ceremony name below
+    const s = fit(ctx, `300 {s}px ${F.sans}`, b.h * .38, s2, b.w * .9), y = b.y + b.h * .42; ctx.fillStyle = acc; ctx.textAlign = "center"; ctx.fillText(s2, cx, y);
+    ctx.fillRect(cx - b.w * .05, y + s * .22, b.w * .1, Math.max(1, s * .03));
+    const s3 = fit(ctx, `italic 500 {s}px ${F.play}`, s * .62, a, b.w * .92); ctx.fillStyle = ink; ctx.fillText(a, cx, y + s * .3 + s3 * 1.15);
+  } else if (id === "chapter") { // CHƯƠNG 01 small and spaced, the ceremony name in italic serif
+    const k = n ? String(ph + 1).padStart(2, "0") : "", lab = (s2 || "").toUpperCase(), s = fit(ctx, `italic 500 {s}px ${F.play}`, b.h * .42, a, b.w * .92);
+    const y = b.y + b.h * .5 + s * .35; ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(a, cx, y);
+    ctx.font = font(`500 {s}px ${F.sans}`, Math.min(s * .26, b.h * .1)); ctx.fillStyle = acc; spaced(ctx, lab || "CHƯƠNG " + k, cx, y - s * 1.05, s * .06);
+    ctx.fillStyle = acc; ctx.fillRect(cx - b.w * .06, y + s * .38, b.w * .12, Math.max(1, s * .025));
   }
   ctx.restore();
 }
@@ -403,6 +498,28 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
       if (s2) framed(ctx, st, S, s2, W * .51, H * .12, W * .39, H * .56, false);
       if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .5, w: W * .76, h: H * .16 }, 0, 0, true, own.cover);
       nameFit(cx, H * .8, W * .84, st.ink); if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
+    } else if (cv === "magazine") {
+      if (src) coverImg(ctx, src, 0, 0, W, H);
+      let g = ctx.createLinearGradient(0, 0, 0, H * .42); g.addColorStop(0, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * .42);
+      g = ctx.createLinearGradient(0, H * .7, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.5)"); ctx.fillStyle = g; ctx.fillRect(0, H * .7, W, H * .3);
+      ctx.font = font(`400 {s}px ${F.sans}`, S * .016); ctx.fillStyle = "rgba(255,250,242,.9)";
+      ["WEDDING", "PHOTOGRAPHY", "FASHION", "LUXURY"].forEach((w, k) => spaced(ctx, w, W * (.14 + k * .24), H * .045, S * .004));
+      if (ty) drawTypo(ctx, st, ty, { x: W * .05, y: H * .07, w: W * .9, h: H * .24 }, 0, 0, true, own.cover);
+      else { ctx.save(); ctx.fillStyle = "#fffaf2"; ctx.textAlign = "center"; const nm = names.toUpperCase(); fit(ctx, `400 {s}px ${F.play}`, S * .14, nm, W * .9); ctx.fillText(nm, cx, H * .22); ctx.restore(); }
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = S * .01; nameFit(cx, H * .9, W * .7, "#fffaf2", .7); if (date) text(ctx, st, date, st.body, S * .022, cx, H * .945, "rgba(255,250,242,.9)"); ctx.restore();
+    } else if (cv === "frame") {
+      if (src) coverImg(ctx, src, W * .06, H * .05, W * .88, H * .68);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .06, y: H * .74, w: W * .88, h: H * .15 }, 0, 0, false, own.cover);
+      else nameFit(cx, H * .84, W * .84, st.ink, 1.1);
+      ctx.fillStyle = st.ink; ctx.fillRect(W * .06, H * .915, W * .88, Math.max(1, S * .0012));
+      ctx.font = font(`400 {s}px ${F.sans}`, S * .018); ctx.fillStyle = st.soft; ctx.textAlign = "left"; ctx.fillText(date ? `(${date})` : "", W * .06, H * .95);
+      ctx.textAlign = "right"; ctx.fillText(`(${(info.names || "").toUpperCase()})`, W * .94, H * .95);
+    } else if (cv === "reportage") {
+      const hw = W / 2, hh = H / 2; [0, 1, 2, 3].forEach((k) => { const p = photos[k] && photos[k].c; if (p) coverImg(ctx, p, (k % 2) * hw, Math.floor(k / 2) * hh, hw, hh); });
+      const bh = H * .2, by = hh - bh / 2; ctx.fillStyle = st.bg; ctx.globalAlpha = .93; ctx.fillRect(0, by, W, bh); ctx.globalAlpha = 1;
+      ctx.font = font(`400 {s}px ${F.sans}`, S * .02); ctx.fillStyle = st.soft; spaced(ctx, "WEDDING REPORTAGE", cx, by + bh * .26, S * .008);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .1, y: by + bh * .3, w: W * .8, h: bh * .48 }, 0, 0, false, own.cover); else nameFit(cx, by + bh * .66, W * .8, st.ink, .9);
+      if (date) text(ctx, st, (ty ? names + " · " : "") + date, st.body, S * .02, cx, by + bh * .9, st.soft);
     } else if (cv === "text") {
       ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .12, H * .3, S * .24, Math.max(1, S * .0015)); ctx.fillRect(cx - S * .12, H * .72, S * .24, Math.max(1, S * .0015));
       if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .33, w: W * .76, h: H * .2 }, 0, 0, false, own.cover);
@@ -462,7 +579,8 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     }
     if (pg.t && pages.typo && pages.typo !== "none") {
       const t = pg.t, tb = pg.bleed ? box(t) : { x: (b.x + t[0] * b.w) * S + GUT * S / 2, y: (b.y + t[1] * b.h) * S, w: t[2] * b.w * S - GUT * S, h: t[3] * b.h * S };
-      if (pg.onPh) { const g = ctx.createLinearGradient(0, tb.y - tb.h * .4, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.45)"); ctx.fillStyle = g; ctx.fillRect(0, tb.y - tb.h * .4, W, H - tb.y + tb.h * .4); }
+      if (pg.onPh && tb.y + tb.h / 2 < H / 2) { const g = ctx.createLinearGradient(0, 0, 0, tb.y + tb.h * 1.5); g.addColorStop(0, "rgba(0,0,0,.45)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, tb.y + tb.h * 1.5); }
+      else if (pg.onPh) { const g = ctx.createLinearGradient(0, tb.y - tb.h * .4, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.45)"); ctx.fillStyle = g; ctx.fillRect(0, tb.y - tb.h * .4, W, H - tb.y + tb.h * .4); }
       drawTypo(ctx, st, pages.typo, tb, pg.ph, n, !!pg.onPh, own[pg.ph]);
     }
     text(ctx, st, String(n), st.body, S * .018, cx, foot, st.soft);
