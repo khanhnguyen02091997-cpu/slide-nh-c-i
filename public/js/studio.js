@@ -388,15 +388,19 @@ let bookAuto = { min: 1, max: 6, pages: 0, pool: [], gut: 2.2 };
 let bookOver = {}, bookSwap = [], bookPattern = "none";
 const photoKey = (p, i) => p.path || "i" + i;
 // Album part: automatic pages, no titles. Wedding story part: the library's layouts and titles, with the user's own words.
-const isBook = (m) => m === "album" || m === "story";
-const bookDesign = () => val("mode") !== "story" ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, gut: bookAuto.gut / 100, over: bookOver,
-  ...(bookLay === "mix" ? { min: bookAuto.min, max: bookAuto.max, pages: bookAuto.pages, pool: bookAuto.pool } : {}) };
+// Prewedding part: the same library, with the templates made for concept shoots.
+const isLib = (m) => m === "story" || m === "pre";
+const isBook = (m) => m === "album" || isLib(m);
+const libKind = () => val("mode") === "pre" ? "pre" : "psc";
+const fits = (it) => !it.for || it.for === libKind(); // a layout, typography or cover made for the part in use, or for both
+const bookDesign = () => !isLib(val("mode")) ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, gut: bookAuto.gut / 100, over: bookOver,
+  ...(bookLay === "mix" ? { min: bookAuto.min, max: bookAuto.max, pages: bookAuto.pages, pool: bookAuto.pool.length ? bookAuto.pool : Object.keys(LAYOUT).filter((k) => LAYOUT[k].pages && fits(LAYOUT[k])) } : {}) };
 // Album page size in cm from the size picker: "20", "25", "30" are square, "30x20" is landscape, "20x30" portrait.
 function bookDim(v = $("bookSize").value) { const [w, h] = String(v).split("x").map(Number); return { w, h: h || w, label: h ? `${w} × ${h}` : `${w} × ${w}`, sq: !h }; }
 const bookFree = (v = $("bookSize").value) => String(v) === String(FREE.book);
 function layoutBook() {
   const d = bookDim(); bookPages = PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, d.w / d.h, bookDesign());
-  if (val("mode") === "story") bookPages.text = bookText;
+  if (isLib(val("mode"))) bookPages.text = bookText;
   // swaps: which photo shows in each slot, starting from the book order
   const idx = new Map(photos.map((p, i) => [photoKey(p, i), i])), show = photos.map((_, i) => i);
   for (const [a, b] of bookSwap) { const ia = idx.get(a), ib = idx.get(b); if (ia == null || ib == null) continue; const pa = show.indexOf(ia), pb = show.indexOf(ib); [show[pa], show[pb]] = [show[pb], show[pa]]; }
@@ -431,7 +435,7 @@ function renderBook() {
   $("pvScene").textContent = "Xem trước · " + label; $("pgNum").textContent = isSpread() ? `Tờ ${si + 1} / ${sh.length}` : (bookPage + 1) + " / " + bookPages.length;
   $("pgPrev").disabled = si <= 0; $("pgNext").disabled = si >= sh.length - 1;
   $("pgFrame").disabled = !(pg && pg.tid && bookPages.pool && frameAlts(pg).length > 1);
-  if (val("mode") === "story") renderBookText(pg);
+  if (isLib(val("mode"))) renderBookText(pg);
 }
 /* ----- wedding story: write your own words on the page shown ----- */
 // Which title slot the page has: "cover" and "end" always, a photo page only when its layout has a title box.
@@ -499,7 +503,7 @@ async function exportBook() {
   try {
     const blob = await PhotoBook.pdf(bookPages, photos.map((p) => p.ph), val("style"), info(), { wCm: d.w, hCm: d.h, px: Math.max(d.w, d.h) >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK, spread: isSpread(),
       onPage: (i, n) => { $("vbar").style.width = (i / n * 100) + "%"; $("vtxt").textContent = `Đang tạo trang ${i} / ${n}`; } });
-    saveFile(blob, slug() + (val("mode") === "story" ? "-phong-su-cuoi.pdf" : "-album.pdf"));
+    saveFile(blob, slug() + ({ story: "-phong-su-cuoi.pdf", pre: "-prewedding.pdf" }[val("mode")] || "-album.pdf"));
     $("goNote").textContent = `Đã tải album PDF (${(blob.size / 1048576).toFixed(1)} MB, ${bookPages.length} trang ${d.label} cm). Gửi file này cho tiệm in là được.`;
   } catch (e) { fail("Chưa tạo được PDF: " + (e.message || e)); }
   $("vprog").hidden = true; $("vcancel").hidden = false; $("go").disabled = false;
@@ -571,6 +575,9 @@ const { LAYOUT, TYPO, COVER, PATTERN, DESIGN } = PhotoBook;
 let libTab = "all";
 // "Mẫu của tôi": the user's own saved looks, kept in their account (auth user metadata) so every album and device sees them.
 let mine = [];
+// The part's designs, the ones built on templates made for it first.
+const designsFor = () => Object.entries(DESIGN).filter(([, d]) => d.kind === libKind()).sort(([, a], [, b]) => (LAYOUT[b.layout].for ? 1 : 0) - (LAYOUT[a.layout].for ? 1 : 0));
+const myLooks = () => mine.filter((m) => (m.kind || "psc") === libKind());
 const isDesign = (d) => val("style") === d.style && bookLay === d.layout && bookTypo === d.typo && bookCover === d.cover && (d.pattern || "none") === bookPattern;
 function libSum() { const d = [...mine, ...Object.values(DESIGN)].find(isDesign); return (d ? d.name + " · " : "") + "Bìa " + COVER[bookCover].name.toLowerCase() + " · " + layName(bookLay) + " · " + TYPO[bookTypo].name + (bookPattern !== "none" ? " · nền " + PATTERN[bookPattern].name.toLowerCase() : ""); }
 const layName = (id) => id === "mix" ? `Auto Design (${bookAuto.min}–${bookAuto.max} ảnh mỗi trang)` : LAYOUT[id].name;
@@ -614,19 +621,19 @@ function renderLib() {
   document.querySelectorAll(".lib-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.t === libTab)));
   const group = (kind, title) => {
     if (libTab !== "all" && libTab !== kind) return;
-    if (kind === "mine" && !mine.length) { if (libTab === "mine") body.insertAdjacentHTML("beforeend", '<p class="hint">Chưa có mẫu nào. Chỉnh album ưng ý rồi bấm 💾 Lưu làm mẫu của tôi ở mục Thư viện mẫu, lần sau chọn ở đây là xong.</p>'); return; }
+    if (kind === "mine" && !myLooks().length) { if (libTab === "mine") body.insertAdjacentHTML("beforeend", '<p class="hint">Chưa có mẫu nào. Chỉnh album ưng ý rồi bấm 💾 Lưu làm mẫu của tôi ở mục Thư viện mẫu, lần sau chọn ở đây là xong.</p>'); return; }
     if (libTab === "all") body.insertAdjacentHTML("beforeend", `<h3>${title}</h3>`);
     const g = document.createElement("div"); g.className = "lib-grid";
-    const src = kind === "mine" ? Object.fromEntries(mine.map((m) => [m.id, m])) : { design: DESIGN, layout: LAYOUT, typo: TYPO, cover: COVER, pattern: PATTERN }[kind];
+    const src = kind === "mine" ? Object.fromEntries(myLooks().map((m) => [m.id, m])) : { design: Object.fromEntries(designsFor()), layout: LAYOUT, typo: TYPO, cover: COVER, pattern: PATTERN }[kind];
     const cur = { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern }[kind];
-    for (const [id, it] of Object.entries(src))
+    for (const [id, it] of Object.entries(src)) if (kind === "design" ? it.kind === libKind() : kind === "mine" || fits(it))
       g.append(libCard(kind, id, it, kind === "design" || kind === "mine" ? isDesign(it) : cur === id, kind === "design" && !plan.pro && !FREE.styles.includes(it.style)));
     body.append(g);
   };
   group("mine", "Mẫu của tôi"); group("design", "Mẫu thiết kế"); group("cover", "Bìa"); group("layout", "Layout"); group("typo", "Typo"); group("pattern", "Họa tiết nền");
 }
 async function openLib(tab) {
-  libTab = tab || "all"; $("lib").hidden = false; renderLib(); $("libX").focus();
+  libTab = tab || "all"; $("libTitle").textContent = libKind() === "pre" ? "Thư viện Prewedding" : "Thư viện Phóng sự cưới"; $("lib").hidden = false; renderLib(); $("libX").focus();
   // script and serif fonts come from Google Fonts; draw again once they are in
   await PhotoBook.fonts();
   if (!$("lib").hidden) renderLib();
@@ -637,9 +644,9 @@ document.querySelectorAll(".lib-btn").forEach((b) => b.onclick = () => openLib(b
 /* Ready designs (the user's own first) in a strip on the page; thumbnails drawn again only when the photos, size, names or saved looks change. */
 let stripKey = "";
 function renderStrip() {
-  if (val("mode") !== "story") return;
-  const all = [...mine.map((m) => ["mine", m.id, m]), ...Object.entries(DESIGN).map(([id, d]) => ["design", id, d])];
-  const key = [photos.length, photos[0] && photos[0].thumb, photos.length && photos[photos.length - 1].thumb, $("bookSize").value, info().names, mine.map((m) => m.id).join()].join("|");
+  if (!isLib(val("mode"))) return;
+  const all = [...myLooks().map((m) => ["mine", m.id, m]), ...designsFor().map(([id, d]) => ["design", id, d])];
+  const key = [libKind(), photos.length, photos[0] && photos[0].thumb, photos.length && photos[photos.length - 1].thumb, $("bookSize").value, info().names, mine.map((m) => m.id).join()].join("|");
   if (key !== stripKey) {
     stripKey = key; const g = $("libStrip"); g.innerHTML = "";
     for (const [kind, id, it] of all) g.append(libCard(kind, id, it, false, kind === "design" && !plan.pro && !FREE.styles.includes(it.style)));
@@ -653,7 +660,7 @@ async function saveMine() {
 }
 $("saveMine").onclick = () => {
   const name = (prompt("Đặt tên cho mẫu này:", "Mẫu của tôi " + (mine.length + 1)) || "").trim(); if (!name) return;
-  mine.unshift({ id: uid(), name: name.slice(0, 40), style: val("style"), layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, auto: { ...bookAuto } });
+  mine.unshift({ id: uid(), kind: libKind(), name: name.slice(0, 40), style: val("style"), layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, auto: { ...bookAuto } });
   saveMine();
 };
 
@@ -673,8 +680,8 @@ function autoPreview() {
 }
 function openAuto() {
   const n = photos.length; $("autoN").textContent = n;
-  autoOpts("autoDesign", [["", "Giữ kiểu đang dùng"], ...Object.entries(DESIGN).map(([k, d]) => [k, d.name + (plan.pro || FREE.styles.includes(d.style) ? "" : " (Pro)")])], "");
-  autoOpts("autoPool", [["mix", "Trộn tất cả (khuyên dùng)"], ...Object.entries(LAYOUT).filter(([, l]) => l.pages).map(([k, l]) => [k, "Chỉ " + l.name])], bookLay === "mix" || !LAYOUT[bookLay] || !LAYOUT[bookLay].pages ? "mix" : bookLay);
+  autoOpts("autoDesign", [["", "Giữ kiểu đang dùng"], ...Object.entries(DESIGN).filter(([, d]) => d.kind === libKind()).map(([k, d]) => [k, d.name + (plan.pro || FREE.styles.includes(d.style) ? "" : " (Pro)")])], "");
+  autoOpts("autoPool", [["mix", "Trộn tất cả (khuyên dùng)"], ...Object.entries(LAYOUT).filter(([, l]) => l.pages && fits(l)).map(([k, l]) => [k, "Chỉ " + l.name])], bookLay === "mix" || !LAYOUT[bookLay] || !LAYOUT[bookLay].pages ? "mix" : bookLay);
   const opts = [[0, "Để app tự chọn"]]; for (let p = Math.max(2, Math.ceil(n / 9)); p <= Math.min(60, n); p++) opts.push([p, p + " trang"]);
   autoOpts("autoTarget", opts, opts.some((o) => o[0] === bookAuto.pages) ? bookAuto.pages : 0);
   const k = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((x) => [x, x + " ảnh"]);
@@ -739,12 +746,19 @@ async function exportVows() {
 
 /* ----- parts: slide (party / stage / deliver), video, album ----- */
 const partOf = (mode) => mode === "video" || mode === "vows" || isBook(mode) ? mode : "slide";
+// Each library part opens on one of its own designs when the current look uses templates made for the other part.
+function partLook() {
+  if (!isLib(val("mode"))) return;
+  const plain = libKind() === "pre" && bookLay === "auto" && bookTypo === "none"; // prewedding starts from a magazine look, not plain pages
+  if (!plain && (bookLay === "mix" || fits(LAYOUT[bookLay])) && fits(TYPO[bookTypo]) && fits(COVER[bookCover])) return;
+  const d = Object.values(DESIGN).find((x) => x.kind === libKind()); applyDesign(d); bookOver = {}; bookSeed = 0;
+}
 let lastSlide = "party";
 function showPart(part) {
   document.querySelectorAll(".parts button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.part === part)));
   document.querySelectorAll("section[data-part]").forEach((sec) => sec.hidden = !sec.dataset.part.split(" ").includes(part));
   let n = 0; document.querySelectorAll(".main section").forEach((sec) => { if (!sec.hidden) { const el = sec.querySelector("h2 .n"); if (el) el.textContent = ++n; } });
-  const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới", story: "Phóng Sự Cưới", vows: "Vows Cưới" }[part];
+  const h = { slide: "Slide Ảnh Cưới", video: "Video Ảnh Cưới", album: "Album Ảnh Cưới", story: "Phóng Sự Cưới", pre: "Album Prewedding", vows: "Vows Cưới" }[part];
   document.querySelector("h1").firstChild.textContent = h + " ";
 }
 document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
@@ -753,11 +767,11 @@ document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
   if (partOf(cur) === "slide") lastSlide = cur;
   const mode = part === "slide" ? lastSlide : part;
   document.querySelector(`input[name=mode][value="${mode}"]`).checked = true;
-  showPart(part); refresh(); changed();
+  showPart(part); partLook(); refresh(); changed();
 });
 
 /* ----- mode-dependent action ----- */
-const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in", story: "⬇ Tải phóng sự cưới PDF", vows: "⬇ Tải thiệp vows PDF để in" };
+const GO = { party: "▶ Bắt đầu chiếu ở tiệc", stage: "▶ Mở màn hình sân khấu", video: "⬇ Xuất video", deliver: "⬇ Tải bộ slide cho khách", album: "⬇ Tải album PDF để in", story: "⬇ Tải phóng sự cưới PDF", pre: "⬇ Tải album prewedding PDF", vows: "⬇ Tải thiệp vows PDF để in" };
 function refresh() {
   const mode = val("mode"); document.body.dataset.mode = mode; showPart(partOf(mode));
   document.querySelectorAll("[data-for]").forEach((el) => el.hidden = !el.dataset.for.split(" ").includes(mode));
@@ -778,6 +792,7 @@ function refresh() {
     album: `${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().sq ? "vuông " : ""}${bookDim().label} cm. Ảnh xếp theo thời gian chụp, mỗi trang tự dàn 1 đến 4 ảnh. Không ưng thì bấm Đổi bố cục.`,
     story: `Phóng sự cưới ${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().label} cm. Chọn mẫu trong Thư viện mẫu hoặc bấm Auto Design, rồi gõ chữ của bạn vào ô dưới khung xem trước.`,
     vows: `${vowCards().length} trang thiệp ${VOW_SIZE[$("vowSize").value].label}: ${vowCards().map((k) => k === "cover" ? "bìa" : k === "groom" ? "lời chú rể" : "lời cô dâu").join(", ")}. Tải PDF gửi tiệm in, hoặc tải ảnh PNG từng trang để gửi Zalo.`,
+    pre: `Album prewedding ${n} ảnh, ${PhotoBook.layout(photos.map((p) => p.ph.ar), bookSeed, bookDim().w / bookDim().h, bookDesign()).length} trang ${bookDim().label} cm. Mẫu kiểu tạp chí thời trang, ít ảnh mỗi trang, chữ lớn. Chọn mẫu trong Thư viện mẫu rồi gõ chữ của bạn vào ô dưới khung xem trước.`,
     deliver: `Tạo một file .html chứa ${n} ảnh${tracks.length ? `, ${tracks.length} bài nhạc` : ""} và hiệu ứng. Gửi file cho khách qua Zalo, email hoặc USB, khách mở bằng Chrome hay Safari là xem được.`,
   };
   const need = proNeed(mode);
@@ -1032,6 +1047,7 @@ function setupAI(enabled) {
   fetch("/api/config").then((r) => r.json()).then((c) => { setupAI(c.aiEnabled); if (c.chibiEnabled) setupChibi(); }).catch(() => {});
   if (!(await load())) return;
   if (!plan.pro && !bookFree()) $("bookSize").value = String(FREE.book);
+  partLook();
   renderPhotos(); renderTracks();
   document.querySelectorAll(".main input, .main select, .main textarea").forEach((el) => {
     if (el.type === "file" || el.id === "aiQ") return;

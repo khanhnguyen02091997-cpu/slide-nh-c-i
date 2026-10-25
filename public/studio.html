@@ -28,7 +28,8 @@
     <button role="tab" data-part="slide" aria-selected="true"><b>▶ Slide trình chiếu</b><span>Chiếu tiệc, sân khấu, file giao khách</span></button>
     <button role="tab" data-part="video" aria-selected="false"><b>🎬 Video có nhạc</b><span>Xuất file video ngang hoặc dọc</span></button>
     <button role="tab" data-part="album" aria-selected="false"><b>📖 Album ảnh in</b><span>Tự dàn trang, tải PDF gửi tiệm in</span></button>
-    <button role="tab" data-part="story" aria-selected="false"><b>📰 Phóng sự cưới <em class="new-tag">NEW</em></b><span>Mẫu thiết kế, tự viết chữ, tải PDF in</span></button>
+    <button role="tab" data-part="story" aria-selected="false"><b>📰 Phóng sự cưới <em class="new-tag">NEW</em></b><span>Kể lại ngày cưới theo từng nghi lễ, tải PDF in</span></button>
+    <button role="tab" data-part="pre" aria-selected="false"><b>📸 Prewedding <em class="new-tag">NEW</em></b><span>Album ảnh cưới chụp concept, kiểu tạp chí</span></button>
     <button role="tab" data-part="vows" aria-selected="false"><b>💍 Vows <em class="new-tag">NEW</em></b><span>Thiệp lời thề, tên dâu rể, chọn phông chữ</span></button>
   </div>
 
@@ -42,6 +43,7 @@
           <label class="opt" hidden><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
           <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
+          <label class="opt" hidden><input type="radio" name="mode" value="pre"><b>Prewedding</b><span>Album prewedding.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="vows"><b>Vows</b><span>Thiệp lời thề.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="story"><b>Phóng sự cưới</b><span>Chọn mẫu thiết kế, tự viết chữ từng trang, tải PDF in.</span></label>
         </div>
@@ -85,7 +87,7 @@
         <div class="checks"><label class="check"><input type="checkbox" id="vowCover" checked><span>Thêm trang bìa có tên hai bạn</span></label></div>
       </section>
 
-      <section data-part="story" class="lib-sec">
+      <section data-part="story pre" class="lib-sec">
         <div class="sec-h">
           <h2><span class="n">3</span>Thư viện mẫu <em class="new-tag">NEW</em></h2>
           <div class="row"><button type="button" id="autoOpen" class="go-soft">✨ Auto Design</button><button type="button" class="lib-btn" data-lib="all">📚 Xem tất cả</button><button type="button" id="saveMine" title="Lưu phong cách, bìa, layout, chữ và họa tiết đang dùng để dùng lại cho album khác">💾 Lưu làm mẫu của tôi</button></div>
@@ -124,7 +126,7 @@
         <select id="frame" hidden><option value="auto">Theo phong cách</option><option value="full">Tràn màn hình</option><option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option><option value="polaroid">Polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option></select>
       </section>
 
-      <section data-part="slide video album story">
+      <section data-part="slide video album story pre">
         <div class="sec-h">
           <h2><span class="n">3</span>Ảnh</h2>
           <span class="count" id="count"></span>
@@ -181,7 +183,7 @@
         </div>
       </section>
 
-      <section data-part="slide video album story">
+      <section data-part="slide video album story pre">
         <h2><span class="n">5</span>Thông tin cô dâu chú rể</h2>
         <div class="fields">
           <label class="f">Chú rể<input type="text" id="groom" placeholder="Tên chú rể"></label>
@@ -201,14 +203,14 @@
         <select id="nameFont" hidden><option value="auto">Theo phong cách</option><option value="vibes">Great Vibes</option><option value="dancing">Dancing Script</option><option value="pinyon">Pinyon Script</option><option value="alex">Alex Brush</option><option value="playball">Playball</option><option value="charm">Charm</option><option value="corinthia">Corinthia</option><option value="pacifico">Pacifico</option><option value="lobster">Lobster</option><option value="patrick">Patrick Hand</option></select>
       </section>
 
-      <section data-part="slide video album story">
+      <section data-part="slide video album story pre">
         <h2><span class="n">6</span>Tùy chọn</h2>
         <div class="fields">
           <label class="f" data-for="party stage video deliver">Mỗi ảnh hiện <span id="secVal">6 giây</span><input type="range" id="sec" min="3" max="15" value="6"></label>
           <label class="f" data-for="party">Hiện lại màn hình tên
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
           </label>
-          <label class="f" data-for="album story">Cỡ album
+          <label class="f" data-for="album story pre">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option><option value="25x35">Dọc 25 × 35 cm</option></select>
           </label>
           <label class="f" data-for="video">Khung hình video
@@ -226,7 +228,7 @@ Cảm ơn quý khách</textarea>
           </label>
         </div>
         <div class="checks">
-          <label class="check" data-for="album story"><input type="checkbox" id="spread"><span>Trang đôi (spread)<small>Xem hai trang cạnh nhau như album mở ra, PDF xuất mỗi tờ là một trang đôi để in album lay-flat. Bìa vẫn để riêng.</small></span></label>
+          <label class="check" data-for="album story pre"><input type="checkbox" id="spread"><span>Trang đôi (spread)<small>Xem hai trang cạnh nhau như album mở ra, PDF xuất mỗi tờ là một trang đôi để in album lay-flat. Bìa vẫn để riêng.</small></span></label>
           <label class="check" data-for="party stage video deliver"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
           <label class="check" data-for="party video deliver"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
           <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
@@ -237,15 +239,15 @@ Cảm ơn quý khách</textarea>
 
     <aside class="side">
       <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
-      <p class="hint" data-for="album story" id="dragHint">Mẹo: kéo một ảnh trong khung xem trước thả lên ảnh khác để đổi chỗ hai ảnh.</p>
+      <p class="hint" data-for="album story pre" id="dragHint">Mẹo: kéo một ảnh trong khung xem trước thả lên ảnh khác để đổi chỗ hai ảnh.</p>
       <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
-      <div class="row book-nav" data-for="album story">
+      <div class="row book-nav" data-for="album story pre">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
-        <button type="button" id="pgFrame" data-for="story" title="Đổi khung ảnh của riêng trang này, các trang khác giữ nguyên">🔁 Đổi khung trang này</button>
-        <button type="button" class="lib-btn" data-lib="all" data-for="story">📚 Thư viện mẫu</button>
+        <button type="button" id="pgFrame" data-for="story pre" title="Đổi khung ảnh của riêng trang này, các trang khác giữ nguyên">🔁 Đổi khung trang này</button>
+        <button type="button" class="lib-btn" data-lib="all" data-for="story pre">📚 Thư viện mẫu</button>
       </div>
-      <div class="book-text" data-for="story">
+      <div class="book-text" data-for="story pre">
         <b id="btLabel">Chữ trên trang này</b>
         <div class="row" id="btEdit"><input type="text" id="btA" placeholder="Chữ lớn" aria-label="Chữ lớn"><input type="text" id="btB" placeholder="Chữ nhỏ" aria-label="Chữ nhỏ"><button type="button" id="btReset">Về chữ mẫu</button></div>
         <span class="hint" id="btHint"></span>
