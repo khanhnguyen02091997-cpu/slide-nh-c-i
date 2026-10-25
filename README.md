@@ -6,7 +6,8 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 - **Màn hình sân khấu:** bấm chuyển từng màn theo chương trình, che đen màn hình.
 - **Video:** xuất video ngang 16:9 hoặc dọc 9:16, có nhạc và hiệu ứng.
 - **Giao khách:** tải một file `.html` chứa sẵn ảnh, nhạc, hiệu ứng; khách mở bằng trình duyệt là xem.
-- **Album ảnh để in:** tự xếp ảnh theo thời gian chụp, tự dàn trang 1 đến 4 ảnh, tải PDF vuông 20, 25 hoặc 30 cm gửi tiệm in.
+- **Album ảnh để in:** tự xếp ảnh theo thời gian chụp, tự dàn trang 1 đến 4 ảnh, tải PDF vuông 20, 25 hoặc 30 cm gửi tiệm in. Xuất được 300 DPI, lề xén 3 mm, tách trang đôi thành trang đơn, ảnh JPG từng trang (.zip); dàn lại riêng trang trái hoặc phải, xem cả cuốn một lúc, đóng logo studio.
+- **Video từ album:** video chạy các trang album đã dàn (trang đôi trên màn ngang), có thể kèm ảnh mở đầu và ảnh kết.
 - 4 phong cách: vàng champagne, Hàn Quốc, cinematic, hiện đại.
 - Tự khớp ảnh với nhạc: chuyển ảnh đúng nhịp, video dài bằng bài nhạc.
 - AI vẽ lại ảnh thành chibi (cần `GEMINI_API_KEY`; Google có thể yêu cầu bật thanh toán cho model tạo ảnh).
@@ -29,6 +30,7 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `public/js/engine.js` | Bộ dựng slide (dùng chung cho studio và file giao khách) |
 | `api/config.js` | Trả cấu hình công khai cho trình duyệt |
 | `api/suggest-music.js` | AI gợi ý nhạc, kiểm tra đăng nhập và giới hạn lượt |
+| `api/clone-layout.js` | AI (Gemini) đọc ảnh một trang album mẫu, trả về vị trí khung ảnh và ô chữ để tạo layout riêng |
 | `supabase/schema.sql` | Bảng dữ liệu, phân quyền, kho lưu ảnh và nhạc |
 | `supabase/free-limits.sql` | Giới hạn bản miễn phí ở máy chủ (tối đa 10 ảnh mỗi album) |
 
