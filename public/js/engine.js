@@ -682,6 +682,7 @@ function Engine(canvas,o){
     else if(sc.type==="letter"){const L=(I.letters||[])[sc.j]||{head:"",text:""},P=photoAt({i:sc.p});if(s.letter)s.letter(c,W,H,L,lt,P,sc.dur);else s.card(c,W,H,{kicker:L.head,big:[L.sub||L.head],msg:L.text},lt,P)}
     else if(sc.type==="collage"){const ps=sc.is.map(i=>photoAt({i}));if(s.collage)s.collage(c,W,H,ps,sc.cap,lt);else photo(c,W,H,ps[0],clamp(lt/sc.dur),sc.is[0],I,lt)}
     else if(sc.type==="cue")card({kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt(sc));
+    else if(sc.type==="studio")studioCard(c,W,H,o.studio||{},sc.role,lt,sc.dur,PAL[o.style]||PAL.lux);
     else if(sc.type==="chapter")card({kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt({i:sc.p}));
     c.restore();
   }
@@ -706,6 +707,28 @@ function Engine(canvas,o){
   }
   function step(dt){time+=dt;t+=dt;const sc=o.scenes[idx];if(o.auto&&sc&&sc.dur&&t>=sc.dur)go(idx+1)}
   return{step,render,go,next:()=>go(idx+1),prev:()=>go(idx-1),get idx(){return idx},get scene(){return o.scenes[idx]},get scenes(){return o.scenes},opts:o};
+}
+/* Studio intro (logo and name) and outro (thanks, phone, page) for a video. st = {img, name, phone, page}. */
+function studioCard(c,W,H,st,role,lt,dur,P){
+  const u=U(W,H),fin=easeOut(lt/1.2),fout=clamp((dur-lt)/.8),a=Math.min(fin,fout);
+  const g=c.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.75);g.addColorStop(0,"#2a2420");g.addColorStop(1,"#0c0a09");c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.save();c.globalAlpha=a;c.textAlign="center";c.textBaseline="middle";const acc=P.acc||"#c9a25a";
+  const im=st.img,iw=im&&(im.naturalWidth||im.width),ih=im&&(im.naturalHeight||im.height);
+  const logo=(cy,maxW,maxH)=>{if(!iw)return 0;const k=Math.min(maxW/iw,maxH/ih),w=iw*k,h=ih*k,z=1+.04*(1-fin);c.save();c.translate(W/2,cy);c.scale(z,z);c.drawImage(im,-w/2,-h/2,w,h);c.restore();return h};
+  const line=(y,w)=>{c.fillStyle=acc;c.fillRect(W/2-w/2*fin,y,w*fin,Math.max(1,1.5*u))};
+  if(role==="intro"){
+    const h=logo(H*.42,W*.42,H*.34),y=iw?H*.42+h/2+48*u:H*.46;
+    if(st.name){c.font=`500 ${44*u}px ${F.play}`;c.fillStyle="#f3ead8";spaced(c,st.name.toUpperCase(),W/2,y,6*u)}
+    line(y+40*u,120*u);c.font=`300 ${18*u}px ${F.sans}`;c.fillStyle="rgba(243,234,216,.75)";spaced(c,"PRESENTS",W/2,y+72*u,8*u);
+  }else{
+    c.font=`italic 500 ${64*u}px ${F.play}`;c.fillStyle="#f3ead8";c.fillText("Cảm ơn bạn đã xem",W/2,H*.3);line(H*.3+52*u,140*u);
+    const h=logo(H*.52,W*.26,H*.18);let y=iw?H*.52+h/2+46*u:H*.5;
+    if(st.name){c.font=`500 ${34*u}px ${F.play}`;c.fillStyle=acc;c.fillText(st.name,W/2,y);y+=50*u}
+    c.font=`400 ${24*u}px ${F.sans}`;c.fillStyle="rgba(243,234,216,.85)";
+    if(st.phone){c.fillText("☎  "+st.phone,W/2,y);y+=38*u}
+    if(st.page)c.fillText(st.page,W/2,y);
+  }
+  c.restore();
 }
 // Small credit line in the corner (free plan).
 function mark(c,W,H,text){const u=U(W,H),fs=Math.max(11,17*u);c.save();c.font="500 "+fs+"px "+F.sans;c.textAlign="right";c.textBaseline="bottom";c.shadowColor="rgba(0,0,0,.55)";c.shadowBlur=6*u;c.fillStyle="rgba(255,255,255,.72)";c.fillText(text,W-22*u,H-18*u);c.restore()}

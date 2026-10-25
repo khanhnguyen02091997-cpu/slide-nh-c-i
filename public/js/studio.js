@@ -11,12 +11,13 @@ let plan = { pro: true };
 const FREE = { photos: 10, styles: ["lux", "korea", "modern"], book: 20, trans: ["fade", "white", "black"], tfx: ["auto", "rise", "type", "hand"], looks: ["none", "korea", "warm", "bw"] };
 // Manual transitions on the free plan: keep the app's pick when it is free, otherwise rotate the free ones.
 const freeTr = (t, i) => plan.pro || FREE.trans.includes(t) ? t : FREE.trans[i % FREE.trans.length];
-function proNeed(mode) {
+function proNeed(mode, mini) {
   if (plan.pro) return "";
   const why = [];
   if (mode !== "vows" && photos.filter((p) => !p.sample).length > FREE.photos) why.push(`quá ${FREE.photos} ảnh`);
   if (!FREE.styles.includes(val("style"))) why.push("phong cách này");
-  if (isBook(mode) && !bookFree()) why.push(`khổ ${bookDim().label} cm`);
+  if (isBook(mode) && !bookFree() && !(mini && mini <= FREE.book)) why.push(`khổ ${bookDim().label} cm`);
+  if (isBook(mode) && [$("bookLook").value, ...photos.map((p) => p.look)].some((k) => k && k !== "none" && !FREE.looks.includes(k))) why.push("màu album có chữ Pro");
   if (!isBook(mode) && val("tmode") === "manual" && transList().some((t) => !FREE.trans.includes(t))) why.push("hiệu ứng có chữ Pro ở phần tự chỉnh");
   if (!isBook(mode) && mode !== "vows" && !FREE.tfx.includes($("tfx").value)) why.push("mẫu chữ chuyển động này");
   if (!isBook(mode) && mode !== "vows" && [$("look").value, ...photos.map((p) => p.look)].some((k) => k && !FREE.looks.includes(k))) why.push("bộ lọc màu có chữ Pro");
@@ -156,6 +157,8 @@ async function load() {
   $("spread").checked = !!s.spread; $("single").checked = !!s.single; $("bleed").checked = !!s.bleed;
   if (s.bookDpi) $("bookDpi").value = s.bookDpi; $("bookFile").value = s.bookFile || "";
   if (s.vsrc) $("vsrc").value = s.vsrc;
+  if (SE.LOOK[s.bookLook]) $("bookLook").value = s.bookLook;
+  $("stIntro").checked = !!s.stIntro; $("autoFace").checked = s.autoFace !== false;
   const lg = s.logo || {}; $("logoOn").checked = !!lg.on; if (lg.pos) logoPos = lg.pos; if (lg.size) $("logoSize").value = lg.size; if (lg.op) $("logoOp").value = lg.op;
   if (PhotoBook.TYPO[s.bookTypo]) bookTypo = s.bookTypo;
   if (s.bookText && typeof s.bookText === "object") bookText = s.bookText;
@@ -281,8 +284,54 @@ async function addFiles(files) {
   }
   if (added.length) photos = photos.filter((p) => !p.sample).concat(added);
   renderPhotos(); refresh(); changed();
+  if (added.length && $("autoFace").checked) faceFit(added, true);
   if (cut) $("photoHint").innerHTML = `Bản miễn phí tối đa ${FREE.photos} ảnh nên ${cut} ảnh cuối chưa được thêm. <a href="/albums.html#pro">Nhập mã Pro</a> để thêm không giới hạn.`;
 }
+/* ----- faces: find people's faces so every crop keeps them (MediaPipe face detector, loaded on first use) ----- */
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14", FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+let faceDet = null;
+function faceDetector() {
+  return faceDet || (faceDet = (async () => {
+    const v = await import(MP + "/vision_bundle.mjs"), fs = await v.FilesetResolver.forVisionTasks(MP + "/wasm");
+    return v.FaceDetector.createFromOptions(fs, { baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" }, runningMode: "IMAGE", minDetectionConfidence: .55 });
+  })().catch((e) => { faceDet = null; throw e; }));
+}
+// The model looks for close-up faces, so the photo is also searched in overlapping tiles (up to 6 x 6) to find faces in full-length shots.
+async function facesIn(src) {
+  const det = await faceDetector(), W = src.width, H = src.height, t = document.createElement("canvas"), found = [];
+  for (const n of [1, 2, 3, 4, 6]) for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const w = n > 1 ? W / n * 1.3 : W, h = n > 1 ? H / n * 1.3 : H, x = Math.max(0, Math.min(W - w, c * W / n - (w - W / n) / 2)), y = Math.max(0, Math.min(H - h, r * H / n - (h - H / n) / 2));
+    t.width = Math.round(Math.min(640, w)); t.height = Math.round(t.width * h / w); t.getContext("2d").drawImage(src, x, y, w, h, 0, 0, t.width, t.height);
+    for (const d of det.detect(t).detections) { const b = d.boundingBox, k = w / t.width; found.push({ x: (x + b.originX * k) / W, y: (y + b.originY * k) / H, w: b.width * k / W, h: b.height * k / H, s: d.categories[0] ? d.categories[0].score : .5 }); }
+  }
+  // the same face found in several tiles: keep the surest box
+  const iou = (a, b) => { const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)), i = ix * iy; return i / (a.w * a.h + b.w * b.h - i); };
+  const keep = []; for (const f of found.sort((a, b) => b.s - a.s)) if (!keep.some((k) => iou(k, f) > .25)) keep.push(f);
+  return keep;
+}
+// Crop focus from faces: the main people (faces at least a third as big as the biggest), a little below their eyes so heads keep room above.
+function faceFocus(faces) {
+  if (!faces.length) return null;
+  const big = Math.max(...faces.map((f) => f.w)), main = faces.filter((f) => f.w >= big / 3);
+  const x0 = Math.min(...main.map((f) => f.x)), x1 = Math.max(...main.map((f) => f.x + f.w)), y0 = Math.min(...main.map((f) => f.y)), y1 = Math.max(...main.map((f) => f.y + f.h));
+  const cl = (v) => Math.min(1, Math.max(0, v));
+  return [cl((x0 + x1) / 2), cl((y0 + y1) / 2 + .04)];
+}
+async function faceFit(list, quiet) {
+  const todo = list.filter((p) => !p.sample); if (!todo.length) return;
+  $("faceAll").disabled = true; let n = 0, hit = 0;
+  try {
+    for (const p of todo) {
+      $("photoHint").textContent = `Đang tìm mặt người ${++n} / ${todo.length}...`;
+      const f = faceFocus(await facesIn(p.ph.c)); if (f) { SE.focus(p.ph, f[0], f[1]); hit++; }
+      await new Promise((ok) => setTimeout(ok, 0));
+    }
+    renderPhotos(); refresh(); changed();
+    $("photoHint").textContent = hit ? `Đã canh mặt cho ${hit} / ${todo.length} ảnh. Ảnh nào chưa ưng thì bấm ✥ để chỉnh tay.` : "Không thấy mặt người rõ trong các ảnh này, giữ vùng cắt giữa ảnh.";
+  } catch (e) { if (!quiet) fail("Chưa tải được bộ tìm mặt (cần mạng). Thử lại sau nhé."); else renderPhotos(); }
+  $("faceAll").disabled = false;
+}
+$("faceAll").onclick = () => faceFit(photos);
 $("photoInput").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
 const drop = $("drop");
 ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
@@ -391,7 +440,7 @@ function fxCfg() {
 function lookMap() { const m = {}; for (const p of photos) if (p.path && p.look) m[p.path] = p.look; return m; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -433,7 +482,7 @@ function makeBook(lib) {
 /* ----- video from the album: the finished pages (spreads on a wide screen) as slides, optionally between an opening and a closing photo ----- */
 let vidKey = "", vidSheets = [];
 function vidPhotos() {
-  const src = vsrc(), ph = photos.map((p) => p.ph);
+  const src = vsrc(), ph = bookPh();
   if (src === "photos" || !photos.length) return ph;
   const lib = bookLay !== "auto" || bookTypo !== "none", d = bookDim(), vertical = $("vfmt").value === "v", spread = !vertical && d.w / d.h <= 1.1;
   const key = JSON.stringify([lib, bookDesign(lib), bookText, bookSwap, bookSeed, $("bookSize").value, spread, val("style"), info(), photos.map((p) => p.path || p.thumb.slice(-24) + p.ph.fx + p.ph.fy)]);
@@ -448,7 +497,25 @@ function vidPhotos() {
 }
 // Album pages show whole (frame "book"); per-photo looks, subtitles and chapters belong to photos, so they are left out.
 const vsrc = () => val("mode") === "video" ? $("vsrc").value : "photos";
-const vidCfg = (c) => vsrc() === "photos" ? c : { ...c, frame: "book", looks: [], subs: [], chap: {} };
+const vidCfg = (c) => vsrc() === "photos" ? c : { ...c, frame: "book", look: "none", looks: [], subs: [], chap: {} };
+/* ----- one colour look for the whole printed book (a photo's own look from the Slide part wins); hold "ảnh gốc" to compare ----- */
+let bookRaw = false;
+const fillBookLook = () => { $("bookLook").innerHTML = '<option value="none">Màu gốc</option>' + Object.entries(SE.LOOK).map(([k, l]) => `<option value="${k}">${l.name}${plan.pro || FREE.looks.includes(k) ? "" : " (Pro)"}</option>`).join(""); };
+const rawHold = (on) => { if (bookRaw === on) return; bookRaw = on; renderBook(); $("pvScene").textContent = on ? "Ảnh gốc, chưa chỉnh màu" : $("pvScene").textContent; };
+$("pgRaw").addEventListener("pointerdown", (e) => { e.preventDefault(); rawHold(true); });
+["pointerup", "pointerleave", "pointercancel"].forEach((ev) => $("pgRaw").addEventListener(ev, () => rawHold(false)));
+const bookPh = () => photos.map((p) => { const k = bookRaw ? "" : p.look && p.look !== "none" ? p.look : $("bookLook").value; return k && k !== "none" ? SE.looked(p.ph, k) : p.ph; });
+// Studio name, phone and page live in the account (user_metadata.studio) so every album reuses them.
+let stTimer = 0;
+const studioInfo = () => ({ img: logoImg, name: $("stName").value.trim(), phone: $("stPhone").value.trim(), page: $("stPage").value.trim() });
+["stName", "stPhone", "stPage"].forEach((id) => $(id).addEventListener("input", () => { clearTimeout(stTimer); stTimer = setTimeout(() => { const { img, ...st } = studioInfo(); client.auth.updateUser({ data: { studio: st } }); }, 1000); }));
+// Intro and outro cards around a video's scenes when switched on.
+function withStudio(sc) {
+  if (!$("stIntro").checked || val("mode") !== "video") return sc;
+  const b = fitted("video").beat, d = (x) => b ? Math.max(2, Math.round(x / b)) * b : x; // keep cuts on the beat
+  const out = [{ type: "studio", role: "intro", name: "Intro studio", dur: d(4.5) }, ...sc, { type: "studio", role: "outro", name: "Outro studio", dur: d(6) }];
+  out.forEach((x, j) => x.k = j); return out;
+}
 const stampLogo = (cv) => { const lg = logo(); if (lg) PhotoBook.stamp(cv.getContext("2d"), cv.width, cv.height, lg); };
 const isSpread = () => $("spread").checked;
 // Sheets on screen: one page, or a spread (cover alone, then pairs). sheetOf(n) is the sheet holding page n.
@@ -467,7 +534,7 @@ function renderBook() {
   for (const r of sheetRects()) {
     ctx.save(); ctx.translate(r.x, 0); ctx.beginPath(); ctx.rect(0, 0, r.W, r.H); ctx.clip();
     if (r.n == null) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, r.W, r.H); }
-    else if (photos.length) PhotoBook.render(ctx, { W: r.W, H: r.H }, bookPages, r.n, photos.map((p) => p.ph), val("style"), info());
+    else if (photos.length) PhotoBook.render(ctx, { W: r.W, H: r.H }, bookPages, r.n, bookPh(), val("style"), info());
     if (isSpread() && r.n === bookPage && sheets()[sheetOf(bookPage)].length > 1) { ctx.strokeStyle = "rgba(139,94,46,.55)"; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, r.W - 3, r.H - 3); }
     ctx.restore();
   }
@@ -550,29 +617,94 @@ $("pgShuffle").onclick = () => { bookSeed++; bookOver = {}; layoutBook(); render
 // File name for exports: what the user typed, else the couple's names and the part.
 const bookName = () => { const t = $("bookFile").value.trim(); return t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || slug() : slug() + ({ story: "-phong-su-cuoi", pre: "-prewedding" }[val("mode")] || "-album"); };
 // Print options: 300 DPI or the lighter default, spreads unless the printer wants single pages, optional 3 mm bleed.
-function printOpts() {
-  const d = bookDim(), long = Math.max(d.w, d.h);
-  return { wCm: d.w, hCm: d.h, px: $("bookDpi").value === "300" ? Math.round(long / 2.54 * 300) : long >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK, spread: isSpread() && !$("single").checked, bleed: $("bleed").checked ? .3 : 0, name: bookName(),
+// mini: long side in cm for a smaller copy of the same book (same pages, scaled), always at 300 DPI.
+function printOpts(mini) {
+  const d0 = bookDim(), k = mini ? mini / Math.max(d0.w, d0.h) : 1, d = { w: +(d0.w * k).toFixed(2), h: +(d0.h * k).toFixed(2) }, long = Math.max(d.w, d.h);
+  return { wCm: d.w, hCm: d.h, px: mini || $("bookDpi").value === "300" ? Math.round(long / 2.54 * 300) : long >= 30 ? 2400 : 2000, mark: plan.pro ? "" : MARK, spread: isSpread() && !$("single").checked, bleed: $("bleed").checked ? .3 : 0, name: bookName() + (mini ? `-mini-${mini}cm` : ""),
     onPage: (i, n) => { $("vbar").style.width = (i / n * 100) + "%"; $("vtxt").textContent = `Đang tạo ${i} / ${n}`; } };
 }
-async function exportBook(jpg) {
+async function exportBook(jpg, mini) {
   if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
   await Promise.all([SE.loadName($("nameFont").value), PhotoBook.fonts()]);
-  const d = bookDim(), o = printOpts();
-  $("go").disabled = $("dlJpg").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
-  const extra = [o.px >= 3000 ? "300 DPI" : "", o.bleed ? "có lề xén 3 mm" : "", isSpread() ? (o.spread ? "trang đôi" : "tách trang đơn") : ""].filter(Boolean).join(", ");
+  const o = printOpts(mini), d = { label: `${o.wCm} × ${o.hCm}` };
+  $("go").disabled = $("dlJpg").disabled = $("dlMini").disabled = true; $("vprog").hidden = false; $("vcancel").hidden = true; $("vbar").style.width = "0";
+  const extra = [mini ? "bản mini" : "", o.px >= 3000 || mini ? "300 DPI" : "", o.bleed ? "có lề xén 3 mm" : "", isSpread() ? (o.spread ? "trang đôi" : "tách trang đơn") : ""].filter(Boolean).join(", ");
   try {
-    const blob = await (jpg ? PhotoBook.jpgZip : PhotoBook.pdf)(bookPages, photos.map((p) => p.ph), val("style"), info(), o);
+    const blob = await (jpg ? PhotoBook.jpgZip : PhotoBook.pdf)(bookPages, bookPh(), val("style"), info(), o);
     saveFile(blob, o.name + (jpg ? "-jpg.zip" : ".pdf"));
     $("goNote").textContent = `Đã tải ${jpg ? "ảnh JPG (file .zip)" : "album PDF"} (${(blob.size / 1048576).toFixed(1)} MB, ${bookPages.length} trang ${d.label} cm${extra ? ", " + extra : ""}). Gửi file này cho tiệm in là được.`;
   } catch (e) { fail("Chưa tạo được file: " + (e.message || e) + (o.px >= 3000 ? ". Máy yếu thì thử độ nét Thường." : "")); }
-  $("vprog").hidden = true; $("vcancel").hidden = false; $("go").disabled = $("dlJpg").disabled = false;
+  $("vprog").hidden = true; $("vcancel").hidden = false; $("go").disabled = $("dlJpg").disabled = $("dlMini").disabled = false;
 }
 $("dlJpg").onclick = () => { const m = val("mode"); if (proNeed(m)) return fail(proNeed(m)); exportBook(true); };
+// The mini copy is never bigger than the free size, so only the other Pro choices (style, looks, photo count) block it.
+$("dlMini").onclick = () => { const m = val("mode"), n = proNeed(m, +$("miniSize").value); if (n) return fail(n); exportBook(false, +$("miniSize").value); };
+/* ----- flip book: every page as an image, for a page that turns like a real book or for a video of it ----- */
+async function pageCanvases(long) {
+  await Promise.all([SE.loadName($("nameFont").value), PhotoBook.fonts()]);
+  const d = bookDim(), W = Math.round(d.w >= d.h ? long : long * d.w / d.h), H = Math.round(W * d.h / d.w), ph = bookPh(), lg = logo();
+  return bookPages.map((_, n) => { const cv = document.createElement("canvas"); cv.width = W; cv.height = H; PhotoBook.render(cv.getContext("2d"), { W, H }, bookPages, n, ph, val("style"), info()); if (lg) PhotoBook.stamp(cv.getContext("2d"), W, H, lg); return cv; });
+}
+const flipTitle = () => { const i = info(); return [i.groom, i.bride].filter(Boolean).join(" & ") || "Album cưới"; };
+$("dlFlip").onclick = async () => {
+  const m = val("mode"), n = proNeed(m, FREE.book); if (n) return fail(n); if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
+  $("dlFlip").disabled = true; $("goNote").classList.remove("err"); $("goNote").textContent = "Đang tạo sách lật...";
+  try {
+    const cvs = await pageCanvases(1400), d = bookDim();
+    const html = FlipBook.html({ pages: cvs.map((c) => c.toDataURL("image/jpeg", .86)), ar: d.w / d.h, title: flipTitle(), sub: info().date || "", mark: plan.pro ? "" : MARK });
+    const blob = new Blob([html], { type: "text/html" }); saveFile(blob, bookName() + "-sach-lat.html");
+    $("goNote").textContent = `Đã tải sách lật trang (${(blob.size / 1048576).toFixed(1)} MB, ${cvs.length} trang). Gửi file .html này qua Zalo hay email, khách mở bằng trình duyệt là lật được.`;
+  } catch (e) { fail("Chưa tạo được sách lật: " + (e.message || e)); }
+  $("dlFlip").disabled = false;
+};
+$("dlFlipVid").onclick = async () => {
+  const m = val("mode"), n = proNeed(m, FREE.book); if (n) return fail(n); if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
+  const W = plan.pro ? 1920 : 1280, H = plan.pro ? 1080 : 720, cvs = await pageCanvases(Math.round(H * .8 * 1.2)), d = bookDim(), mark = plan.pro ? "" : MARK;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const ctx = cv.getContext("2d");
+  record({ cv, dur: FlipBook.duration(cvs.length), name: bookName() + "-lat-sach", label: "video lật sách", draw: (e) => FlipBook.frame(ctx, W, H, cvs, e, d.w / d.h, mark) });
+};
+
+/* ----- gate photo: one big print with names, solar and lunar date, shown flat or as a mockup ----- */
+let gatePic = 0, gateView = "print";
+const GP = window.GatePrint;
+$("gateTpl").innerHTML = Object.entries(GP.TPL).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join("");
+function gateOpts() {
+  const i = info(), iso = $("date").value, nf = SE.NAMEF[i.nameFont], ph = bookPh(), lg = logo();
+  return { img: ph[Math.min(gatePic, ph.length - 1)].c, groom: i.groom, bride: i.bride, title: $("gateHead").value.trim(), date: GP.solarText(iso), lunar: $("gateLunar").checked ? GP.lunarText(iso) : "",
+    script: nf ? `"${nf[0]}",cursive` : "", scale: +$("gateScale").value, tpl: $("gateTpl").value, logo: $("gateLogo").checked && lg ? { ...lg, size: .16 } : null, mark: plan.pro ? "" : MARK };
+}
+const gateDim = () => GP.SIZES[$("gateSize").value] || [60, 90];
+function gatePoster(long) { const [w, h] = gateDim(), cv = document.createElement("canvas"); cv.width = Math.round(w >= h ? long : long * w / h); cv.height = Math.round(cv.width * h / w); GP.draw(cv.getContext("2d"), cv.width, cv.height, gateOpts()); return cv; }
+function gateMockCv(poster) { const cv = document.createElement("canvas"); cv.width = 1600; cv.height = 1200; GP.mockup(cv.getContext("2d"), cv.width, cv.height, poster, gateView === "wall" ? "wall" : "easel"); return cv; }
+function renderGate() {
+  if (!photos.length) return;
+  const poster = gatePoster(1100), out = gateView === "print" ? poster : gateMockCv(poster), cv = $("gateCv");
+  cv.width = out.width; cv.height = out.height; cv.getContext("2d").drawImage(out, 0, 0);
+  const iso = $("date").value; $("gateDate").textContent = iso ? GP.solarText(iso) + (GP.lunarText(iso) ? " · " + GP.lunarText(iso).replace("Tức ", "") : "") : "Chưa có ngày cưới: nhập ở phần Thông tin để có ngày dương và ngày âm.";
+}
+$("gateOpen").onclick = async () => {
+  if (!photos.length) return fail("Thêm ảnh trước đã nhé.");
+  await Promise.all([SE.loadName($("nameFont").value), PhotoBook.fonts(), document.fonts.load('400 40px "Great Vibes"', "Ắ").catch(() => {})]);
+  const g = $("gatePics"); g.innerHTML = ""; gatePic = Math.min(gatePic, photos.length - 1);
+  photos.forEach((p, i) => { const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Chọn " + p.name); b.setAttribute("aria-pressed", String(i === gatePic)); b.innerHTML = `<img alt="" src="${p.thumb}">`;
+    b.onclick = () => { gatePic = i; g.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); renderGate(); }; g.append(b); });
+  $("gateBox").hidden = false; renderGate(); $("gateX").focus();
+};
+["gateTpl", "gateSize", "gateHead", "gateScale", "gateLunar", "gateLogo"].forEach((id) => $(id).addEventListener("input", renderGate));
+document.querySelectorAll("[data-gv]").forEach((b) => b.onclick = () => { gateView = b.dataset.gv; document.querySelectorAll("[data-gv]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderGate(); });
+$("gateX").onclick = () => { $("gateBox").hidden = true; };
+$("gateBox").addEventListener("click", (e) => { if (e.target === $("gateBox")) $("gateBox").hidden = true; });
+const gateName = () => bookName().replace(/-(album|prewedding|phong-su-cuoi)$/, "") + "-anh-cong-" + $("gateSize").value;
+// 150 DPI on the long side: a 90 cm print is about 5300 px, sharp from a few steps away.
+const gateFull = () => { const [w, h] = gateDim(); return gatePoster(Math.round(Math.max(w, h) / 2.54 * 150)); };
+$("gateJpg").onclick = async () => { const cv = gateFull(); saveFile(await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .92)), gateName() + ".jpg"); };
+$("gatePdf").onclick = async () => { const [w, h] = gateDim(), cv = gateFull(); saveFile(await PhotoBook.imgPdf(1, async () => ({ cv, wCm: w, hCm: h })), gateName() + ".pdf"); };
+$("gateMock").onclick = async () => { if (gateView === "print") { gateView = "easel"; document.querySelectorAll("[data-gv]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.gv === "easel"))); renderGate(); }
+  const cv = gateMockCv(gatePoster(1400)); saveFile(await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .9)), gateName() + "-mockup.jpg"); };
 
 /* ----- contact sheet: every page of the book at once, click one to open it ----- */
 function openSheet() {
-  const g = $("sheetGrid"); g.innerHTML = ""; const d = bookDim(), w = 220, ph = photos.map((p) => p.ph);
+  const g = $("sheetGrid"); g.innerHTML = ""; const d = bookDim(), w = 220, ph = bookPh();
   sheets().forEach((sh) => {
     const b = document.createElement("button"); b.type = "button"; const cv = document.createElement("canvas"); cv.width = w * sh.length; cv.height = Math.round(w * d.h / d.w); const ctx = cv.getContext("2d");
     sh.forEach((n, k) => { ctx.save(); ctx.translate(k * w, 0); if (n == null) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, cv.height); } else PhotoBook.render(ctx, { W: w, H: cv.height }, bookPages, n, ph, val("style"), info()); ctx.restore(); });
@@ -630,8 +762,8 @@ function startPreview() {
   if (mode === "vows") { const v = VOW_SIZE[$("vowSize").value]; $("pvBox").classList.remove("v"); $("pvBox").classList.add("sq"); $("pvBox").style.aspectRatio = `${v.w} / ${v.h}`; $("pvBox").style.maxWidth = `min(100%, ${(70 * v.w / v.h).toFixed(1)}vh)`; sizePv(); pvEng = null; renderVows(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
   const vp = mode === "video" ? vidPhotos() : photos.map((p) => p.ph); if (mode === "video") c = vidCfg(c);
-  const mk = () => SE.build(mode, vp.length, c);
-  pvEng = SE.Engine(pv, { style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes: mk(), auto: true, loop: true, onLoop: mk,
+  const mk = () => withStudio(SE.build(mode, vp.length, c));
+  pvEng = SE.Engine(pv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
@@ -761,7 +893,7 @@ function libThumb(style, lay, typo, cover, coverPage, pattern, tone) {
   if (!photos.length) return cv;
   const pages = PhotoBook.layout(photos.map((p) => p.ph.ar), 0, d.w / d.h, { layout: lay, typo, cover, pattern, tone, min: bookAuto.min, max: bookAuto.max });
   const n = Math.max(1, pages.findIndex((p) => p.t)), i = coverPage ? 0 : pages[n] && pages[n].type === "photos" ? n : 0;
-  PhotoBook.render(cv.getContext("2d"), { W: cv.width, H: cv.height }, pages, i, photos.map((p) => p.ph), style, info());
+  PhotoBook.render(cv.getContext("2d"), { W: cv.width, H: cv.height }, pages, i, bookPh(), style, info());
   return cv;
 }
 function libCard(kind, id, it, on, pro) {
@@ -1001,7 +1133,7 @@ function refresh() {
   const nm = info().names;
   document.querySelectorAll(".nf-pick button").forEach((b) => { if (b.dataset.v !== "auto") { b.querySelector(".nf-s").textContent = nm; b.title = b.querySelector(".nf-s").title = SE.NAMEF[b.dataset.v][0]; } });
   $("go").textContent = GO[mode]; $("go").disabled = !photos.length && mode !== "stage" && mode !== "vows";
-  const c = cfg(), n = photos.length, sc = SE.build(mode === "stage" || mode === "vows" ? "party" : mode, mode === "video" ? vidPhotos().length : n, mode === "video" ? vidCfg(c) : c);
+  const c = cfg(), n = photos.length, sc = withStudio(SE.build(mode === "stage" || mode === "vows" ? "party" : mode, mode === "video" ? vidPhotos().length : n, mode === "video" ? vidCfg(c) : c));
   const notes = {
     party: `Một vòng chiếu khoảng ${fmtDur(SE.total(sc))}, chạy lặp lại tới khi bạn thoát. Màn hình tự phóng to, giữ sáng và ẩn chuột.`,
     stage: `${c.cues.length} màn theo chương trình. Bấm → hoặc bút trình chiếu để chuyển, B để che đen. Khung xem trước tự chạy để bạn xem từng màn.`,
@@ -1045,12 +1177,17 @@ let cancelRec = null;
 function pickMime() { for (const m of ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
 async function exportVideo() {
   await SE.loadName($("nameFont").value);
-  const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
   const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-  const vp = vidPhotos(), c = vidCfg(cfg("video")), scenes = SE.build("video", vp.length, c), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false });
-  eng.render(); stampLogo(cv);
+  const vp = vidPhotos(), c = vidCfg(cfg("video")), scenes = withStudio(SE.build("video", vp.length, c)), dur = SE.total(scenes);
+  const eng = SE.Engine(cv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false });
+  let lastE = 0;
+  record({ cv, dur, vertical, beat0: c.beat0, name: slug() + (vertical ? "-doc" : ""), draw: (e) => { eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv); } });
+}
+/* Record a canvas animation as a video with the album's music: draw(e) paints second e. */
+async function record({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
+  const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
+  draw(0);
   const stream = cv.captureStream(30); let ac = null;
   $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị...";
   if (tracks.length) {
@@ -1058,7 +1195,7 @@ async function exportVideo() {
     const bufs = []; for (const t of tracks) { try { bufs.push(await ac.decodeAudioData(await (await trackFile(t)).arrayBuffer())); } catch {} }
     if (bufs.length) {
       const t0 = ac.currentTime + .25; let at = t0, j = 0;
-      while (at < t0 + dur) { const s = ac.createBufferSource(); s.buffer = bufs[j % bufs.length]; s.connect(gain); const off = j === 0 ? Math.min(c.beat0 || 0, s.buffer.duration - 1) : 0; s.start(at, Math.max(0, off)); at += s.buffer.duration - Math.max(0, off); j++; }
+      while (at < t0 + dur) { const s = ac.createBufferSource(); s.buffer = bufs[j % bufs.length]; s.connect(gain); const off = j === 0 ? Math.min(beat0 || 0, s.buffer.duration - 1) : 0; s.start(at, Math.max(0, off)); at += s.buffer.duration - Math.max(0, off); j++; }
       gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(1, t0 + 1.5); gain.gain.setValueAtTime(1, t0 + Math.max(1.6, dur - 3)); gain.gain.linearRampToValueAtTime(0, t0 + dur);
       stream.addTrack(dest.stream.getAudioTracks()[0]);
     }
@@ -1066,22 +1203,22 @@ async function exportVideo() {
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: vertical ? 9e6 : 12e6 }), chunks = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   let cancelled = false; cancelRec = () => { cancelled = true; finish(); };
-  pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", vertical); sizePv();
-  let iv = 0, t0 = 0, lastE = 0;
+  pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", !!vertical); $("pvBox").style.aspectRatio = `${cv.width} / ${cv.height}`; sizePv();
+  let iv = 0, t0 = 0;
   function finish() { clearInterval(iv); if (rec.state !== "inactive") rec.stop(); }
   rec.onstop = () => {
     stream.getTracks().forEach((t) => t.stop()); ac && ac.close(); pvHold = false; $("go").disabled = false; busy(false); $("vprog").hidden = true;
     if (cancelled) { refresh(); return; }
     const ext = mime.startsWith("video/mp4") ? "mp4" : "webm", blob = new Blob(chunks, { type: mime.split(";")[0] });
-    saveFile(blob, slug() + (vertical ? "-doc" : "") + "." + ext);
-    $("goNote").textContent = "Đã xuất video " + ext.toUpperCase() + " (" + (blob.size / 1048576).toFixed(1) + " MB)." + (ext === "webm" ? " Trình duyệt này chỉ quay được WebM; muốn MP4 thì dùng Chrome bản mới." : "");
-    startPreview();
+    saveFile(blob, name + "." + ext);
+    $("goNote").textContent = `Đã xuất ${label} ` + ext.toUpperCase() + " (" + (blob.size / 1048576).toFixed(1) + " MB)." + (ext === "webm" ? " Trình duyệt này chỉ quay được WebM; muốn MP4 thì dùng Chrome bản mới." : "");
+    refresh();
   };
   rec.start(1000); t0 = performance.now();
   iv = setInterval(() => {
-    const e = (performance.now() - t0) / 1000; eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv);
+    const e = (performance.now() - t0) / 1000; draw(e);
     pctx.drawImage(cv, 0, 0, pv.width, pv.height);
-    $("vbar").style.width = Math.min(100, e / dur * 100) + "%"; $("vtxt").textContent = "Đang dựng video " + fmtDur(Math.min(e, dur)) + " / " + fmtDur(dur);
+    $("vbar").style.width = Math.min(100, e / dur * 100) + "%"; $("vtxt").textContent = `Đang dựng ${label} ` + fmtDur(Math.min(e, dur)) + " / " + fmtDur(dur);
     if (e >= dur + .3) finish();
   }, 1000 / 30);
 }
@@ -1257,10 +1394,11 @@ function setupAI(enabled) {
   user = await requireUser();
   client = await sb();
   plan = await myPlan();
-  $("planNote").hidden = plan.pro; markPro();
+  $("planNote").hidden = plan.pro; markPro(); fillBookLook();
   $("email").textContent = user.email || "";
   const um = user.user_metadata || {};
   rates = um.rate && typeof um.rate === "object" ? um.rate : {};
+  const st = um.studio || {}; $("stName").value = st.name || ""; $("stPhone").value = st.phone || ""; $("stPage").value = st.page || "";
   myLays = Array.isArray(um.myLayouts) ? um.myLayouts.filter((m) => m && m.id && Array.isArray(m.pages) && m.pages.length) : []; addMyLays();
   mine = Array.isArray(user.user_metadata && user.user_metadata.myDesigns) ? user.user_metadata.myDesigns.filter((m) => m && (LAYOUT[m.layout] || m.layout === "mix")) : [];
   $("out").onclick = signOut;
