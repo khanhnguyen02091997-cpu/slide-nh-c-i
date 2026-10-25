@@ -143,6 +143,7 @@ async function load() {
   if (s.bookOver && typeof s.bookOver === "object") bookOver = s.bookOver;
   if (Array.isArray(s.bookSwap)) bookSwap = s.bookSwap;
   if (PhotoBook.PATTERN[s.bookPattern]) bookPattern = s.bookPattern;
+  if (PhotoBook.TONE[s.bookTone]) bookTone = s.bookTone;
   const v = s.vows || {};
   if (Vows.TPL[v.tpl]) $("vowTpl").value = v.tpl;
   if (Vows.FONTS[v.font]) $("vowFont").value = v.font;
@@ -374,7 +375,7 @@ function fitted(mode) {
 function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean) }; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, spread: $("spread").checked, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, spread: $("spread").checked, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -385,7 +386,7 @@ let bookPages = [], bookPage = 0, bookSeed = 0, bookLay = "auto", bookTypo = "no
 // Auto Design: photos per page range, wished page count (0 = free), layouts to draw from (empty = all), gutter (% of page side)
 let bookAuto = { min: 1, max: 6, pages: 0, pool: [], gut: 2.2 };
 // Hand edits on top of the automatic pages: pinned frame per page (first photo index -> template id) and photo swaps (pairs of photo keys).
-let bookOver = {}, bookSwap = [], bookPattern = "none";
+let bookOver = {}, bookSwap = [], bookPattern = "none", bookTone = "none";
 const photoKey = (p, i) => p.path || "i" + i;
 // Album part: automatic pages, no titles. Wedding story part: the library's layouts and titles, with the user's own words.
 // Prewedding part: the same library, with the templates made for concept shoots.
@@ -393,7 +394,7 @@ const isLib = (m) => m === "story" || m === "pre";
 const isBook = (m) => m === "album" || isLib(m);
 const libKind = () => val("mode") === "pre" ? "pre" : "psc";
 const fits = (it) => !it.for || it.for === libKind(); // a layout, typography or cover made for the part in use, or for both
-const bookDesign = () => !isLib(val("mode")) ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, gut: bookAuto.gut / 100, over: bookOver,
+const bookDesign = () => !isLib(val("mode")) ? {} : { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, tone: bookTone, gut: bookAuto.gut / 100, over: bookOver,
   ...(bookLay === "mix" ? { min: bookAuto.min, max: bookAuto.max, pages: bookAuto.pages, pool: bookAuto.pool.length ? bookAuto.pool : Object.keys(LAYOUT).filter((k) => LAYOUT[k].pages && fits(LAYOUT[k])) } : {}) };
 // Album page size in cm from the size picker: "20", "25", "30" are square, "30x20" is landscape, "20x30" portrait.
 function bookDim(v = $("bookSize").value) { const [w, h] = String(v).split("x").map(Number); return { w, h: h || w, label: h ? `${w} × ${h}` : `${w} × ${w}`, sq: !h }; }
@@ -571,26 +572,27 @@ document.querySelectorAll(".pick[data-for-select]").forEach((g) => g.querySelect
 }));
 
 /* ----- album resource library: layouts, title typography and ready designs, previewed with the user's photos ----- */
-const { LAYOUT, TYPO, COVER, PATTERN, DESIGN } = PhotoBook;
+const { LAYOUT, TYPO, COVER, PATTERN, TONE, DESIGN } = PhotoBook;
 let libTab = "all";
 // "Mẫu của tôi": the user's own saved looks, kept in their account (auth user metadata) so every album and device sees them.
 let mine = [];
-// The part's designs, the ones built on templates made for it first.
-const designsFor = () => Object.entries(DESIGN).filter(([, d]) => d.kind === libKind()).sort(([, a], [, b]) => (LAYOUT[b.layout].for ? 1 : 0) - (LAYOUT[a.layout].for ? 1 : 0));
+// The part's designs, newest kinds first.
+const rank = (d) => (d.tone ? 2 : 0) + (LAYOUT[d.layout].for ? 1 : 0); // luxury sets, then the part's own templates
+const designsFor = () => Object.entries(DESIGN).filter(([, d]) => d.kind === libKind()).sort(([, a], [, b]) => rank(b) - rank(a));
 const myLooks = () => mine.filter((m) => (m.kind || "psc") === libKind());
-const isDesign = (d) => val("style") === d.style && bookLay === d.layout && bookTypo === d.typo && bookCover === d.cover && (d.pattern || "none") === bookPattern;
-function libSum() { const d = [...mine, ...Object.values(DESIGN)].find(isDesign); return (d ? d.name + " · " : "") + "Bìa " + COVER[bookCover].name.toLowerCase() + " · " + layName(bookLay) + " · " + TYPO[bookTypo].name + (bookPattern !== "none" ? " · nền " + PATTERN[bookPattern].name.toLowerCase() : ""); }
+const isDesign = (d) => val("style") === d.style && bookLay === d.layout && bookTypo === d.typo && bookCover === d.cover && (d.pattern || "none") === bookPattern && (d.tone || "none") === bookTone;
+function libSum() { const d = [...mine, ...Object.values(DESIGN)].find(isDesign); return (d ? d.name + " · " : "") + "Bìa " + COVER[bookCover].name.toLowerCase() + " · " + layName(bookLay) + " · " + TYPO[bookTypo].name + (bookPattern !== "none" ? " · nền " + PATTERN[bookPattern].name.toLowerCase() : "") + (bookTone !== "none" ? " · " + TONE[bookTone].name.toLowerCase() : ""); }
 const layName = (id) => id === "mix" ? `Auto Design (${bookAuto.min}–${bookAuto.max} ảnh mỗi trang)` : LAYOUT[id].name;
-const designSub = (it) => `Bìa ${COVER[it.cover].name.toLowerCase()} · ${it.layout === "mix" ? "Auto Design" : LAYOUT[it.layout].name} · ${TYPO[it.typo].name}${it.pattern && it.pattern !== "none" ? " · " + PATTERN[it.pattern].name : ""}`;
+const designSub = (it) => `Bìa ${COVER[it.cover].name.toLowerCase()} · ${it.layout === "mix" ? "Auto Design" : LAYOUT[it.layout].name} · ${TYPO[it.typo].name}${it.pattern && it.pattern !== "none" ? " · " + PATTERN[it.pattern].name : ""}${it.tone && it.tone !== "none" ? " · " + TONE[it.tone].name : ""}`;
 function applyDesign(it) {
   document.querySelector(`input[name=style][value="${it.style}"]`).checked = true;
-  bookLay = it.layout; bookTypo = it.typo; bookCover = it.cover; bookPattern = it.pattern || "none"; if (it.auto) bookAuto = { ...bookAuto, ...it.auto };
+  bookLay = it.layout; bookTypo = it.typo; bookCover = it.cover; bookPattern = it.pattern || "none"; bookTone = it.tone || "none"; if (it.auto) bookAuto = { ...bookAuto, ...it.auto };
 }
 // Thumbnail: the first photo page that carries a title (or page 1) of the album as it would look with these choices.
-function libThumb(style, lay, typo, cover, coverPage, pattern) {
+function libThumb(style, lay, typo, cover, coverPage, pattern, tone) {
   const d = bookDim(), w = 300, cv = document.createElement("canvas"); cv.width = w; cv.height = Math.round(w * d.h / d.w);
   if (!photos.length) return cv;
-  const pages = PhotoBook.layout(photos.map((p) => p.ph.ar), 0, d.w / d.h, { layout: lay, typo, cover, pattern, min: bookAuto.min, max: bookAuto.max });
+  const pages = PhotoBook.layout(photos.map((p) => p.ph.ar), 0, d.w / d.h, { layout: lay, typo, cover, pattern, tone, min: bookAuto.min, max: bookAuto.max });
   const n = Math.max(1, pages.findIndex((p) => p.t)), i = coverPage ? 0 : pages[n] && pages[n].type === "photos" ? n : 0;
   PhotoBook.render(cv.getContext("2d"), { W: cv.width, H: cv.height }, pages, i, photos.map((p) => p.ph), style, info());
   return cv;
@@ -599,17 +601,19 @@ function libCard(kind, id, it, on, pro) {
   const b = document.createElement("button"); b.type = "button"; b.className = "lib-item"; b.setAttribute("aria-pressed", String(on)); b.dataset.id = id;
   const look = kind === "design" || kind === "mine", st = look ? it.style : val("style");
   // a typography card needs a layout with title space; a layout card shows its titles with the chosen typography (or a sample one)
-  const lay = look ? it.layout : kind === "layout" ? id : bookLay === "auto" ? "strip" : bookLay;
-  const ty = look ? it.typo : kind === "typo" ? id : bookTypo === "none" ? "mag" : bookTypo;
+  // a colour card needs a page with open background, so it shows the gallery layout with couture titles
+  const lay = look ? it.layout : kind === "layout" ? id : kind === "tone" ? "gallery" : bookLay === "auto" ? "strip" : bookLay;
+  const ty = look ? it.typo : kind === "typo" ? id : kind === "tone" ? "couture" : bookTypo === "none" ? "mag" : bookTypo;
   const cv = look ? it.cover : kind === "cover" ? id : bookCover, pt = look ? it.pattern || "none" : kind === "pattern" ? id : bookPattern;
-  b.append(libThumb(st, lay, ty, cv, kind === "cover", pt));
+  const tn = look ? it.tone || "none" : kind === "tone" ? id : bookTone;
+  b.append(libThumb(st, lay, ty, cv, kind === "cover", pt, tn));
   b.insertAdjacentHTML("beforeend", `${it.isNew ? '<em class="new-tag">NEW</em>' : ""}${kind === "mine" ? '<em class="new-tag mine-tag">CỦA TÔI</em><span class="lib-del" role="button" tabindex="0" aria-label="Xóa mẫu này">✕</span>' : ""}${pro ? '<em class="pro-tag">PRO</em>' : ""}<b></b><small></small>`);
   b.querySelector("b").textContent = it.name;
   b.querySelector("small").textContent = look ? designSub(it) : it.desc;
   if (kind === "mine") b.querySelector(".lib-del").onclick = (e) => { e.stopPropagation(); if (confirm(`Xóa mẫu "${it.name}"?`)) { mine = mine.filter((m) => m.id !== it.id); saveMine(); } };
   b.onclick = () => {
     if (look) applyDesign(it);
-    else if (kind === "layout") bookLay = id; else if (kind === "cover") bookCover = id; else if (kind === "pattern") bookPattern = id; else bookTypo = id;
+    else if (kind === "layout") bookLay = id; else if (kind === "cover") bookCover = id; else if (kind === "pattern") bookPattern = id; else if (kind === "tone") bookTone = id; else bookTypo = id;
     bookSeed = 0; if (look || kind === "layout") bookOver = {};
     refresh(); changed(); if (!$("lib").hidden) renderLib();
     bookPage = kind === "cover" ? 0 : Math.min(1, bookPages.length - 1); renderBook();
@@ -624,13 +628,13 @@ function renderLib() {
     if (kind === "mine" && !myLooks().length) { if (libTab === "mine") body.insertAdjacentHTML("beforeend", '<p class="hint">Chưa có mẫu nào. Chỉnh album ưng ý rồi bấm 💾 Lưu làm mẫu của tôi ở mục Thư viện mẫu, lần sau chọn ở đây là xong.</p>'); return; }
     if (libTab === "all") body.insertAdjacentHTML("beforeend", `<h3>${title}</h3>`);
     const g = document.createElement("div"); g.className = "lib-grid";
-    const src = kind === "mine" ? Object.fromEntries(myLooks().map((m) => [m.id, m])) : { design: Object.fromEntries(designsFor()), layout: LAYOUT, typo: TYPO, cover: COVER, pattern: PATTERN }[kind];
-    const cur = { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern }[kind];
+    const src = kind === "mine" ? Object.fromEntries(myLooks().map((m) => [m.id, m])) : { design: Object.fromEntries(designsFor()), layout: LAYOUT, typo: TYPO, cover: COVER, pattern: PATTERN, tone: TONE }[kind];
+    const cur = { layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, tone: bookTone }[kind];
     for (const [id, it] of Object.entries(src)) if (kind === "design" ? it.kind === libKind() : kind === "mine" || fits(it))
       g.append(libCard(kind, id, it, kind === "design" || kind === "mine" ? isDesign(it) : cur === id, kind === "design" && !plan.pro && !FREE.styles.includes(it.style)));
     body.append(g);
   };
-  group("mine", "Mẫu của tôi"); group("design", "Mẫu thiết kế"); group("cover", "Bìa"); group("layout", "Layout"); group("typo", "Typo"); group("pattern", "Họa tiết nền");
+  group("mine", "Mẫu của tôi"); group("design", "Mẫu thiết kế"); group("cover", "Bìa"); group("layout", "Layout"); group("typo", "Typo"); group("tone", "Bảng màu sang trọng"); group("pattern", "Họa tiết nền");
 }
 async function openLib(tab) {
   libTab = tab || "all"; $("libTitle").textContent = libKind() === "pre" ? "Thư viện Prewedding" : "Thư viện Phóng sự cưới"; $("lib").hidden = false; renderLib(); $("libX").focus();
@@ -660,7 +664,7 @@ async function saveMine() {
 }
 $("saveMine").onclick = () => {
   const name = (prompt("Đặt tên cho mẫu này:", "Mẫu của tôi " + (mine.length + 1)) || "").trim(); if (!name) return;
-  mine.unshift({ id: uid(), kind: libKind(), name: name.slice(0, 40), style: val("style"), layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, auto: { ...bookAuto } });
+  mine.unshift({ id: uid(), kind: libKind(), name: name.slice(0, 40), style: val("style"), layout: bookLay, typo: bookTypo, cover: bookCover, pattern: bookPattern, tone: bookTone, auto: { ...bookAuto } });
   saveMine();
 };
 
@@ -694,7 +698,7 @@ $("autoX").onclick = $("autoCancel").onclick = () => { $("auto").hidden = true; 
 $("auto").addEventListener("click", (e) => { if (e.target === $("auto")) $("auto").hidden = true; });
 $("autoGo").onclick = () => {
   const { ds, lay, a } = autoDraft();
-  if (ds) { document.querySelector(`input[name=style][value="${ds.style}"]`).checked = true; bookTypo = ds.typo; bookCover = ds.cover; bookPattern = ds.pattern || "none"; }
+  if (ds) { document.querySelector(`input[name=style][value="${ds.style}"]`).checked = true; bookTypo = ds.typo; bookCover = ds.cover; bookPattern = ds.pattern || "none"; bookTone = ds.tone || "none"; }
   bookLay = lay; bookAuto = a; bookSeed = 0; bookOver = {}; bookPage = 1; $("auto").hidden = true; refresh(); changed();
 };
 document.querySelectorAll(".lib-tabs button").forEach((b) => b.onclick = () => { libTab = b.dataset.t; renderLib(); });
