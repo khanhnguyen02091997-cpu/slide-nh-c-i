@@ -45,7 +45,7 @@
         </div>
       </section>
 
-      <section>
+      <section class="style-sec">
         <h2><span class="n">2</span>Phong cách</h2>
         <div class="opts" id="styles">
           <label class="opt"><input type="radio" name="style" value="lux" checked><div class="sw"><i style="background:#120d08"></i><i style="background:#d4ac63"></i><i style="background:#f6e7c1"></i></div><b>Sang trọng, vàng champagne</b><span>Khung viền vàng, chữ nghiêng, kim tuyến bay nhẹ.</span></label>
@@ -59,6 +59,15 @@
           <label class="opt"><input type="radio" name="style" value="garden"><div class="sw"><i style="background:#eef2e8"></i><i style="background:#8aa37c"></i><i style="background:#2f4229"></i></div><b>Xanh sân vườn</b><span>Xanh lá dịu, cành lá ở góc, khung vòm, lá bay.</span></label>
           <label class="opt"><input type="radio" name="style" value="editorial"><div class="sw"><i style="background:#f6f2e4"></i><i style="background:#b08d57"></i><i style="background:#5a4636"></i></div><b>Thư tình, kem thanh lịch</b><span>Ảnh trên nền mờ của chính nó, tên chữ ký, thư tay gõ từng chữ, ghép 3 ảnh, kết thúc hoa cúc.</span></label>
         </div>
+      </section>
+
+      <section data-part="story" class="lib-sec">
+        <div class="sec-h">
+          <h2><span class="n">3</span>Thư viện mẫu <em class="new-tag">NEW</em></h2>
+          <div class="row"><button type="button" id="autoOpen" class="go-soft">✨ Auto Design</button><button type="button" class="lib-btn" data-lib="all">📚 Xem tất cả</button><button type="button" id="saveMine" title="Lưu phong cách, bìa, layout, chữ và họa tiết đang dùng để dùng lại cho album khác">💾 Lưu làm mẫu của tôi</button></div>
+        </div>
+        <div class="lib-strip" id="libStrip"></div>
+        <p class="hint" id="libSum">Tự động · Không chữ</p>
       </section>
 
       <section data-part="slide video" class="trans-sec">
@@ -176,12 +185,8 @@
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
           </label>
           <label class="f" data-for="album story">Cỡ album
-            <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option></select>
+            <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option><option value="25x35">Dọc 25 × 35 cm</option></select>
           </label>
-          <div class="f wide lib-open" data-for="story">Mẫu thiết kế phóng sự
-            <div class="row"><button type="button" class="lib-btn" data-lib="design">📚 Thư viện mẫu <em class="new-tag">NEW</em></button><button type="button" id="libAuto">✨ Tự thiết kế</button></div>
-            <span class="hint" id="libSum">Tự động · Không chữ</span>
-          </div>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
           </label>
@@ -197,6 +202,7 @@ Cảm ơn quý khách</textarea>
           </label>
         </div>
         <div class="checks">
+          <label class="check" data-for="album story"><input type="checkbox" id="spread"><span>Trang đôi (spread)<small>Xem hai trang cạnh nhau như album mở ra, PDF xuất mỗi tờ là một trang đôi để in album lay-flat. Bìa vẫn để riêng.</small></span></label>
           <label class="check" data-for="party stage video deliver"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
           <label class="check" data-for="party video deliver"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
           <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
@@ -207,10 +213,12 @@ Cảm ơn quý khách</textarea>
 
     <aside class="side">
       <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
+      <p class="hint" data-for="album story" id="dragHint">Mẹo: kéo một ảnh trong khung xem trước thả lên ảnh khác để đổi chỗ hai ảnh.</p>
       <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
       <div class="row book-nav" data-for="album story">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
+        <button type="button" id="pgFrame" data-for="story" title="Đổi khung ảnh của riêng trang này, các trang khác giữ nguyên">🔁 Đổi khung trang này</button>
         <button type="button" class="lib-btn" data-lib="all" data-for="story">📚 Thư viện mẫu</button>
       </div>
       <div class="book-text" data-for="story">
@@ -244,9 +252,26 @@ Cảm ơn quý khách</textarea>
       <button id="libX" aria-label="Đóng">✕</button>
     </div>
     <div class="lib-tabs" role="tablist" aria-label="Loại mẫu">
-      <button role="tab" data-t="all" aria-selected="true">Tất cả</button><button role="tab" data-t="layout" aria-selected="false">Layout</button><button role="tab" data-t="cover" aria-selected="false">Bìa</button><button role="tab" data-t="typo" aria-selected="false">Typo</button><button role="tab" data-t="design" aria-selected="false">Mẫu thiết kế</button>
+      <button role="tab" data-t="all" aria-selected="true">Tất cả</button><button role="tab" data-t="mine" aria-selected="false">Mẫu của tôi</button><button role="tab" data-t="layout" aria-selected="false">Layout</button><button role="tab" data-t="cover" aria-selected="false">Bìa</button><button role="tab" data-t="typo" aria-selected="false">Typo</button><button role="tab" data-t="pattern" aria-selected="false">Họa tiết</button><button role="tab" data-t="design" aria-selected="false">Mẫu thiết kế</button>
     </div>
     <div class="lib-body" id="libBody"></div>
+  </div>
+</div>
+
+<div class="crop" id="auto" hidden role="dialog" aria-modal="true" aria-labelledby="autoTitle">
+  <div class="crop-card auto-card">
+    <div class="sec-h"><b id="autoTitle">✨ Auto Design · <span id="autoN"></span> ảnh</b><button id="autoX" aria-label="Đóng">✕</button></div>
+    <p class="hint">App tự chọn khung hợp với dáng từng ảnh (ngang, dọc), giữ thứ tự theo giờ chụp, rồi dàn cả cuốn trong một lần bấm. Xong bạn vẫn sửa chữ, đổi mẫu thoải mái.</p>
+    <div class="auto-sum"><div><b id="autoPages">0</b><span>trang ảnh</span></div><div><b id="autoRange">1 – 6</b><span>ảnh mỗi trang</span></div></div>
+    <div class="fields">
+      <label class="f">Bộ mẫu<select id="autoDesign"></select></label>
+      <label class="f">Layout dùng<select id="autoPool"></select></label>
+      <label class="f">Số trang mong muốn<select id="autoTarget"></select></label>
+      <label class="f">Ít nhất mấy ảnh một trang<select id="autoMin"></select></label>
+      <label class="f">Nhiều nhất mấy ảnh một trang<select id="autoMax"></select></label>
+      <label class="f">Khoảng cách giữa các ảnh <span id="autoGutV"></span><input type="range" id="autoGut" min="0" max="5" step=".5" value="2"></label>
+    </div>
+    <div class="row"><button id="autoCancel">Hủy</button><button class="go" id="autoGo">✨ Dàn trang</button></div>
   </div>
 </div>
 
