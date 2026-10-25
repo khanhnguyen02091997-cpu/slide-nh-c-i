@@ -500,6 +500,125 @@ function framed(style,c,W,H,ph,p,i,info,t,frame){
   c.restore();
 }
 
+/* ---------- colour looks: graded copies of each photo, made once on first use ---------- */
+// Each look: gamma brightness (exp), contrast (con), lifted blacks (lift), warm/cool (temp), magenta/green (tint),
+// saturation (sat), split toning added to shadows (sh) and highlights (hi), and a final colour multiply (mul).
+const LOOK={
+  korea:{name:"Hàn Quốc trong trẻo",exp:.08,con:-.1,lift:.05,temp:-.02,tint:.015,sat:.86},
+  warm:{name:"Nắng vàng",exp:.03,con:.04,temp:.08,sat:1.06,hi:[.03,.015,-.02]},
+  bw:{name:"Đen trắng",con:.16,sat:0},
+  film:{name:"Phim cổ điển",con:-.04,lift:.09,sat:.8,sh:[-.02,.04,.06],hi:[.07,.035,-.04]},
+  cine:{name:"Điện ảnh xanh cam",con:.12,sat:.95,sh:[-.05,.03,.08],hi:[.09,.03,-.06]},
+  pastel:{name:"Pastel ngọt",exp:.1,con:-.18,lift:.08,tint:.025,sat:.72},
+  sepia:{name:"Hoài cổ nâu",con:.06,lift:.05,sat:0,mul:[1.08,.95,.76]},
+  vivid:{name:"Rực rỡ",exp:.02,con:.1,sat:1.3},
+  moody:{name:"Trầm ấm",exp:-.08,con:.1,temp:.05,sat:.75,sh:[.02,0,-.02]}
+};
+function gradeC(src,L){
+  const w=src.width,h=src.height,o=document.createElement("canvas");o.width=w;o.height=h;const g=o.getContext("2d");g.drawImage(src,0,0);
+  let d;try{d=g.getImageData(0,0,w,h)}catch(e){return src}
+  const lut=[0,1,2].map(ch=>{const a=new Float32Array(256),sh=ch===0?(L.temp||0)+(L.tint||0)*.5:ch===2?-(L.temp||0)+(L.tint||0)*.5:-(L.tint||0);
+    for(let i=0;i<256;i++){let v=Math.pow(i/255,1-(L.exp||0)*2);v=(v-.5)*(1+(L.con||0))+.5;v=(L.lift||0)+v*(1-(L.lift||0))+sh;a[i]=v}return a});
+  const sat=L.sat==null?1:L.sat,S=L.sh||[0,0,0],Hh=L.hi||[0,0,0],M=L.mul||[1,1,1],p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    let r=lut[0][p[i]],gg=lut[1][p[i+1]],b=lut[2][p[i+2]];const y=.299*r+.587*gg+.114*b,ws=(1-y)*(1-y),wh=y*y;
+    r=(y+(r-y)*sat+S[0]*ws+Hh[0]*wh)*M[0];gg=(y+(gg-y)*sat+S[1]*ws+Hh[1]*wh)*M[1];b=(y+(b-y)*sat+S[2]*ws+Hh[2]*wh)*M[2];
+    p[i]=r*255;p[i+1]=gg*255;p[i+2]=b*255;
+  }
+  g.putImageData(d,0,0);return o;
+}
+// A stand-in for a prepped photo that hands out graded canvases (crop focus still follows the original).
+function looked(ph,k){
+  if(!ph||!LOOK[k])return ph;const m=ph.__lw||(ph.__lw={});if(m[k])return m[k];
+  const g=s=>{const c=s.__lk||(s.__lk={});const d=c[k]||(c[k]=gradeC(s,LOOK[k]));d.fx=s.fx;d.fy=s.fy;return d};
+  return m[k]={get c(){return g(ph.c)},get b(){return g(ph.b)},get ar(){return ph.ar},get fx(){return ph.fx},get fy(){return ph.fy},src:ph};
+}
+
+/* ---------- animated title templates (opening, thank-you, chapter and stage cards) ---------- */
+const backOut=x=>{x=clamp(x);const s=1.5;return 1+(s+1)*Math.pow(x-1,3)+s*Math.pow(x-1,2)};
+function tbg(c,W,H,ph,t,dark){c.fillStyle="#0d0a08";c.fillRect(0,0,W,H);if(ph)cover(c,ph.c,0,0,W,H,1.04+Math.min(t,14)*.006);c.fillStyle="rgba(12,8,5,"+dark+")";c.fillRect(0,0,W,H);vignette(c,W,H,.75)}
+function paper(c,W,H,ph,col,a){c.fillStyle=col;c.fillRect(0,0,W,H);if(ph){c.save();c.globalAlpha=a;cover(c,ph.b,0,0,W,H,1.1);c.restore();c.save();c.globalAlpha=.72;c.fillStyle=col;c.fillRect(0,0,W,H);c.restore()}}
+// Couple-name font: the user's pick if any, else the template's own.
+function nameTpl(I,def,k){const f=NAMEF[I&&I.nameFont];return f?{tpl:`${f[2]||400} {s}px "${f[0]}",cursive`,k:f[1]}:{tpl:def,k:k||1}}
+function perChar(c,str,cx,y,sp,fn){const ch=[...str],ws=ch.map(x=>c.measureText(x).width),tot=ws.reduce((a,b)=>a+b,0)+sp*Math.max(0,ch.length-1);let x=cx-tot/2;const ta=c.textAlign;c.textAlign="left";ch.forEach((k,i)=>{c.save();fn(k,x,ws[i],i,ch.length);c.restore();x+=ws[i]+sp});c.textAlign=ta}
+const fadeCh=(dl,dur)=>(c,ch,x,y,w,o)=>{c.globalAlpha*=clamp((o.lt-o.i*dl)/dur);c.fillText(ch,x,y)};
+const initial=s=>{const w=String(s||"").trim().split(/\s+/).pop()||"";return([...w][0]||"").toUpperCase()};
+const TFX={
+  rise:{name:"Chữ bay lên",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.5)},ink:"#fffaf2",acc:"#f1d9a7",font:I=>nameTpl(I,`italic 500 {s}px ${F.play}`),
+    ch(c,ch,x,y,w,o){const d=clamp((o.lt-o.i*.045)/.75);c.globalAlpha*=clamp(d*1.6);c.fillText(ch,x,y+(1-backOut(d))*o.size*.5)}},
+  type:{name:"Gõ máy chữ",bg(c,W,H,ph){paper(c,W,H,ph,"#f4ede2",.5)},ink:"#3b2f25",acc:"#9a7b55",font:I=>nameTpl(I,`italic 500 {s}px ${F.corm}`),
+    dur:l=>[...l].length*.085+.25,
+    ch(c,ch,x,y,w,o){const v=g=>o.t-o.t0>=g*.085;if(!v(o.g))return;c.fillText(ch,x,y);
+      if(!v(o.g+1)||o.g===o.N-1){if(o.g===o.N-1&&v(o.g+3)&&Math.floor(o.t*2)%2)return;c.fillStyle=this.acc;c.fillRect(x+w+3*o.u,y-o.size*.38,3*o.u,o.size*.76)}}},
+  hand:{name:"Viết tay",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.52)},ink:"#fffaf0",acc:"#f1d9a7",font:I=>nameTpl(I,`400 {s}px "Great Vibes",cursive`,1.4),
+    dur:l=>.6+[...l].length*.05,lh:1.05,
+    line(c,l,cx,y,size,lt,o){const w=c.measureText(l).width,x0=cx-w/2,d=clamp(lt/(.5+[...l].length*.05)),rw=(w+size*.4)*ease(d);
+      c.save();c.beginPath();c.rect(x0-size*.25,y-size,rw,size*2);c.clip();c.fillText(l,cx,y);c.restore();
+      if(d>0&&d<1){const px=x0-size*.25+rw,g=c.createRadialGradient(px,y,0,px,y,size*.35);g.addColorStop(0,"rgba(255,236,190,.9)");g.addColorStop(1,"rgba(255,236,190,0)");c.fillStyle=g;c.fillRect(px-size*.4,y-size*.4,size*.8,size*.8)}}},
+  gold:{name:"Ánh vàng lấp lánh",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.74)},ink:(c,x0,x1,t)=>gold(c,x0,x1,t),acc:"#d4ac63",font:I=>nameTpl(I,`italic 500 {s}px ${F.play}`),
+    ch(c,ch,x,y,w,o){const d=clamp((o.lt-o.i*.06)/.9);c.globalAlpha*=d;c.shadowColor="rgba(246,231,193,.85)";c.shadowBlur=(1-d)*34*o.u+6*o.u;c.fillText(ch,x,y)},
+    over(c,W,H,b,t,u){c.save();c.fillStyle="#fbefcf";for(let i=0;i<46;i++){const tw=Math.sin(t*2.2+i*1.7);if(tw<.35)continue;const x=b.x+hash(i)*b.w,y=b.y+hash(i+9)*b.h,r=(1.2+hash(i+4)*2.6)*u*(tw-.35)*1.6;
+      c.globalAlpha=clamp(t/1.5)*(tw-.35);c.beginPath();c.moveTo(x,y-r*3);c.lineTo(x+r*.6,y);c.lineTo(x,y+r*3);c.lineTo(x-r*.6,y);c.closePath();c.moveTo(x-r*3,y);c.lineTo(x,y+r*.6);c.lineTo(x+r*3,y);c.lineTo(x,y-r*.6);c.fill()}c.restore()}},
+  track:{name:"Điện ảnh",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.55);const b=W>H?Math.max(0,(H-W/2.39)/2):H*.08;c.fillStyle="#000";c.fillRect(0,0,W,b);c.fillRect(0,H-b,W,b)},
+    ink:"#fff",acc:"rgba(255,255,255,.7)",upper:true,sp:.18,lh:1.35,font:()=>({tpl:`300 {s}px ${F.sans}`,k:.75}),
+    line(c,l,cx,y,size,lt){const e=easeOut(lt/2.6);c.globalAlpha*=clamp(lt/1.3);spaced(c,l,cx,y,size*(.5-.32*e))}},
+  mono:{name:"Monogram",bg(c,W,H,ph){paper(c,W,H,ph,"#f7f1e8",.45)},ink:"#4a3b2c",acc:"#b08d57",S:.62,font:I=>nameTpl(I,`italic 500 {s}px ${F.corm}`),ch:fadeCh(.03,.6),
+    pre(c,W,I,u,T){const R=104*u;return{h:R*2+70*u,f(y,t){const e=easeOut(t/1.8);c.strokeStyle=T.acc;c.lineWidth=2*u;c.beginPath();c.arc(W/2,y,R,-Math.PI/2,-Math.PI/2+6.283*e);c.stroke();
+      c.globalAlpha*=.6;c.lineWidth=u;c.beginPath();c.arc(W/2,y,R-10*u,Math.PI/2,Math.PI/2+6.283*e);c.stroke();c.globalAlpha/=.6;
+      const a=clamp((t-.6)/1);c.globalAlpha*=a;c.fillStyle=T.ink;c.font=`italic 500 ${70*u}px ${F.play}`;c.fillText(initial(I.groom),W/2-44*u,y+4*u);c.fillText(initial(I.bride),W/2+44*u,y+4*u);
+      c.fillStyle=T.acc;c.font=`italic 400 ${34*u}px ${F.play}`;c.fillText("&",W/2,y+6*u)}}}},
+  date:{name:"Save the date",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.5)},ink:"#fff",acc:"#f1d9a7",sp:.04,font:()=>({tpl:`800 {s}px ${F.mont}`,k:1.05}),
+    remap(cd,I){return cd.role&&I.date?{...cd,big:[I.date.replace(/\s+/g,"")],amp:false,sub:I.names,subScript:true}:cd},
+    ch(c,ch,x,y,w,o){const d=clamp((o.lt-o.i*.05)/.7),dir=o.i%2?1:-1;c.globalAlpha*=d;c.fillText(ch,x,y+dir*(1-easeOut(d))*o.size*.6)}},
+  split:{name:"Tách đôi",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.5)},ink:"#fffaf2",acc:"#f1d9a7",font:I=>nameTpl(I,`italic 500 {s}px ${F.play}`),dur:()=>.15,after:1,
+    line(c,l,cx,y,size,lt,o){const dir=o.last>0?(o.j===0?-1:o.j===o.last?1:0):0,e=easeOut(lt/1.2);c.globalAlpha*=clamp(lt/.8);c.fillText(l,cx+dir*(1-e)*o.W*.35,y+(dir?0:(1-e)*size*.4))},
+    amp(c,x,y,lt,u){const e=backOut((lt-.5)/.6);c.globalAlpha*=clamp((lt-.5)/.3);c.translate(x,y);c.scale(e,e);c.font=`italic 400 ${54*u}px ${F.play}`;c.fillText("&",0,0)}},
+  frame:{name:"Khung thiệp",bg(c,W,H,ph,t){tbg(c,W,H,ph,t,.22)},ink:"#3d3128",acc:"#a8834d",font:I=>nameTpl(I,`italic 500 {s}px ${F.play}`),ch:fadeCh(.035,.6),
+    under(c,W,H,b,t,u){const a=clamp(t/.9);c.save();c.globalAlpha=a*.88;c.fillStyle="#fffcf6";c.shadowColor="rgba(0,0,0,.35)";c.shadowBlur=50*u;c.fillRect(b.x,b.y,b.w,b.h);c.restore();
+      const e=ease(clamp((t-.2)/1.8)),per=(r)=>{const L=2*(r.w+r.h)*e;
+        const pts=[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h],[r.x,r.y]];let rem=L;c.beginPath();c.moveTo(r.x,r.y);
+        for(let k=1;k<5&&rem>0;k++){const [x0,y0]=pts[k-1],[x1,y1]=pts[k],len=Math.hypot(x1-x0,y1-y0),s=Math.min(1,rem/len);c.lineTo(x0+(x1-x0)*s,y0+(y1-y0)*s);rem-=len}c.stroke()};
+      c.save();c.strokeStyle=this.acc;c.lineWidth=1.6*u;per({x:b.x+16*u,y:b.y+16*u,w:b.w-32*u,h:b.h-32*u});c.globalAlpha=.5;c.lineWidth=u;per({x:b.x+24*u,y:b.y+24*u,w:b.w-48*u,h:b.h-48*u});c.restore()}}
+};
+function tcard(k,c,W,H,cd,t,ph,I){
+  const T=TFX[k],u=U(W,H);c.save();c.__nf=null;if(T.remap)cd=T.remap(cd,I);
+  T.bg(c,W,H,ph,t,u);c.textAlign="center";c.textBaseline="middle";
+  const maxW=Math.min(W*.82,1300*u),nf=T.font(I),items=[];
+  {const f=nf.tpl.replace("{s}",40);if(document.fonts&&!document.fonts.check(f,"Ắ"))document.fonts.load(f,"Ắ").catch(()=>{})}
+  const sp=T.sp||0;let at=.15,g=0,nl=0,wid=0,t0=null;
+  const ink=(x0,x1)=>typeof T.ink==="function"?T.ink(c,x0,x1,t):T.ink;
+  if(cd.kicker){const s=at,k=cd.kicker.toUpperCase();items.push({h:48*u,f(y){const a=easeOut((t-s)/.8);c.globalAlpha*=a;c.font=`400 ${18*u}px ${F.sans}`;c.fillStyle=T.acc;spaced(c,k,W/2,y+(1-a)*10*u,7*u)}});at+=.25}
+  if(T.pre){const p=T.pre(c,W,I,u,T);items.push({h:p.h,f:y=>p.f(y,t)});at+=.5}
+  const S=(cd.big.length>1?112:100)*u*(T.S||1)*nf.k;
+  cd.big.forEach((b,j)=>{
+    if(j>0&&cd.amp){const s=at;items.push({h:66*u,f(y){c.fillStyle=T.acc;if(T.amp)T.amp(c,W/2,y,t-s,u);else{c.globalAlpha*=clamp((t-s)/.6);c.font=`italic 400 ${46*u}px ${F.play}`;c.fillText("&",W/2,y)}}});at+=T.dur?0:.25}
+    const L=bigLines(c,T.upper?b.toUpperCase():b,nf.tpl,S,maxW,sp);
+    L.lines.forEach(l=>{const s=at,jj=nl++,g0=g;if(t0==null)t0=s;g+=[...l].length;c.font=nf.tpl.replace("{s}",L.size);wid=Math.max(wid,sp?spW(c,l,sp*L.size):c.measureText(l).width);
+      items.push({h:L.size*(T.lh||1.2),f(y){c.font=nf.tpl.replace("{s}",L.size);const lw=sp?spW(c,l,sp*L.size):c.measureText(l).width;c.fillStyle=ink(W/2-lw/2,W/2+lw/2);
+        const o={j:jj,last:nl-1,u,W,H,t,t0,size:L.size,N:g};
+        if(T.line)T.line(c,l,W/2,y,L.size,t-s,o);else perChar(c,l,W/2,y,sp*L.size,(ch,x,w,i)=>T.ch(c,ch,x,y,w,{...o,i,g:g0+i,lt:t-s}))}});
+      at+=T.dur?T.dur(l):.45});
+  });
+  at+=T.after||0;
+  if(cd.sub){const s=at+.2,scr=cd.subScript;items.push({h:(scr?70:56)*u,f(y){const a=easeOut((t-s)/.9);c.globalAlpha*=a;c.fillStyle=scr?T.acc:ink(W/2-150*u,W/2+150*u);
+    if(scr){c.font=`400 ${54*u}px "Great Vibes",cursive`;c.fillText(cd.sub,W/2,y+8*u)}else{c.font=`400 ${20*u}px ${F.sans}`;spaced(c,cd.sub,W/2,y+(1-a)*10*u+8*u,7*u)}}});at+=.3}
+  if(cd.msg){const s=at+.3;c.font=`italic 400 ${31*u}px ${F.corm}`;wrap(c,cd.msg,maxW*.8).forEach((l,j)=>items.push({h:(j?38:56)*u,f(y){c.globalAlpha*=easeOut((t-s)/1.1);c.font=`italic 400 ${31*u}px ${F.corm}`;c.fillStyle=ink(W/2-200*u,W/2+200*u);c.fillText(l,W/2,y+(j?0:9*u))}}))}
+  const tot=items.reduce((a,i)=>a+i.h,0),top=H/2-tot/2,bw=Math.min(W*.92,Math.max(wid,320*u)+170*u),box={x:W/2-bw/2,y:top-56*u,w:bw,h:tot+112*u};
+  if(T.under)T.under(c,W,H,box,t,u);
+  let y=top;for(const it of items){c.save();it.f(y+it.h/2);c.restore();y+=it.h}
+  if(T.over)T.over(c,W,H,box,t,u);
+  c.restore();
+}
+// Subtitle under a photo: fades in after the cut and out before the next one.
+function subtitle(c,W,H,text,t,dur,cap){
+  const u=U(W,H),a=Math.min(easeOut((t-.5)/.7),clamp((dur-t)/.6));if(a<=0)return;
+  c.save();c.__nf=null;c.font=`500 ${34*u}px ${F.sans}`;const ls=wrap(c,text,W*.78).slice(0,3),lh=48*u,base=H-(cap?H*.2:H*.08)-(ls.length-1)*lh;
+  const w=Math.max(...ls.map(l=>c.measureText(l).width));c.globalAlpha=a;c.translate(0,(1-a)*10*u);
+  c.fillStyle="rgba(10,8,6,.5)";roundRect(c,W/2-w/2-26*u,base-lh/2-10*u,w+52*u,ls.length*lh+20*u,18*u);c.fill();
+  c.textAlign="center";c.textBaseline="middle";c.fillStyle="#fff";c.shadowColor="rgba(0,0,0,.6)";c.shadowBlur=6*u;
+  ls.forEach((l,j)=>c.fillText(l,W/2,base+j*lh));c.restore();
+}
+
 /* ---------- scenes ---------- */
 // Love letters (first after the opening, second halfway) and photo collages every 6 photos, for templates that have them.
 const COLLAGE=["Love Story","Save the Date","Happy Wedding Day","Forever & Always"];
@@ -511,6 +630,7 @@ function extras(s,ord,j,cfg){
   if(cfg.collage&&j>0&&j%6===0)s.push({type:"collage",is:[ord[j-3],ord[j-2],ord[j-1]],cap:COLLAGE[(j/6-1)%COLLAGE.length],name:"Ghép ảnh",dur:Math.max(5,cfg.sec)});
 }
 function build(mode,n,cfg){
+  const chap=(s,i)=>{const t=cfg.chap&&cfg.chap[i];if(t)s.push({type:"chapter",text:t,p:i,name:"Chương · "+t,dur:Math.max(4,Math.round(sec*.8))})};
   const sec=cfg.sec,ord=[...Array(n).keys()],s=[];
   if(cfg.shuffle)for(let i=n-1;i>0;i--){const j=Math.random()*(i+1)|0;[ord[i],ord[j]]=[ord[j],ord[i]]}
   if(mode==="stage"){
@@ -518,10 +638,10 @@ function build(mode,n,cfg){
     (cfg.cues||[]).forEach((c,j)=>{if(/^\[.*ảnh.*\]$/i.test(c))s.push({type:"gallery",name:"Trình chiếu ảnh",dur:sec*Math.min(4,Math.max(1,n))});else s.push({type:"cue",text:c,i:j,name:c,dur:5})});
   }else if(mode==="party"){
     s.push({type:"title",name:"Màn hình tên",dur:Math.max(7,sec)});
-    ord.forEach((i,j)=>{if(cfg.every&&j>0&&j%cfg.every===0)s.push({type:"title",name:"Màn hình tên",dur:Math.max(6,sec)});extras(s,ord,j,cfg);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
+    ord.forEach((i,j)=>{if(cfg.every&&j>0&&j%cfg.every===0)s.push({type:"title",name:"Màn hình tên",dur:Math.max(6,sec)});extras(s,ord,j,cfg);chap(s,i);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
   }else{
     s.push({type:"title",name:"Mở đầu",dur:Math.max(6,sec)});
-    ord.forEach((i,j)=>{extras(s,ord,j,cfg);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
+    ord.forEach((i,j)=>{extras(s,ord,j,cfg);chap(s,i);s.push({type:"photo",i,name:"Ảnh "+(i+1),dur:sec})});
     s.push({type:"end",name:"Lời cảm ơn",dur:7});
   }
   // Fit to music: every scene lasts a whole number of beats, so cuts land on the beat.
@@ -532,6 +652,8 @@ function build(mode,n,cfg){
 /* ---------- engine ---------- */
 function Engine(canvas,o){
   const ctx=canvas.getContext("2d"),bufs=[0,1,2,3].map(()=>document.createElement("canvas"));
+  // colour look: o.looks[i] (per photo) wins over o.look; graded copies are made the first time a photo is drawn
+  if(o.look||o.looks)o.photos=o.photos.map((ph,i)=>looked(ph,(o.looks&&o.looks[i])||o.look));
   let idx=0,t=0,time=0,prev=null,prevT=0,ended=false;
   const S=()=>STY[o.style]||STY.lux;
   // o.trs[i] is the transition into photo i (per-photo choice); other scenes use o.trans.
@@ -549,14 +671,16 @@ function Engine(canvas,o){
   }
   function draw(c,sc,lt){
     const s=S(),W=canvas.width,H=canvas.height,I=o.info;names(c,I);c.save();
-    if(!o.photos.length&&sc.type!=="cue"){s.card(c,W,H,{kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
-    else if(sc.type==="photo")photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);
+    const card=(cd,lt,ph)=>{if(TFX[o.tfx])tcard(o.tfx,c,W,H,cd,lt,ph,I);else s.card(c,W,H,cd,lt,ph)};
+    if(!o.photos.length&&sc.type!=="cue"){card({role:"title",kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
+    else if(sc.type==="photo"){photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);const st=o.subs&&o.subs[sc.i];if(st)subtitle(c,W,H,st,lt,sc.dur,I.cap)}
     else if(sc.type==="gallery")drawPhotoGallery(c,lt);
-    else if(sc.type==="title")s.card(c,W,H,{role:"title",kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[0]);
-    else if(sc.type==="end")s.card(c,W,H,{role:"end",kicker:"Trân trọng cảm ơn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[Math.min(1,o.photos.length-1)]);
+    else if(sc.type==="title")card({role:"title",kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[0]);
+    else if(sc.type==="end")card({role:"end",kicker:"Trân trọng cảm ơn",big:[I.groom,I.bride],amp:true,sub:I.date,msg:I.msg},lt,o.photos[Math.min(1,o.photos.length-1)]);
     else if(sc.type==="letter"){const L=(I.letters||[])[sc.j]||{head:"",text:""},P=photoAt({i:sc.p});if(s.letter)s.letter(c,W,H,L,lt,P,sc.dur);else s.card(c,W,H,{kicker:L.head,big:[L.sub||L.head],msg:L.text},lt,P)}
     else if(sc.type==="collage"){const ps=sc.is.map(i=>photoAt({i}));if(s.collage)s.collage(c,W,H,ps,sc.cap,lt);else photo(c,W,H,ps[0],clamp(lt/sc.dur),sc.is[0],I,lt)}
-    else if(sc.type==="cue")s.card(c,W,H,{kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt(sc));
+    else if(sc.type==="cue")card({kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt(sc));
+    else if(sc.type==="chapter")card({kicker:I.names,big:[sc.text],sub:I.date,photoBg:true},lt,photoAt({i:sc.p}));
     c.restore();
   }
   function render(){
@@ -575,6 +699,8 @@ function Engine(canvas,o){
     if(n<0)n=o.loop?len-1:0;
     if(n===idx&&prev){prev=null}
     idx=n;t=0;ended=false;o.onScene&&o.onScene(idx,o.scenes[idx]);
+    // grade the next photo ahead of time so its first frame doesn't stall
+    const nx=o.scenes[(idx+1)%len];if(nx&&(o.look||o.looks)&&nx.type==="photo")setTimeout(()=>{const p=photoAt(nx);p&&p.c},30);
   }
   function step(dt){time+=dt;t+=dt;const sc=o.scenes[idx];if(o.auto&&sc&&sc.dur&&t>=sc.dur)go(idx+1)}
   return{step,render,go,next:()=>go(idx+1),prev:()=>go(idx-1),get idx(){return idx},get scene(){return o.scenes[idx]},get scenes(){return o.scenes},opts:o};
@@ -608,7 +734,7 @@ function Player(p){
   function size(){const dpr=Math.min(2,window.devicePixelRatio||1);let w=ov.clientWidth*dpr,h=ov.clientHeight*dpr;const k=Math.min(1,2560/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k)}
   size();const ro=new ResizeObserver(size);ro.observe(ov);
   const mk=()=>build(p.mode,p.photos.length,p.cfg);
-  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,mark:p.cfg.mark,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
+  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,mark:p.cfg.mark,tfx:p.cfg.tfx,subs:p.cfg.subs,look:p.cfg.look,looks:p.cfg.looks,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
   function label(i,sc){lbl.textContent=(i+1)+"/"+eng.scenes.length+" · "+sc.name}
   label(0,eng.scene);
   // music
@@ -647,5 +773,5 @@ function Player(p){
     try{wl&&wl.release()}catch(e){}if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});ov.remove();p.onClose&&p.onClose()}
   return{close};
 }
-G.SlideEngine={ready,names,nCollage,loadName,NAMEF,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
+G.SlideEngine={LOOK,TFX,looked,gradeC,ready,names,nCollage,loadName,NAMEF,prep,focus,autoTrans,build,Engine,Player,total,mark,STY};
 })(window);

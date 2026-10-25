@@ -126,6 +126,35 @@
         <select id="frame" hidden><option value="auto">Theo phong cách</option><option value="full">Tràn màn hình</option><option value="thin">Viền mảnh</option><option value="white">Viền trắng dày</option><option value="round">Bo góc mềm</option><option value="polaroid">Polaroid</option><option value="arch">Khung vòm</option><option value="oval">Khung oval</option></select>
       </section>
 
+      <section data-part="slide video" class="fx-sec">
+        <h2><span class="n">5</span>Chữ chuyển động &amp; màu ảnh <em class="new-tag">NEW</em></h2>
+        <details class="fold" open>
+          <summary>Mẫu chữ chuyển động <span class="hint" id="tfxSum"></span></summary>
+          <p class="hint">Dùng cho màn hình tên, lời cảm ơn, tiêu đề chương và các màn sân khấu. Bấm một mẫu là khung xem trước chạy lại từ đầu.</p>
+          <div class="pick" data-for-select="tfx" role="group"><button type="button" data-v="auto"><i aria-hidden="true">✦</i>Theo phong cách</button><button type="button" data-v="rise"><i aria-hidden="true">⇡</i>Chữ bay lên</button><button type="button" data-v="type"><i aria-hidden="true">⌨</i>Gõ máy chữ</button><button type="button" data-v="hand"><i aria-hidden="true">✍</i>Viết tay</button><button type="button" data-v="gold"><i aria-hidden="true">✧</i>Ánh vàng lấp lánh</button><button type="button" data-v="track"><i aria-hidden="true">🎬</i>Điện ảnh</button><button type="button" data-v="mono"><i aria-hidden="true">◎</i>Monogram</button><button type="button" data-v="date"><i aria-hidden="true">📅</i>Save the date</button><button type="button" data-v="split"><i aria-hidden="true">⇔</i>Tách đôi</button><button type="button" data-v="frame"><i aria-hidden="true">▭</i>Khung thiệp</button></div>
+        </details>
+        <select id="tfx" hidden><option value="auto">Theo phong cách</option><option value="rise">Chữ bay lên</option><option value="type">Gõ máy chữ</option><option value="hand">Viết tay</option><option value="gold">Ánh vàng lấp lánh</option><option value="track">Điện ảnh</option><option value="mono">Monogram</option><option value="date">Save the date</option><option value="split">Tách đôi</option><option value="frame">Khung thiệp</option></select>
+        <details class="fold">
+          <summary>Bộ lọc màu <span class="hint" id="lookSum"></span></summary>
+          <p class="hint">Tô màu cả slide cho đồng bộ. Ảnh gốc của bạn không bị đổi.</p>
+          <div class="pick look-pick" id="lookPick" role="group"></div>
+          <details class="fold">
+            <summary>Chỉnh màu riêng từng ảnh <span class="hint" id="lookPer"></span></summary>
+            <ul class="tlist" id="lookList"></ul>
+          </details>
+        </details>
+        <select id="look" hidden><option value="none">Màu gốc</option></select>
+        <details class="fold" data-for="party video deliver">
+          <summary>Tiêu đề chương &amp; phụ đề <span class="hint" id="subSum"></span></summary>
+          <div class="fields">
+            <label class="f wide"><span>Tiêu đề chương, mỗi dòng là <b>số ảnh: tên chương</b>. Màn tiêu đề hiện ngay trước ảnh đó.</span>
+              <textarea id="chap" rows="3" placeholder="1: Lễ gia tiên&#10;8: Lễ thành hôn&#10;15: Tiệc cưới"></textarea></label>
+            <label class="f wide">Phụ đề dưới ảnh: dòng 1 cho ảnh 1, dòng 2 cho ảnh 2... Dòng nào để trống thì ảnh đó không có chữ.
+              <textarea id="subs" rows="4" placeholder="Ngày đầu tiên mình gặp nhau&#10;&#10;Chuyến đi Đà Lạt năm ấy"></textarea></label>
+          </div>
+        </details>
+      </section>
+
       <section data-part="slide video album story pre">
         <div class="sec-h">
           <h2><span class="n">3</span>Ảnh</h2>
