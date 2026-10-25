@@ -50,7 +50,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
   const gut = d.gut != null ? d.gut : GUT;
   // "mix" draws from every library layout (or the ones in d.pool); a range d.min..d.max limits photos per page
   const pool = d.layout === "mix" ? (d.pool && d.pool.length ? d.pool : Object.keys(LAYOUT)).filter((k) => LAYOUT[k] && LAYOUT[k].pages) : lay && lay.pages ? [d.layout] : null;
-  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool, pattern: d.pattern });
+  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool, pattern: d.pattern, tone: d.tone });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -65,7 +65,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
     i += pick.k;
   }
   pages.push({ type: "end" });
-  return Object.assign(pages, { typo, cover, gut, pattern: d.pattern });
+  return Object.assign(pages, { typo, cover, gut, pattern: d.pattern, tone: d.tone });
 }
 
 
@@ -133,6 +133,14 @@ const LAYOUT = {
     pages: [{ bleed: true, onPh: true, t: [.05, .05, .9, .26], cells: [[0, 0, 1, 1]] },
       { bleed: true, t: [.06, .78, .88, .16], cells: [[.06, .05, .88, .72]] },
       { bleed: true, onPh: true, t: [.05, .66, .9, .26], cells: [[0, 0, 1, 1]] }] },
+  gallery: { name: "Gallery bảo tàng", desc: "Ảnh treo như phòng tranh, viền chỉ vàng mảnh, nhiều khoảng trắng", isNew: true,
+    pages: [{ gal: true, t: [0, .8, 1, .2], cells: [[.06, .04, .4, .72], [.54, .04, .4, .72]] }, { gal: true, t: [0, 0, 1, .18], cells: [[.18, .24, .64, .72]] },
+      { gal: true, t: [0, .84, 1, .16], cells: [[.02, .04, .29, .36], [.355, .04, .29, .36], [.69, .04, .29, .36], [.18, .44, .29, .36], [.53, .44, .29, .36]] }] },
+  couture: { name: "Couture", desc: "Bố cục lệch, rất nhiều khoảng trắng như lookbook thời trang", for: "pre", isNew: true,
+    pages: [{ t: [.46, .62, .54, .3], cells: [[0, 0, .42, .94], [.52, .06, .3, .42]] }, { t: [0, .04, .52, .26], cells: [[.56, 0, .44, .64], [.12, .36, .38, .56]] }] },
+  chronicle: { name: "Biên niên", desc: "4 ảnh viền chỉ vàng, tiêu đề nghi lễ phía trên", for: "psc", isNew: true,
+    pages: [{ gal: true, t: [0, 0, 1, .14], cells: [[.02, .18, .45, .38], [.53, .18, .45, .38], [.02, .6, .45, .38], [.53, .6, .45, .38]] },
+      { gal: true, t: [0, 0, 1, .14], cells: [[.02, .2, .29, .78], [.355, .2, .29, .78], [.69, .2, .29, .78]] }] },
   report: { name: "Phóng sự dày", desc: "6 đến 7 ảnh mỗi trang, kể lại cả ngày cưới", for: "psc", isNew: true,
     pages: [{ t: [0, 0, .34, .32], cells: [[.36, 0, .64, .48], [0, .34, .34, .3], [.36, .5, .32, .25], [.68, .5, .32, .25], [0, .66, .34, .34], [.36, .75, .32, .25], [.68, .75, .32, .25]] },
       { t: [0, .84, 1, .16], cells: [[0, 0, .5, .41], [.5, 0, .25, .41], [.75, 0, .25, .41], [0, .41, .25, .41], [.25, .41, .25, .41], [.5, .41, .5, .41]] }] },
@@ -181,9 +189,15 @@ const TYPO = {
     phr: [["subtle", "grace"], ["softly", "sworn"], ["hearts", "become one"], ["made of love", "& made to love"]] },
   savedate: { name: "Save of Date", desc: "SAVE of DATE, chữ ký nhỏ giữa hai chữ in hoa", for: "pre", isNew: true,
     phr: [["Save", "Date", "of"], ["Maison", "Amour", "de"], ["Love", "Mosaic", "of"], ["Sacred", "Union", "&"]] },
-  timeline: { name: "Giờ và nghi lễ", desc: "07:30 Getting ready, 09:00 Rước dâu... theo diễn biến ngày cưới", for: "psc", isNew: true,
+  couture: { name: "Couture", desc: "HAUTE COUTURE, chữ in hoa giãn rộng giữa hai đường chỉ", isNew: true,
+    phr: [["Haute Couture", "The wedding collection"], ["Atelier", "Chapter one"], ["Le Mariage", "Paris · 2026"], ["Maison", "de l'amour"]] },
+  didone: { name: "Didone sang trọng", desc: "Elegance, chữ nghiêng tương phản cao kiểu Vogue", isNew: true,
+    phr: [["Elegance", "The art of love"], ["Opulence", "Since forever"], ["Grandeur", "A love story"], ["Timeless", "Yours, always"]] },
+  roman: { name: "Số La Mã", desc: "I. Lễ Vu Quy, II. Rước Dâu... chương nghi lễ kiểu hoàng gia", for: "psc", noCover: true, isNew: true,
+    phr: [["Lễ Vu Quy", "I"], ["Rước Dâu", "II"], ["Lễ Gia Tiên", "III"], ["Lễ Thành Hôn", "IV"], ["Tiệc Cưới", "V"]] },
+  timeline: { name: "Giờ và nghi lễ", desc: "07:30 Getting ready, 09:00 Rước dâu... theo diễn biến ngày cưới", for: "psc", noCover: true, isNew: true,
     phr: [["Getting Ready", "07:30"], ["Rước Dâu", "09:00"], ["Lễ Gia Tiên", "10:00"], ["Lễ Thành Hôn", "11:00"], ["Tiệc Cưới", "18:00"], ["After Party", "21:00"]] },
-  chapter: { name: "Chương nghi lễ", desc: "Chương 01, Lễ Vu Quy... chia album theo từng nghi lễ", for: "psc", isNew: true,
+  chapter: { name: "Chương nghi lễ", desc: "Chương 01, Lễ Vu Quy... chia album theo từng nghi lễ", for: "psc", noCover: true, isNew: true,
     phr: [["Lễ Vu Quy", "Chương 01"], ["Rước Dâu", "Chương 02"], ["Lễ Gia Tiên", "Chương 03"], ["Lễ Thành Hôn", "Chương 04"], ["Tiệc Cưới", "Chương 05"]] },
 };
 
@@ -195,7 +209,23 @@ const PATTERN = {
   lines: { name: "Kẻ sọc mảnh", desc: "Sọc dọc rất mảnh", isNew: true },
   grid: { name: "Lưới mảnh", desc: "Ô lưới mờ kiểu sổ tay", isNew: true },
   corners: { name: "Hoa văn góc", desc: "Họa tiết lá ở bốn góc", isNew: true },
+  marble: { name: "Vân đá marble", desc: "Vân đá cẩm thạch mờ, sang trọng", isNew: true },
+  linen: { name: "Vải lanh", desc: "Vân vải lanh mịn như giấy in cao cấp", isNew: true },
+  gilded: { name: "Viền nhũ vàng", desc: "Hai đường viền vàng mảnh, góc hình thoi", isNew: true },
 };
+// Luxury colour sets laid over a style for the printed book only: dark or ivory pages with gold (foil = gold gradient type).
+const TONE = {
+  none: { name: "Theo phong cách", desc: "Màu của phong cách đang chọn" },
+  noir: { name: "Đen nhũ vàng", desc: "Nền đen sâu, chữ và viền vàng ánh kim", isNew: true, bg: "#0e0c0a", ink: "#efe4cc", soft: "#a8957a", acc: "#c9a35b", line: true, foil: true, mat: false },
+  emerald: { name: "Xanh lục bảo", desc: "Xanh ngọc lục bảo với vàng đồng", isNew: true, bg: "#10291f", ink: "#f1e7d0", soft: "#a9b8a5", acc: "#cfae67", line: true, foil: true, mat: false },
+  navy: { name: "Navy champagne", desc: "Xanh navy đêm, vàng champagne", isNew: true, bg: "#0f1a2c", ink: "#f2eadb", soft: "#9aa6b8", acc: "#c9ab72", line: true, foil: true, mat: false },
+  bordeaux: { name: "Đỏ rượu vang", desc: "Đỏ bordeaux nhung, vàng cổ", isNew: true, bg: "#3b0d16", ink: "#f4e4c6", soft: "#c79d8f", acc: "#d6b06a", line: true, foil: true, mat: false },
+  ivory: { name: "Ngà nhũ vàng", desc: "Giấy ngà ấm, chữ vàng ánh kim", isNew: true, bg: "#f8f3e8", ink: "#2a241c", soft: "#8c7b62", acc: "#b08a46", line: true, foil: true },
+  blush: { name: "Hồng satin", desc: "Hồng phấn satin, vàng hồng", isNew: true, bg: "#f6e9e4", ink: "#4a2c2a", soft: "#9c7a72", acc: "#b88a5a", foil: true, mat: true },
+};
+const toned = (style, tone) => { const t = TONE[tone]; return t && t.bg ? { ...(STY[style] || STY.lux), ...t } : STY[style] || STY.lux; };
+// Gold foil: a metallic gradient across a box, for type and hairlines on luxury tones.
+function foil(ctx, x, w) { const g = ctx.createLinearGradient(x, 0, x + w, 0); [["#9c7330", 0], ["#e9cf8a", .3], ["#b8893a", .5], ["#f3dc9a", .72], ["#a67c2e", 1]].forEach(([c, o]) => g.addColorStop(o, c)); return g; }
 function pattern(ctx, st, id, W, H, S) {
   if (!id || id === "none") return;
   ctx.save(); ctx.fillStyle = st.acc; ctx.strokeStyle = st.acc;
@@ -204,7 +234,17 @@ function pattern(ctx, st, id, W, H, S) {
   } else if (id === "dots") { ctx.globalAlpha = .13; const g = S * .045; for (let y = g / 2; y < H; y += g) for (let x = (y / g) % 2 ? g : g / 2; x < W; x += g) { ctx.beginPath(); ctx.arc(x, y, S * .0028, 0, 7); ctx.fill(); } }
   else if (id === "lines") { ctx.globalAlpha = .1; ctx.lineWidth = Math.max(1, S * .001); for (let x = S * .02; x < W; x += S * .022) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } }
   else if (id === "grid") { ctx.globalAlpha = .1; ctx.lineWidth = Math.max(1, S * .001); const g = S * .04; for (let x = g; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = g; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } }
-  else if (id === "corners") {
+  else if (id === "marble") { // soft veins: a few wandering curves, fixed so every render matches
+    let r = 11; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+    for (let v = 0; v < 9; v++) { ctx.globalAlpha = .05 + rnd() * .08; ctx.lineWidth = Math.max(1, S * (.001 + rnd() * .003)); ctx.strokeStyle = v % 3 ? st.soft : st.acc;
+      ctx.beginPath(); let x = rnd() * W, y = -S * .05; ctx.moveTo(x, y);
+      while (y < H + S * .05) { const nx = x + (rnd() - .5) * S * .3, ny = y + S * (.08 + rnd() * .12); ctx.quadraticCurveTo(x + (rnd() - .5) * S * .2, (y + ny) / 2, nx, ny); x = nx; y = ny; } ctx.stroke(); }
+  } else if (id === "linen") { ctx.globalAlpha = .05; ctx.lineWidth = Math.max(1, S * .0008); const g = S * .006;
+    for (let x = 0; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } ctx.globalAlpha = .035; for (let y = 0; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  } else if (id === "gilded") { ctx.globalAlpha = .9; ctx.strokeStyle = st.foil ? foil(ctx, 0, W) : st.acc; ctx.fillStyle = ctx.strokeStyle;
+    const a = S * .022, b = S * .031; ctx.lineWidth = Math.max(1, S * .0018); ctx.strokeRect(a, a, W - 2 * a, H - 2 * a); ctx.lineWidth = Math.max(1, S * .0008); ctx.strokeRect(b, b, W - 2 * b, H - 2 * b);
+    const d = S * .009; for (const [x, y] of [[a, a], [W - a, a], [a, H - a], [W - a, H - a]]) { ctx.beginPath(); ctx.moveTo(x, y - d); ctx.lineTo(x + d, y); ctx.lineTo(x, y + d); ctx.lineTo(x - d, y); ctx.closePath(); ctx.fill(); }
+  } else if (id === "corners") {
     ctx.globalAlpha = .35; ctx.lineWidth = Math.max(1, S * .0022);
     for (const [ox, oy, sx, sy] of [[0, 0, 1, 1], [W, 0, -1, 1], [0, H, 1, -1], [W, H, -1, -1]]) {
       ctx.save(); ctx.translate(ox, oy); ctx.scale(sx, sy);
@@ -228,6 +268,9 @@ const COVER = {
   magazine: { name: "Bìa tạp chí", desc: "Ảnh tràn bìa, chữ lớn ở đầu trang như tạp chí thời trang", for: "pre", isNew: true },
   frame: { name: "Khung trắng", desc: "Ảnh lớn viền trắng, chữ to bên dưới", for: "pre", isNew: true },
   reportage: { name: "Bìa phóng sự", desc: "4 ảnh ghép, dải tên ở giữa", for: "psc", isNew: true },
+  crest: { name: "Huy hiệu chữ lồng", desc: "Chữ cái đầu trong vòng nguyệt quế, tên in hoa giãn rộng", isNew: true },
+  foil: { name: "Khung nhũ vàng", desc: "Ảnh trong khung chỉ vàng đôi, tên ánh kim", isNew: true },
+  passe: { name: "Passe-partout", desc: "Ảnh nằm trong khung giấy dày có đường chỉ, như ảnh treo tường", isNew: true },
 };
 
 // Designs = cover + layout + typography + style, applied in one tap.
@@ -281,6 +324,23 @@ const DESIGN = {
   alwaysforever: { kind: "pre", name: "Always & Forever", style: "vintage", layout: "nine", typo: "script", cover: "magazine", isNew: true },
   wildvows: { kind: "pre", name: "Wild Vows", style: "modern", layout: "magsplit", typo: "grotesk", cover: "magazine", isNew: true },
 };
+Object.assign(DESIGN, {
+  // luxury sets: dark or ivory pages with gold foil (tone), for both parts
+  noirgold: { kind: "pre", name: "Noir & Gold", style: "lux", tone: "noir", layout: "couture", typo: "didone", cover: "foil", pattern: "gilded", isNew: true },
+  emeraldgrace: { kind: "pre", name: "Emerald Grace", style: "garden", tone: "emerald", layout: "gallery", typo: "couture", cover: "crest", isNew: true },
+  hautecouture: { kind: "pre", name: "Haute Couture", style: "mono", tone: "ivory", layout: "couture", typo: "couture", cover: "passe", pattern: "linen", isNew: true },
+  bordeauxroyale: { kind: "pre", name: "Bordeaux Royale", style: "lux", tone: "bordeaux", layout: "magsplit", typo: "didone", cover: "foil", pattern: "gilded", isNew: true },
+  marblevows: { kind: "pre", name: "Marble Vows", style: "korea", tone: "ivory", layout: "gallery", typo: "poster", cover: "frame", pattern: "marble", isNew: true },
+  midnight: { kind: "pre", name: "Midnight Navy", style: "cinema", tone: "navy", layout: "poster", typo: "couture", cover: "magazine", isNew: true },
+  blushsatin: { kind: "pre", name: "Blush Satin", style: "floral", tone: "blush", layout: "couture", typo: "softly", cover: "passe", pattern: "linen", isNew: true },
+  opulence: { kind: "pre", name: "Opulence", style: "editorial", tone: "noir", layout: "nine", typo: "didone", cover: "crest", pattern: "gilded", isNew: true },
+  royalwedding: { name: "Royal Wedding", style: "lux", tone: "ivory", layout: "chronicle", typo: "roman", cover: "crest", pattern: "gilded", isNew: true },
+  grandballroom: { name: "Grand Ballroom", style: "cinema", tone: "noir", layout: "pano", typo: "roman", cover: "foil", isNew: true },
+  emeraldceremony: { name: "Emerald Ceremony", style: "garden", tone: "emerald", layout: "chronicle", typo: "chapter", cover: "passe", isNew: true },
+  vuquynhung: { name: "Vu Quy Nhung Đỏ", style: "red", tone: "bordeaux", layout: "detail", typo: "roman", cover: "crest", pattern: "gilded", isNew: true },
+  ivorychronicle: { name: "Ivory Chronicle", style: "korea", tone: "ivory", layout: "report", typo: "timeline", cover: "reportage", pattern: "marble", isNew: true },
+  navygala: { name: "Navy Gala", style: "mono", tone: "navy", layout: "gallery", typo: "couture", cover: "foil", isNew: true },
+});
 // Designs without a kind belong to the wedding-day reportage (Phóng sự cưới).
 Object.values(DESIGN).forEach((d) => { d.kind = d.kind || "psc"; });
 
@@ -301,7 +361,7 @@ function spaced(ctx, str, x, y, sp, align = "center") {
 }
 function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
   const ty = TYPO[id]; if (!ty || id === "none") return;
-  const [a, s2] = own || ty.phr[ph % ty.phr.length], ink = onPhoto ? "#fffaf2" : st.ink, acc = onPhoto ? "#fffaf2" : st.acc, soft = onPhoto ? "rgba(255,250,242,.9)" : st.soft;
+  const [a, s2] = own || ty.phr[ph % ty.phr.length], ink = onPhoto ? "#fffaf2" : st.ink, acc = onPhoto ? "#fffaf2" : st.foil ? foil(ctx, b.x, b.w) : st.acc, soft = onPhoto ? "rgba(255,250,242,.9)" : st.soft;
   const S = Math.min(b.w, b.h * 2.4), cx = b.x + b.w / 2;
   ctx.save(); ctx.textBaseline = "alphabetic";
   if (onPhoto) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = b.h * .06; }
@@ -364,6 +424,20 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
     ctx.lineWidth = lw * 2.4; for (const [px, py, dx, dy] of [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]]) { ctx.beginPath(); ctx.moveTo(px, py + dy * k); ctx.lineTo(px, py); ctx.lineTo(px + dx * k, py); ctx.stroke(); }
     ctx.fillStyle = ink; spaced(ctx, a.toUpperCase(), cx, fy + fh * .55, s * .12);
     ctx.font = font(`italic 400 {s}px ${F.corm}`, s3 * 1.4); ctx.fillStyle = soft; ctx.textAlign = "center"; ctx.fillText(s2, cx, fy + fh * .82);
+  } else if (id === "couture") { // spaced caps between two hairlines, a small italic line under
+    const A = a.toUpperCase(); let s = fit(ctx, `400 {s}px ${F.play}`, b.h * .3, A, b.w * .7);
+    const tw = ctx.measureText(A).width + s * .4 * ([...A].length - 1); if (tw > b.w * .92) { s *= b.w * .92 / tw; ctx.font = font(`400 {s}px ${F.play}`, s); }
+    const y = b.y + b.h * .5 + s * .1; ctx.fillStyle = ink; spaced(ctx, A, cx, y, s * .4);
+    ctx.fillStyle = acc; const lw = Math.max(1, s * .025); ctx.fillRect(cx - b.w * .3, y - s * 1.25, b.w * .6, lw); ctx.fillRect(cx - b.w * .3, y + s * .55, b.w * .6, lw);
+    ctx.font = font(`italic 400 {s}px ${F.corm}`, s * .55); ctx.fillStyle = soft; ctx.textAlign = "center"; ctx.fillText(s2, cx, y + s * 1.35);
+  } else if (id === "didone") { // big italic serif, small caps under it on the right
+    const s = fit(ctx, `italic 400 {s}px ${F.play}`, b.h * .62, a, b.w * .92), y = b.y + b.h * .58; ctx.fillStyle = acc; ctx.textAlign = "center"; ctx.fillText(a, cx, y);
+    ctx.font = font(`500 {s}px ${F.sans}`, Math.min(s * .16, b.h * .08)); ctx.fillStyle = ink; spaced(ctx, s2.toUpperCase(), b.x + b.w * .92, y + s * .38, s * .04, "right");
+  } else if (id === "roman") { // roman numeral, a hairline, the ceremony in spaced caps
+    const s = fit(ctx, `italic 400 {s}px ${F.play}`, b.h * .44, s2, b.w * .5), y = b.y + b.h * .48; ctx.fillStyle = acc; ctx.textAlign = "center"; ctx.fillText(s2, cx, y);
+    ctx.fillRect(cx - b.w * .12, y + s * .22, b.w * .24, Math.max(1, s * .02));
+    const A = a.toUpperCase(); let s3 = fit(ctx, `500 {s}px ${F.play}`, s * .34, A, b.w * .6); const tw = ctx.measureText(A).width + s3 * .3 * ([...A].length - 1);
+    if (tw > b.w * .92) { s3 *= b.w * .92 / tw; ctx.font = font(`500 {s}px ${F.play}`, s3); } ctx.fillStyle = ink; spaced(ctx, A, cx, y + s * .3 + s3 * 1.5, s3 * .3);
   } else if (id === "poster") { // big uppercase serif, script word laid over its top left
     const B = s2.toUpperCase(), s = fit(ctx, `400 {s}px ${F.play}`, b.h * .6, B, b.w * .96), y = b.y + b.h * .88;
     ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.fillText(B, cx, y);
@@ -428,7 +502,7 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target, over) {
       const k = Math.max(1, Math.min(4, left, max)), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
-    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, lift: t.lift, film: t.film, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    pages.push({ type: "photos", tid: t.id, at: i, t: t.t, pol: t.pol, gal: t.gal, lift: t.lift, film: t.film, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
     i += t.cells.length; prev = t;
   }
   pages.push({ type: "end" });
@@ -484,13 +558,14 @@ const spreads = (pages) => { const out = [[0]]; for (let i = 1; i < pages.length
 function render(ctx, dims, pages, n, photos, style, info, mark) {
   if (G.SlideEngine) G.SlideEngine.names(ctx, info);
   const W = typeof dims === "number" ? dims : dims.W, H = typeof dims === "number" ? dims : dims.H, S = Math.min(W, H), cx = W / 2;
-  const st = STY[style] || STY.lux, pg = pages[n];
+  const st = toned(style, pages.tone), pg = pages[n];
   ctx.save(); ctx.fillStyle = st.bg; ctx.fillRect(0, 0, W, H); pattern(ctx, st, pages.pattern, W, H, S);
-  if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, W - 2 * p, H - 2 * p); }
+  if (st.line && pages.pattern !== "gilded") { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0015); const p = S * .03; ctx.strokeRect(p, p, W - 2 * p, H - 2 * p); }
   if (st.bar && pg.type !== "photos") { ctx.fillStyle = st.acc; ctx.fillRect(S * M, S * .06, S * .08, S * .012); }
   const names = info.names || "", date = info.date || "", foot = H - S * M * .6, own = pages.text || {};
   if (pg.type === "cover") {
-    const src = photos[pg.photo] && photos[pg.photo].c, cv = pages.cover || "classic", ty = pages.typo && pages.typo !== "none" ? pages.typo : "";
+    // chapter-style titles name a moment of the day, so the cover shows the couple instead (unless the user wrote cover words)
+    const src = photos[pg.photo] && photos[pg.photo].c, cv = pages.cover || "classic", ty = pages.typo && pages.typo !== "none" && (!TYPO[pages.typo].noCover || own.cover) ? pages.typo : "";
     const nameFit = (x, y, maxW, color, k = 1) => { ctx.font = font(st.title, S * (st.upper ? .052 : .068) * k); const w = ctx.measureText(st.upper ? names.toUpperCase() : names).width; text(ctx, st, names, st.title, S * (st.upper ? .052 : .068) * k * Math.min(1, maxW / w), x, y, color); };
     if (cv === "duo") {
       const s2 = photos[1] && photos[1].c;
@@ -498,6 +573,32 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
       if (s2) framed(ctx, st, S, s2, W * .51, H * .12, W * .39, H * .56, false);
       if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .5, w: W * .76, h: H * .16 }, 0, 0, true, own.cover);
       nameFit(cx, H * .8, W * .84, st.ink); if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
+    } else if (cv === "crest") {
+      const gold = st.foil ? foil(ctx, cx - S * .3, S * .6) : st.acc, ini = [info.groom, info.bride].map((x) => (x || "").trim().split(/\s+/).pop().charAt(0).toUpperCase()), R = S * .15, cy = H * .36;
+      ctx.strokeStyle = gold; ctx.fillStyle = gold; ctx.lineWidth = Math.max(1, S * .002); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke(); ctx.lineWidth = Math.max(1, S * .0008); ctx.beginPath(); ctx.arc(cx, cy, R * .92, 0, 7); ctx.stroke();
+      for (const sd of [-1, 1]) for (let k = 0; k < 9; k++) { const t = Math.PI / 2 + sd * (.5 + k * .2), px = cx + Math.cos(t) * R * 1.12, py = cy + Math.sin(t) * R * 1.12;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(t + sd * Math.PI / 2 + .5 * sd); ctx.beginPath(); ctx.ellipse(0, 0, S * .016, S * .006, 0, 0, 7); ctx.globalAlpha = .85; ctx.fill(); ctx.restore(); }
+      ctx.font = font(`italic 400 {s}px ${F.play}`, R * .9); ctx.textAlign = "center"; ctx.fillText(ini[0] || "", cx - R * .28, cy + R * .1); ctx.fillText(ini[1] || "", cx + R * .28, cy + R * .42);
+      ctx.font = font(`italic 400 {s}px ${F.corm}`, R * .35); ctx.fillText("&", cx + R * .02, cy + R * .2);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .12, y: H * .55, w: W * .76, h: H * .14 }, 0, 0, false, own.cover);
+      ctx.fillStyle = st.ink; const nm = names.toUpperCase(); let s = fit(ctx, `400 {s}px ${F.play}`, S * .045, nm, W * .6); const tw = ctx.measureText(nm).width + s * .3 * ([...nm].length - 1);
+      if (tw > W * .84) { s *= W * .84 / tw; ctx.font = font(`400 {s}px ${F.play}`, s); } spaced(ctx, nm, cx, H * (ty ? .78 : .7), s * .3);
+      if (date) { ctx.font = font(`400 {s}px ${F.sans}`, S * .02); ctx.fillStyle = st.soft; spaced(ctx, date, cx, H * (ty ? .83 : .76), S * .008); }
+    } else if (cv === "foil") {
+      const gold = st.foil ? foil(ctx, W * .2, W * .6) : st.acc, fx = W * .2, fy = H * .2, fw = W * .6, fh = H * .5;
+      ctx.font = font(`400 {s}px ${F.sans}`, S * .018); ctx.fillStyle = st.soft; spaced(ctx, "THE WEDDING OF", cx, H * .13, S * .008);
+      if (src) coverImg(ctx, src, fx, fy, fw, fh);
+      ctx.strokeStyle = gold; ctx.lineWidth = Math.max(1, S * .002); ctx.strokeRect(fx - S * .014, fy - S * .014, fw + S * .028, fh + S * .028); ctx.lineWidth = Math.max(1, S * .0008); ctx.strokeRect(fx - S * .024, fy - S * .024, fw + S * .048, fh + S * .048);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .1, y: H * .73, w: W * .8, h: H * .13 }, 0, 0, false, own.cover);
+      else { ctx.fillStyle = gold; ctx.textAlign = "center"; fit(ctx, `400 {s}px ${SCR}`, S * .1, names, W * .8); ctx.fillText(names, cx, H * .82); }
+      if (date) { ctx.font = font(`400 {s}px ${F.sans}`, S * .02); ctx.fillStyle = st.soft; spaced(ctx, (ty ? names.toUpperCase() + "  ·  " : "") + date, cx, H * .9, S * .006); }
+    } else if (cv === "passe") {
+      const m = S * .1, fx = m, fy = m, fw = W - 2 * m, fh = H * .62;
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = S * .012; ctx.shadowOffsetY = S * .004; ctx.fillStyle = st.bg; ctx.fillRect(fx, fy, fw, fh); ctx.restore();
+      if (src) coverImg(ctx, src, fx, fy, fw, fh);
+      ctx.strokeStyle = st.foil ? foil(ctx, fx, fw) : st.acc; ctx.lineWidth = Math.max(1, S * .0012); ctx.strokeRect(fx - S * .03, fy - S * .03, fw + S * .06, fh + S * .06);
+      if (ty) drawTypo(ctx, st, ty, { x: W * .1, y: fy + fh + S * .06, w: W * .8, h: H * .16 }, 0, 0, false, own.cover); else nameFit(cx, fy + fh + S * .14, W * .8, st.ink);
+      if (date) text(ctx, st, (ty ? names + " · " : "") + date, st.body, S * .022, cx, H - S * .06, st.soft);
     } else if (cv === "magazine") {
       if (src) coverImg(ctx, src, 0, 0, W, H);
       let g = ctx.createLinearGradient(0, 0, 0, H * .42); g.addColorStop(0, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * .42);
@@ -570,6 +671,7 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
       const c = it.cell, { x, y, w, h } = box(c);
+      if (pg.gal) { const p = S * .014; ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0012); ctx.strokeRect(x - p, y - p, w + 2 * p, h + 2 * p); coverImg(ctx, src, x, y, w, h); continue; }
       if (pg.lift) { const p = S * .012; ctx.save(); ctx.shadowColor = "rgba(30,20,10,.28)"; ctx.shadowBlur = S * .02; ctx.shadowOffsetY = S * .006; ctx.fillStyle = "#fffdf8"; ctx.fillRect(x - p, y - p, w + 2 * p, h + 2 * p); ctx.restore(); coverImg(ctx, src, x, y, w, h); continue; }
       if (pg.bleed) { coverImg(ctx, src, x, y, w, h); continue; }
       if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol, pg.shape); continue; }
@@ -600,7 +702,7 @@ async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = s
     const sh = sheets[i], wide = sh.length === 2, cv = wide ? document.createElement("canvas") : page;
     if (wide) {
       cv.width = pxW * 2; cv.height = pxH; const c = cv.getContext("2d");
-      sh.forEach((n, k) => { if (n == null) { c.fillStyle = (STY[style] || STY.lux).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
+      sh.forEach((n, k) => { if (n == null) { c.fillStyle = toned(style, pages.tone).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
         render(pctx, { W: pxW, H: pxH }, pages, n, photos, style, info, mark); c.drawImage(page, k * pxW, 0); });
     } else render(pctx, { W: pxW, H: pxH }, pages, sh[0], photos, style, info, mark);
     return { cv, wCm: wCm * (wide ? 2 : 1), hCm };
@@ -657,5 +759,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, imgPdf, STY, F, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
+G.PhotoBook = { layout, render, pdf, imgPdf, STY, F, TONE, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
 })(window);
