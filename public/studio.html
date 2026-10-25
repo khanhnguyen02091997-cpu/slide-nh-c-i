@@ -28,6 +28,7 @@
     <button role="tab" data-part="slide" aria-selected="true"><b>▶ Slide trình chiếu</b><span>Chiếu tiệc, sân khấu, file giao khách</span></button>
     <button role="tab" data-part="video" aria-selected="false"><b>🎬 Video có nhạc</b><span>Xuất file video ngang hoặc dọc</span></button>
     <button role="tab" data-part="album" aria-selected="false"><b>📖 Album ảnh in</b><span>Tự dàn trang, tải PDF gửi tiệm in</span></button>
+    <button role="tab" data-part="story" aria-selected="false"><b>📰 Phóng sự cưới <em class="new-tag">NEW</em></b><span>Mẫu thiết kế, tự viết chữ, tải PDF in</span></button>
   </div>
 
   <div class="layout">
@@ -40,6 +41,7 @@
           <label class="opt" hidden><input type="radio" name="mode" value="video"><b>Video ảnh cưới có nhạc</b><span>Xuất file video ngang cho TV hoặc dọc cho điện thoại.</span></label>
           <label class="opt"><input type="radio" name="mode" value="deliver"><b>Trọn bộ slide giao cho khách</b><span>Một file duy nhất chứa ảnh, nhạc, hiệu ứng. Khách mở bằng trình duyệt là xem.</span></label>
           <label class="opt" hidden><input type="radio" name="mode" value="album"><b>Album ảnh để in</b><span>Thả ảnh vào là tự xếp theo thời gian chụp, tự dàn trang. Tải PDF gửi tiệm in.</span></label>
+          <label class="opt" hidden><input type="radio" name="mode" value="story"><b>Phóng sự cưới</b><span>Chọn mẫu thiết kế, tự viết chữ từng trang, tải PDF in.</span></label>
         </div>
       </section>
 
@@ -173,11 +175,12 @@
           <label class="f" data-for="party">Hiện lại màn hình tên
             <select id="every"><option value="0">Chỉ đầu mỗi vòng</option><option value="10" selected>Sau mỗi 10 ảnh</option><option value="20">Sau mỗi 20 ảnh</option></select>
           </label>
-          <label class="f" data-for="album">Cỡ album
+          <label class="f" data-for="album story">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option></select>
           </label>
-          <div class="f wide lib-open" data-for="album">Mẫu thiết kế album
-            <div class="row"><button type="button" class="lib-btn" data-lib="design">📚 Thư viện mẫu <em class="new-tag">NEW</em></button><span class="hint" id="libSum">Tự động · Không chữ</span></div>
+          <div class="f wide lib-open" data-for="story">Mẫu thiết kế phóng sự
+            <div class="row"><button type="button" class="lib-btn" data-lib="design">📚 Thư viện mẫu <em class="new-tag">NEW</em></button><button type="button" id="libAuto">✨ Tự thiết kế</button></div>
+            <span class="hint" id="libSum">Tự động · Không chữ</span>
           </div>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
@@ -205,10 +208,15 @@ Cảm ơn quý khách</textarea>
     <aside class="side">
       <div class="preview" id="pvBox"><canvas id="pv"></canvas></div>
       <div class="pv-meta"><span id="pvScene">Xem trước</span><span id="pvInfo"></span></div>
-      <div class="row book-nav" data-for="album">
+      <div class="row book-nav" data-for="album story">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
-        <button type="button" class="lib-btn" data-lib="all">📚 Thư viện mẫu</button>
+        <button type="button" class="lib-btn" data-lib="all" data-for="story">📚 Thư viện mẫu</button>
+      </div>
+      <div class="book-text" data-for="story">
+        <b id="btLabel">Chữ trên trang này</b>
+        <div class="row" id="btEdit"><input type="text" id="btA" placeholder="Chữ lớn" aria-label="Chữ lớn"><input type="text" id="btB" placeholder="Chữ nhỏ" aria-label="Chữ nhỏ"><button type="button" id="btReset">Về chữ mẫu</button></div>
+        <span class="hint" id="btHint"></span>
       </div>
       <div class="row">
         <button class="go" id="go"></button>
@@ -236,7 +244,7 @@ Cảm ơn quý khách</textarea>
       <button id="libX" aria-label="Đóng">✕</button>
     </div>
     <div class="lib-tabs" role="tablist" aria-label="Loại mẫu">
-      <button role="tab" data-t="all" aria-selected="true">Tất cả</button><button role="tab" data-t="layout" aria-selected="false">Layout</button><button role="tab" data-t="typo" aria-selected="false">Typo</button><button role="tab" data-t="design" aria-selected="false">Mẫu thiết kế</button>
+      <button role="tab" data-t="all" aria-selected="true">Tất cả</button><button role="tab" data-t="layout" aria-selected="false">Layout</button><button role="tab" data-t="cover" aria-selected="false">Bìa</button><button role="tab" data-t="typo" aria-selected="false">Typo</button><button role="tab" data-t="design" aria-selected="false">Mẫu thiết kế</button>
     </div>
     <div class="lib-body" id="libBody"></div>
   </div>
