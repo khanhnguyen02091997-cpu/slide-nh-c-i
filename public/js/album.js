@@ -44,8 +44,10 @@ function best(ars, A) {
   return top;
 }
 
-/* Group photos (kept in order) into pages, varying 1-4 photos per page. */
-function layout(ars, seed = 0, A = 1) {
+/* Group photos (kept in order) into pages, varying 1-4 photos per page, or by a library layout (d.layout) with titles (d.typo). */
+function layout(ars, seed = 0, A = 1, d = {}) {
+  const lay = LAYOUT[d.layout], typo = TYPO[d.typo] ? d.typo : "none";
+  if (lay && lay.pages) return Object.assign(layoutLib(ars, seed, A, lay), { typo });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -60,6 +62,120 @@ function layout(ars, seed = 0, A = 1) {
     i += pick.k;
   }
   pages.push({ type: "end" });
+  return Object.assign(pages, { typo });
+}
+
+
+/* ===== Resource library: page layouts, title typography, and designs that combine them with a style ===== */
+// A layout is a list of page templates: cells [x, y, w, h, rot] in the inner box (rot in degrees, around the cell's
+// center), t = box for the page title. pol = polaroid frames. The library repeats the templates in order.
+const g3 = (y0, rows, cols) => { const out = [], h = (1 - y0) / rows; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) out.push([c / cols, y0 + r * h, 1 / cols, h]); return out; };
+const LAYOUT = {
+  auto: { name: "Tự động", desc: "Mỗi trang 1 đến 4 ảnh, app tự chọn khung hợp ảnh" },
+  grid: { name: "Lưới 9 ô", desc: "9 ảnh đều nhau, tiêu đề nhỏ phía trên", isNew: true,
+    pages: [{ t: [0, 0, 1, .1], cells: g3(.12, 3, 3) }, { t: [0, 0, 1, .1], cells: g3(.12, 2, 3) }, { t: [0, 0, 1, .1], cells: g3(.12, 2, 2) }] },
+  strip: { name: "Dải phim", desc: "Tiêu đề lớn, hàng ảnh bên dưới", isNew: true,
+    pages: [{ t: [0, 0, 1, .44], cells: [[0, .48, 1 / 3, .52], [1 / 3, .48, 1 / 3, .52], [2 / 3, .48, 1 / 3, .52]] },
+      { t: [0, .56, 1, .44], cells: [[0, 0, .5, .52], [.5, 0, .5, .52]] },
+      { t: [0, 0, 1, .36], cells: [[0, .4, .25, .6], [.25, .4, .25, .6], [.5, .4, .25, .6], [.75, .4, .25, .6]] }] },
+  hero: { name: "Ảnh lớn + chữ", desc: "Một ảnh lớn kiểu tạp chí, chữ và ảnh nhỏ bên cạnh", isNew: true,
+    pages: [{ t: [.63, 0, .37, .46], cells: [[0, 0, .6, 1], [.63, .5, .37, .5]] },
+      { t: [0, .78, 1, .22], cells: [[0, 0, 1, .76]] },
+      { t: [0, 0, .37, .46], cells: [[.4, 0, .6, 1], [0, .5, .37, .5]] }] },
+  diag: { name: "Cắt chéo", desc: "Ảnh xếp nghiêng theo đường chéo, chữ to ở góc", isNew: true,
+    pages: [{ t: [.42, .7, .58, .3], cells: [[-.06, -.02, .6, .36, -18], [.5, .04, .6, .36, -18], [-.12, .36, .62, .34, -18], [.46, .38, .5, .3, -18]] },
+      { t: [0, 0, .44, .3], cells: [[.46, -.04, .62, .36, -18], [-.04, .32, .6, .34, -18], [.52, .36, .56, .34, -18]] }] },
+  scatter: { name: "Rải ảnh polaroid", desc: "Ảnh polaroid nghiêng nhẹ, chữ ký to phía trên", isNew: true,
+    pages: [{ pol: true, t: [0, 0, 1, .3], cells: [[.02, .34, .3, .3, -6], [.35, .3, .3, .34, 3], [.68, .35, .3, .3, -3], [.1, .66, .36, .33, 4], [.52, .66, .36, .33, -5]] },
+      { pol: true, t: [0, .7, 1, .3], cells: [[.04, .04, .44, .6, -4], [.52, .02, .44, .62, 5]] }] },
+  mosaic: { name: "Lưới so le", desc: "8 ảnh nhỏ cao thấp xen kẽ", isNew: true,
+    pages: [{ t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .3], [0, .4, 1 / 3, .3], [0, .7, 1 / 3, .3], [1 / 3, .1, 1 / 3, .22], [1 / 3, .32, 1 / 3, .36], [1 / 3, .68, 1 / 3, .32], [2 / 3, .1, 1 / 3, .45], [2 / 3, .55, 1 / 3, .45]] },
+      { t: [0, 0, 1, .08], cells: [[0, .1, 1 / 3, .45], [0, .55, 1 / 3, .45], [1 / 3, .1, 1 / 3, .3], [1 / 3, .4, 1 / 3, .3], [1 / 3, .7, 1 / 3, .3], [2 / 3, .1, 1 / 3, .22], [2 / 3, .32, 1 / 3, .36], [2 / 3, .68, 1 / 3, .32]] }] },
+};
+
+const SCR = '"Great Vibes",cursive';
+// Title typography: phrases rotate page by page; draw(ctx, st, box, phrase, page index, on a photo?).
+const TYPO = {
+  none: { name: "Không chữ", desc: "Chỉ tên cô dâu chú rể như cũ", phr: [["", ""]] },
+  script: { name: "Chữ ký bay bổng", desc: "Sweet Memories, chữ viết tay lớn", isNew: true,
+    phr: [["Sweet Memories", "Our wedding day"], ["Love Story", "Two hearts, one love"], ["Forever & Always", "Just married"], ["Happily Ever After", "Since this day"]] },
+  serif: { name: "Serif thanh lịch", desc: "Moment IN TIME, nghiêng mảnh và in hoa giãn chữ", isNew: true,
+    phr: [["Moment", "in time"], ["Pure", "love"], ["The day", "we said yes"], ["Always", "& forever"]] },
+  bold: { name: "In hoa đậm", desc: "The Sacred VOWS, chữ to nổi bật", isNew: true,
+    phr: [["The sacred", "Vows"], ["Our", "Love"], ["Just", "Married"], ["Pure", "Joy"]] },
+  mag: { name: "Tạp chí", desc: "The Vows, Vol. 01, Chapter one", isNew: true,
+    phr: [["The Vows", "Chapter one"], ["Our Day", "Chapter two"], ["Together", "Chapter three"], ["Celebration", "Chapter four"]] },
+  love: { name: "Love & Grace", desc: "Chữ ký lồng chữ serif", isNew: true,
+    phr: [["Love", "& Grace"], ["Forever", "Yours"], ["Mr & Mrs", "Hello"], ["Sweet", "Moments"]] },
+};
+
+// Designs = style + layout + typography, applied in one tap.
+const DESIGN = {
+  vows: { name: "The Vows", style: "korea", layout: "grid", typo: "mag", isNew: true },
+  moment: { name: "Moment in Time", style: "vintage", layout: "strip", typo: "serif", isNew: true },
+  sacred: { name: "The Sacred Vows", style: "mono", layout: "diag", typo: "bold", isNew: true },
+  sweet: { name: "Sweet Memories", style: "lux", layout: "scatter", typo: "script", isNew: true },
+  grace: { name: "Love & Grace", style: "garden", layout: "hero", typo: "love", isNew: true },
+  chapter: { name: "Chapter One", style: "editorial", layout: "mosaic", typo: "mag", isNew: true },
+  vuquy: { name: "Ngày Vu Quy", style: "red", layout: "hero", typo: "script", isNew: true },
+  minimal: { name: "Tối giản", style: "modern", layout: "grid", typo: "bold", isNew: true },
+};
+
+// Biggest font size (up to s) that keeps str within maxW.
+function fit(ctx, f, s, str, maxW) { ctx.font = font(f, s); const w = ctx.measureText(str).width; if (w > maxW) { s *= maxW / w; ctx.font = font(f, s); } return s; }
+function spaced(ctx, str, x, y, sp, align = "center") {
+  const ch = [...str], ws = ch.map((c) => ctx.measureText(c).width), tw = ws.reduce((a, b) => a + b, 0) + sp * (ch.length - 1);
+  let cx = align === "center" ? x - tw / 2 : align === "right" ? x - tw : x; ctx.textAlign = "left";
+  ch.forEach((c, i) => { ctx.fillText(c, cx, y); cx += ws[i] + sp; });
+}
+function drawTypo(ctx, st, id, b, ph, n, onPhoto) {
+  const ty = TYPO[id]; if (!ty || id === "none") return;
+  const [a, s2] = ty.phr[ph % ty.phr.length], ink = onPhoto ? "#fffaf2" : st.ink, acc = onPhoto ? "#fffaf2" : st.acc, soft = onPhoto ? "rgba(255,250,242,.9)" : st.soft;
+  const S = Math.min(b.w, b.h * 2.4), cx = b.x + b.w / 2;
+  ctx.save(); ctx.textBaseline = "alphabetic";
+  if (onPhoto) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = b.h * .06; }
+  if (id === "script") {
+    const s = fit(ctx, `400 {s}px ${SCR}`, b.h * .62, a, b.w * .94); ctx.fillStyle = ink; ctx.textAlign = "center";
+    ctx.fillText(a, cx, b.y + b.h * .5 + s * .28);
+    ctx.font = font(`400 {s}px ${F.sans}`, Math.min(b.h * .07, S * .035)); ctx.fillStyle = soft; spaced(ctx, s2.toUpperCase(), cx, b.y + b.h * .5 + s * .28 + b.h * .2, b.h * .022);
+  } else if (id === "serif") {
+    const s = fit(ctx, `italic 400 {s}px ${F.corm}`, b.h * .56, a, b.w * .8); ctx.fillStyle = ink; ctx.textAlign = "center";
+    const y = b.y + b.h * .52; ctx.fillText(a, cx - b.w * .04, y);
+    const s3 = fit(ctx, `500 {s}px ${F.play}`, s * .34, s2.toUpperCase(), b.w * .5); ctx.fillStyle = acc;
+    spaced(ctx, s2.toUpperCase(), cx + b.w * .1, y + s3 * 1.3, s3 * .35);
+  } else if (id === "bold") {
+    const big = s2.toUpperCase(), s = fit(ctx, `600 {s}px ${F.play}`, b.h * .7, big, b.w * .92); ctx.fillStyle = ink; ctx.textAlign = "right";
+    const r = b.x + b.w * .96, y = b.y + b.h * .9; ctx.fillText(big, r, y);
+    ctx.font = font(`500 {s}px ${F.play}`, Math.min(s * .2, b.h * .12)); ctx.fillStyle = soft; spaced(ctx, a.toUpperCase(), r, y - s * .82, s * .04, "right");
+  } else if (id === "mag") {
+    const s = fit(ctx, `italic 400 {s}px ${F.corm}`, b.h * .72, a, b.w * .5); ctx.fillStyle = ink; ctx.textAlign = "left";
+    ctx.fillText(a, b.x, b.y + b.h * .5 + s * .3);
+    const vol = (n ? `VOL. ${String(n).padStart(2, "0")}  ·  ` : "") + s2.toUpperCase(), s3 = fit(ctx, `400 {s}px ${F.sans}`, s * .3, vol, b.w * .34); ctx.fillStyle = soft;
+    spaced(ctx, vol, b.x + b.w, b.y + b.h * .5 + s * .3, s3 * .2, "right");
+    ctx.fillStyle = st.acc; ctx.fillRect(b.x, b.y + b.h * .5 + s * .55, b.w, Math.max(1, s * .02));
+  } else if (id === "love") {
+    const s = fit(ctx, `400 {s}px ${SCR}`, b.h * .5, a, b.w * .86); ctx.fillStyle = acc; ctx.textAlign = "center";
+    const y = b.y + b.h * .46; ctx.fillText(a, cx, y);
+    const s3 = fit(ctx, `italic 500 {s}px ${F.play}`, s * .5, s2, b.w * .8); ctx.fillStyle = ink; ctx.fillText(s2, cx + b.w * .08, y + s3 * 1.25);
+  }
+  ctx.restore();
+}
+
+/* Pages for a non-auto layout: templates in order, the last pages shrink to the photos left. */
+function layoutLib(ars, seed, A, lay) {
+  const pages = [{ type: "cover", photo: 0 }], tp = lay.pages;
+  let i = ars.length > 1 ? 1 : 0, r = seed % tp.length, ph = 0;
+  while (i < ars.length) {
+    const left = ars.length - i; let t = tp[r++ % tp.length];
+    if (t.cells.length > left) t = tp.filter((x) => x.cells.length <= left).sort((x, y) => y.cells.length - x.cells.length)[0];
+    if (!t) { // fewer photos than any template: fall back to the automatic frames
+      const k = Math.min(4, left), b = best(ars.slice(i, i + k), A);
+      pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
+    }
+    pages.push({ type: "photos", t: t.t, pol: t.pol, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
+    i += t.cells.length;
+  }
+  pages.push({ type: "end" });
   return pages;
 }
 
@@ -69,8 +185,13 @@ function coverImg(ctx, src, x, y, w, h) {
   ctx.drawImage(src, x + (w - dw) * fx, y + (h - dh) * fy, dw, dh); ctx.restore();
 }
 function containRect(ar, x, y, w, h) { let fw = w, fh = w / ar; if (fh > h) { fh = h; fw = h * ar; } return { x: x + (w - fw) / 2, y: y + (h - fh) / 2, w: fw, h: fh }; }
-function framed(ctx, st, S, src, x, y, w, h, contain) {
+function framed(ctx, st, S, src, x, y, w, h, contain, pol) {
   const r = contain ? containRect(src.width / src.height, x, y, w, h) : { x, y, w, h };
+  if (pol) { // polaroid: white card, wider at the bottom
+    const p = Math.min(w, h) * .05; r.x += p; r.y += p; r.w -= 2 * p; r.h -= 3.2 * p;
+    ctx.save(); ctx.shadowColor = "rgba(40,30,20,.28)"; ctx.shadowBlur = S * .014; ctx.shadowOffsetY = S * .005; ctx.fillStyle = "#fffdf8"; ctx.fillRect(x, y, w, h); ctx.restore();
+    return coverImg(ctx, src, r.x, r.y, r.w, r.h);
+  }
   if (st.mat) { ctx.save(); ctx.shadowColor = "rgba(80,60,40,.18)"; ctx.shadowBlur = S * .012; ctx.shadowOffsetY = S * .004; ctx.fillStyle = "#fff"; const p = S * .008; ctx.fillRect(r.x - p, r.y - p, r.w + 2 * p, r.h + 2 * p); ctx.restore(); }
   coverImg(ctx, src, r.x, r.y, r.w, r.h);
   if (st.line) { ctx.strokeStyle = st.acc; ctx.lineWidth = Math.max(1, S * .0012); ctx.strokeRect(r.x + .5, r.y + .5, r.w - 1, r.h - 1); }
@@ -92,6 +213,7 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
   if (pg.type === "cover") {
     const src = photos[pg.photo] && photos[pg.photo].c;
     if (src) framed(ctx, st, S, src, W * .14, H * .12, W * .72, H * .56, false);
+    if (src && pages.typo && pages.typo !== "none") drawTypo(ctx, st, pages.typo, { x: W * .16, y: H * .44, w: W * .68, h: H * .22 }, 0, 0, true);
     text(ctx, st, names, st.title, S * (st.upper ? .052 : .068), cx, H * .8, st.ink);
     if (date) text(ctx, st, date, st.body, S * .026, cx, H * .86, st.soft);
     if (st.line) { ctx.fillStyle = st.acc; ctx.fillRect(cx - S * .04, H * .885, S * .08, Math.max(1, S * .0015)); }
@@ -104,14 +226,20 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     lines.forEach((ln, j) => text(ctx, st, ln, st.body, S * .026, cx, H * .54 + j * S * .04, st.soft));
     text(ctx, st, names + (date ? " · " + date : ""), st.body, S * .022, cx, H * .86, st.soft);
   } else {
-    const b = inner(W / H), solo = pg.items.length === 1;
+    const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null;
     for (const it of pg.items) {
       const src = photos[it.photo] && photos[it.photo].c; if (!src) continue;
-      const c = it.cell, x = (b.x + c[0] * b.w) * S + GUT * S / 2, y = (b.y + c[1] * b.h) * S + GUT * S / 2;
-      framed(ctx, st, S, src, x, y, c[2] * b.w * S - GUT * S, c[3] * b.h * S - GUT * S, solo);
+      const c = it.cell, x = (b.x + c[0] * b.w) * S + GUT * S / 2, y = (b.y + c[1] * b.h) * S + GUT * S / 2, w = c[2] * b.w * S - GUT * S, h = c[3] * b.h * S - GUT * S;
+      if (!c[4]) { framed(ctx, st, S, src, x, y, w, h, solo, pg.pol); continue; }
+      ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(c[4] * Math.PI / 180);
+      if (!pg.pol) { ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = S * .01; ctx.fillStyle = st.bg; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = "transparent"; }
+      framed(ctx, st, S, src, -w / 2, -h / 2, w, h, false, pg.pol); ctx.restore();
+    }
+    if (pg.t && pages.typo && pages.typo !== "none") {
+      const t = pg.t; drawTypo(ctx, st, pages.typo, { x: (b.x + t[0] * b.w) * S + GUT * S / 2, y: (b.y + t[1] * b.h) * S, w: t[2] * b.w * S - GUT * S, h: t[3] * b.h * S }, pg.ph, n, false);
     }
     text(ctx, st, String(n), st.body, S * .018, cx, foot, st.soft);
-    if (n === 1 || n % 6 === 0) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, foot, st.soft, "left");
+    if ((n === 1 || n % 6 === 0) && !(lib && pages.typo !== "none")) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, foot, st.soft, "left");
   }
   if (mark) text(ctx, st, mark, st.body, S * .016, W - S * M - GUT * S / 2, foot, st.soft, "right");
   ctx.restore();
@@ -169,5 +297,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, takenAt };
+G.PhotoBook = { layout, render, pdf, takenAt, LAYOUT, TYPO, DESIGN };
 })(window);
