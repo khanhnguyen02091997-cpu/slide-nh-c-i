@@ -32,6 +32,9 @@
   "functions": {
     "api/chibi.js": {
       "maxDuration": 60
+    },
+    "api/clone-layout.js": {
+      "maxDuration": 30
     }
   }
 }

@@ -242,6 +242,13 @@
           <label class="f" data-for="album story pre">Cỡ album
             <select id="bookSize"><option value="20">Vuông 20 × 20 cm</option><option value="25">Vuông 25 × 25 cm</option><option value="30" selected>Vuông 30 × 30 cm</option><option value="30x20">Ngang 30 × 20 cm</option><option value="20x30">Dọc 20 × 30 cm</option><option value="25x35">Dọc 25 × 35 cm</option></select>
           </label>
+          <label class="f" data-for="album story pre">Độ nét khi xuất
+            <select id="bookDpi"><option value="std">Thường, file nhẹ (khoảng 200 DPI)</option><option value="300">In chuẩn 300 DPI, file nặng</option></select>
+          </label>
+          <label class="f" data-for="album story pre">Tên file khi xuất<input type="text" id="bookFile" placeholder="album-khanh-linh" maxlength="60"></label>
+          <label class="f" data-for="video">Video gồm
+            <select id="vsrc"><option value="photos">Chỉ ảnh</option><option value="pages">Chỉ trang album đã dàn</option><option value="both">Ảnh mở đầu, các trang album, ảnh kết</option></select>
+          </label>
           <label class="f" data-for="video">Khung hình video
             <select id="vfmt"><option value="h">Ngang 16:9, chiếu TV, YouTube</option><option value="v">Dọc 9:16, điện thoại, TikTok, Reels</option></select>
           </label>
@@ -258,11 +265,31 @@ Cảm ơn quý khách</textarea>
         </div>
         <div class="checks">
           <label class="check" data-for="album story pre"><input type="checkbox" id="spread"><span>Trang đôi (spread)<small>Xem hai trang cạnh nhau như album mở ra, PDF xuất mỗi tờ là một trang đôi để in album lay-flat. Bìa vẫn để riêng.</small></span></label>
+          <label class="check" data-for="album story pre"><input type="checkbox" id="single"><span>Xuất trang đơn<small>Đang xem trang đôi mà tiệm in cần từng trang lẻ thì bật cái này, mỗi trang đôi tách thành 2 trang.</small></span></label>
+          <label class="check" data-for="album story pre"><input type="checkbox" id="bleed"><span>Thêm lề xén 3 mm (bleed)<small>Mỗi cạnh dư ra 3 mm lấy từ mép ảnh, tiệm in xén xong không bị viền trắng. Hỏi tiệm in nếu chưa rõ.</small></span></label>
           <label class="check" data-for="party stage video deliver"><input type="checkbox" id="cap" checked><span>Hiện tên hai bạn trên mỗi ảnh</span></label>
           <label class="check" data-for="party video deliver"><input type="checkbox" id="fitMusic" checked><span>Tự khớp ảnh với nhạc<small>Ảnh chuyển đúng nhịp nhạc. Với video và bộ giao khách, slide kết thúc cùng lúc với nhạc.</small></span></label>
           <label class="check" data-for="party"><input type="checkbox" id="shuffle"><span>Trộn thứ tự ảnh mỗi vòng<small>Khách ngồi lâu sẽ không thấy lặp lại y hệt.</small></span></label>
           <label class="check" data-for="stage"><input type="checkbox" id="stageMusic"><span>Phát nhạc trên màn hình sân khấu<small>Thường để MC và ban nhạc lo phần âm thanh, nên mặc định tắt.</small></span></label>
         </div>
+        <details class="fold logo-fold" data-for="album story pre video">
+          <summary>Logo studio <span class="hint" id="logoSum">· chưa cài</span></summary>
+          <p class="hint">Cài logo một lần (ảnh PNG nền trong là đẹp nhất), app nhớ trên máy này và đóng lên album, ảnh JPG và video khi bật.</p>
+          <div class="logo-row">
+            <div class="logo-pv" id="logoPv" aria-hidden="true"></div>
+            <div class="logo-ctl">
+              <label class="check"><input type="checkbox" id="logoOn"><span>Đóng logo lên album và video</span></label>
+              <div class="row"><button type="button" id="logoPick">🖼 Chọn ảnh logo</button><button type="button" id="logoDel" hidden>Xóa logo</button><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></div>
+            </div>
+          </div>
+          <div class="fields">
+            <label class="f">Vị trí
+              <span class="pos9" id="logoPos" role="group" aria-label="Vị trí logo"><button type="button" data-v="tl" aria-label="Trên trái"></button><button type="button" data-v="tc" aria-label="Trên giữa"></button><button type="button" data-v="tr" aria-label="Trên phải"></button><button type="button" data-v="ml" aria-label="Giữa trái"></button><button type="button" data-v="mc" aria-label="Chính giữa"></button><button type="button" data-v="mr" aria-label="Giữa phải"></button><button type="button" data-v="bl" aria-label="Dưới trái"></button><button type="button" data-v="bc" aria-label="Dưới giữa"></button><button type="button" data-v="br" aria-label="Dưới phải"></button></span>
+            </label>
+            <label class="f">Cỡ logo <span id="logoSizeV">14%</span><input type="range" id="logoSize" min="5" max="35" value="14"></label>
+            <label class="f">Độ đậm <span id="logoOpV">90%</span><input type="range" id="logoOp" min="20" max="100" value="90"></label>
+          </div>
+        </details>
       </section>
     </div>
 
@@ -273,8 +300,13 @@ Cảm ơn quý khách</textarea>
       <div class="row book-nav" data-for="album story pre">
         <button id="pgPrev" aria-label="Trang trước">‹</button><span id="pgNum"></span><button id="pgNext" aria-label="Trang sau">›</button>
         <button id="pgShuffle">🔀 Đổi bố cục</button>
-        <button type="button" id="pgFrame" data-for="story pre" title="Đổi khung ảnh của riêng trang này, các trang khác giữ nguyên">🔁 Đổi khung trang này</button>
+        <button type="button" id="pgFrame" title="Dàn lại riêng trang đang chọn, các trang khác giữ nguyên">🔁 Dàn lại trang này</button>
+        <button type="button" id="pgLeft" title="Dàn lại riêng trang bên trái của tờ này">🔁 Trang trái</button>
+        <button type="button" id="pgRight" title="Dàn lại riêng trang bên phải của tờ này">🔁 Trang phải</button>
+        <button type="button" id="pgSheet" title="Xem tất cả các trang một lúc">▦ Xem cả cuốn</button>
         <button type="button" class="lib-btn" data-lib="all" data-for="story pre">📚 Thư viện mẫu</button>
+        <button type="button" id="cloneOpen" data-for="story pre" title="Up ảnh một trang album bạn thích, AI chép lại khung ảnh và ô chữ thành layout của bạn">📷 Chép bố cục từ ảnh mẫu</button>
+        <input type="file" id="cloneFile" accept="image/*" hidden>
       </div>
       <div class="book-text" data-for="story pre">
         <b id="btLabel">Chữ trên trang này</b>
@@ -288,6 +320,7 @@ Cảm ơn quý khách</textarea>
       <div class="row">
         <button class="go" id="go"></button>
       </div>
+      <div class="row" data-for="album story pre"><button type="button" id="dlJpg">⬇ Ảnh JPG từng trang (.zip)</button></div>
       <div class="row" data-for="deliver"><button id="tryDeliver">Xem thử như khách</button></div>
       <div class="dl" data-for="party stage deliver">
         <span class="hint">Tải slide về máy để copy, gửi Zalo, Messenger:</span>
@@ -317,10 +350,17 @@ Cảm ơn quý khách</textarea>
   </div>
 </div>
 
+<div class="crop" id="sheetBox" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="crop-card lib-card">
+    <div class="lib-h"><div><b id="sheetTitle">Cả cuốn album</b><span>Bấm một trang để mở trang đó.</span></div><button id="sheetX" aria-label="Đóng">✕</button></div>
+    <div class="sheet-grid" id="sheetGrid"></div>
+  </div>
+</div>
+
 <div class="crop" id="auto" hidden role="dialog" aria-modal="true" aria-labelledby="autoTitle">
   <div class="crop-card auto-card">
     <div class="sec-h"><b id="autoTitle">✨ Auto Design · <span id="autoN"></span> ảnh</b><button id="autoX" aria-label="Đóng">✕</button></div>
-    <p class="hint">App tự chọn khung hợp với dáng từng ảnh (ngang, dọc), giữ thứ tự theo giờ chụp, rồi dàn cả cuốn trong một lần bấm. Xong bạn vẫn sửa chữ, đổi mẫu thoải mái.</p>
+    <p class="hint">App tự chọn khung hợp với dáng từng ảnh (ngang, dọc), giữ thứ tự theo giờ chụp, rồi dàn cả cuốn trong một lần bấm. Layout bạn chấm sao cao trong Thư viện mẫu được ưu tiên, layout 1 sao bị bỏ qua. Xong bạn vẫn sửa chữ, đổi mẫu thoải mái.</p>
     <div class="auto-sum"><div><b id="autoPages">0</b><span>trang ảnh</span></div><div><b id="autoRange">1 – 6</b><span>ảnh mỗi trang</span></div></div>
     <div class="fields">
       <label class="f">Bộ mẫu<select id="autoDesign"></select></label>

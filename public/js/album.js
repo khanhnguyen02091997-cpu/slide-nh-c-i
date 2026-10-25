@@ -50,18 +50,25 @@ function layout(ars, seed = 0, A = 1, d = {}) {
   const gut = d.gut != null ? d.gut : GUT;
   // "mix" draws from every library layout (or the ones in d.pool); a range d.min..d.max limits photos per page
   const pool = d.layout === "mix" ? (d.pool && d.pool.length ? d.pool : Object.keys(LAYOUT)).filter((k) => LAYOUT[k] && LAYOUT[k].pages) : lay && lay.pages ? [d.layout] : null;
-  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}), { typo, cover, gut, pool, pattern: d.pattern, tone: d.tone });
-  const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
+  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages, d.over || {}, d.rate || {}), { typo, cover, gut, pool, pattern: d.pattern, tone: d.tone });
+  const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2], over = d.over || {};
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
     const left = ars.length - i, want = rhythm[r++ % rhythm.length];
+    // a page laid out again by hand keeps its photos and takes another frame set: over[first photo] = "T:k:v"
+    const [tk, k0, v0] = String(over[i] || "").split(":");
+    if (tk === "T" && T[k0] && T[k0][v0] && +k0 <= left) {
+      const k = +k0, cells = T[k][v0], ar = ars.slice(i, i + k), bx = inner(A);
+      let top = null; for (const ord of perms([...Array(k).keys()])) { let c = 0; cells.forEach((cl, j) => { c += Math.abs(Math.log((cl[2] * bx.w - GUT) / (cl[3] * bx.h - GUT) / ar[ord[j]])); }); if (!top || c < top.c) top = { c, ord }; }
+      pages.push({ type: "photos", at: i, tv: over[i], items: top.ord.map((o, j) => ({ photo: i + o, cell: cells[j] })) }); i += k; continue;
+    }
     let pick = null;
     for (let k = 1; k <= Math.min(4, left); k++) {
       if (left - k === 1 && k > 1 && left > 2) continue; // avoid leaving one lonely photo when we can help it
       const b = best(ars.slice(i, i + k), A), score = b.cost + .14 * Math.abs(k - want);
       if (!pick || score < pick.score) pick = { k, b, score };
     }
-    pages.push({ type: "photos", items: pick.b.order.map((o, j) => ({ photo: i + o, cell: pick.b.cells[j] })) });
+    pages.push({ type: "photos", at: i, tv: "T:" + pick.k + ":" + Math.max(0, T[pick.k].indexOf(pick.b.cells)), items: pick.b.order.map((o, j) => ({ photo: i + o, cell: pick.b.cells[j] })) });
     i += pick.k;
   }
   pages.push({ type: "end" });
@@ -472,9 +479,11 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
 
 /* Pages for library layouts. One layout: its templates in order. Mix (Auto Design): for each page the template whose cells
    best fit the next photos' shapes and the wished photos per page, kept in min..max, rarely the same template twice in a row. */
-function layoutLib(ars, seed, A, pool, min, max, mix, target, over) {
+// rate: the user's stars per layout (1 to 5): Auto Design leans to well rated layouts and leaves out one-star ones.
+function layoutLib(ars, seed, A, pool, min, max, mix, target, over, rate = {}) {
   // each template carries an id "layout:index" so a page can be pinned to one (over: first photo of the page -> id)
-  const pages = [{ type: "cover", photo: 0 }], tps = pool.flatMap((k) => LAYOUT[k].pages.map((t, n) => Object.assign({ id: k + ":" + n }, t))), box = inner(A);
+  const liked = mix ? pool.filter((k) => rate[k] !== 1) : pool, use = liked.length ? liked : pool;
+  const pages = [{ type: "cover", photo: 0 }], tps = use.flatMap((k) => LAYOUT[k].pages.map((t, n) => Object.assign({ id: k + ":" + n, lay: k }, t))), box = inner(A);
   const fitCost = (t, at) => { let c = 0; t.cells.forEach((cl, j) => { const car = (cl[2] * box.w) / (cl[3] * box.h); c += Math.abs(Math.log(car / ars[at + j])); }); return c / t.cells.length; };
   const jitter = (a, b) => ((Math.sin((a + 1) * 12.9898 + (b + 1) * 78.233 + seed * 37.719) * 43758.5453) % 1 + 1) % 1;
   let i = ars.length > 1 ? 1 : 0, r = seed, ph = 0, prev = null;
@@ -490,7 +499,7 @@ function layoutLib(ars, seed, A, pool, min, max, mix, target, over) {
       tps.forEach((x, n) => {
         const k = x.cells.length; if (k > left || k < Math.min(min, left) || k > max) return;
         const rest = left - k; // leaving fewer photos than a page can take makes an odd last page
-        const score = fitCost(x, i) + .22 * Math.abs(k - want) + (x === prev ? 1 : 0) + (rest > 0 && rest < min ? .6 : 0) + jitter(ph, n) * .5;
+        const score = fitCost(x, i) + .22 * Math.abs(k - want) + (x === prev ? 1 : 0) + (rest > 0 && rest < min ? .6 : 0) + jitter(ph, n) * .5 - (rate[x.lay] ? (rate[x.lay] - 3) * .12 : 0);
         if (score < top) { top = score; t = x; }
       });
     } else {
@@ -689,24 +698,75 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     if ((n === 1 || n % 6 === 0) && !(lib && pages.typo !== "none")) text(ctx, st, names, st.title, S * .022, S * M + GUT * S / 2, foot, st.soft, "left");
   }
   if (mark) text(ctx, st, mark, st.body, S * .016, W - S * M - GUT * S / 2, foot, st.soft, "right");
+  if (pages.logo) stamp(ctx, W, H, pages.logo);
   ctx.restore();
 }
 
-/* Minimal PDF: one JPEG per page. Pages are sizeCm square, or wCm x hCm; px is the long side. */
-async function pdf(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, onPage, mark, spread } = {}) {
-  // spread: the cover on its own page, then two pages side by side on a sheet twice as wide
-  const sheets = spread ? spreads(pages) : pages.map((_, i) => [i]);
-  const pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm);
+/* Studio logo: img at one of 9 spots (pos "tl" ... "br"), size = width as a share of the short side, op = opacity. */
+function stamp(ctx, W, H, lg) {
+  const im = lg && lg.img, iw = im && (im.naturalWidth || im.width), ih = im && (im.naturalHeight || im.height); if (!iw || !ih) return;
+  const S = Math.min(W, H), w = S * (lg.size || .14), h = w * ih / iw, m = S * .035, p = lg.pos || "br";
+  const x = p[1] === "l" ? m : p[1] === "r" ? W - m - w : (W - w) / 2, y = p[0] === "t" ? m : p[0] === "b" ? H - m - h : (H - h) / 2;
+  ctx.save(); ctx.globalAlpha = lg.op == null ? .9 : lg.op; ctx.drawImage(im, x, y, w, h); ctx.restore();
+}
+
+/* Print sheets: one page each, or spreads (the cover alone, then two pages side by side) unless single is set.
+   bleed (cm) adds a mirrored band around each sheet so the printer can trim without white edges. px is a page's long side. */
+function printSheets(pages, photos, style, info, { px = 2400, sizeCm = 30, wCm = sizeCm, hCm = sizeCm, mark, spread, bleed = 0 } = {}) {
+  const list = spread ? spreads(pages) : pages.map((_, i) => [i]);
+  const pxW = Math.round(wCm >= hCm ? px : px * wCm / hCm), pxH = Math.round(hCm >= wCm ? px : px * hCm / wCm), b = Math.round(bleed * pxW / wCm);
   const page = document.createElement("canvas"); page.width = pxW; page.height = pxH; const pctx = page.getContext("2d");
-  return imgPdf(sheets.length, (i) => {
-    const sh = sheets[i], wide = sh.length === 2, cv = wide ? document.createElement("canvas") : page;
-    if (wide) {
-      cv.width = pxW * 2; cv.height = pxH; const c = cv.getContext("2d");
-      sh.forEach((n, k) => { if (n == null) { c.fillStyle = toned(style, pages.tone).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
-        render(pctx, { W: pxW, H: pxH }, pages, n, photos, style, info, mark); c.drawImage(page, k * pxW, 0); });
-    } else render(pctx, { W: pxW, H: pxH }, pages, sh[0], photos, style, info, mark);
-    return { cv, wCm: wCm * (wide ? 2 : 1), hCm };
-  }, onPage);
+  const sheet = (i) => {
+    const sh = list[i], wide = sh.length === 2, cv = document.createElement("canvas"); cv.width = pxW * sh.length; cv.height = pxH; const c = cv.getContext("2d");
+    sh.forEach((n, k) => { if (n == null) { c.fillStyle = toned(style, pages.tone).bg; c.fillRect(k * pxW, 0, pxW, pxH); return; }
+      render(pctx, { W: pxW, H: pxH }, pages, n, photos, style, info, mark); c.drawImage(page, k * pxW, 0); });
+    const out = b ? bleedOut(cv, b) : cv;
+    return { cv: out, wCm: wCm * (wide ? 2 : 1) + 2 * bleed, hCm: hCm + 2 * bleed, pages: sh };
+  };
+  return { n: list.length, list, sheet };
+}
+// Mirror b pixels of the sheet's edges outward.
+function bleedOut(src, b) {
+  const w = src.width, h = src.height, out = document.createElement("canvas"); out.width = w + 2 * b; out.height = h + 2 * b; const c = out.getContext("2d");
+  c.drawImage(src, b, b);
+  c.save(); c.scale(-1, 1); c.drawImage(src, 0, 0, b, h, -b, b, b, h); c.drawImage(src, w - b, 0, b, h, -(2 * b + w), b, b, h); c.restore();
+  const t = document.createElement("canvas"); t.width = out.width; t.height = out.height; t.getContext("2d").drawImage(out, 0, 0);
+  c.save(); c.scale(1, -1); c.drawImage(t, 0, b, t.width, b, 0, -b, t.width, b); c.drawImage(t, 0, h, t.width, b, 0, -(2 * b + h), t.width, b); c.restore();
+  return out;
+}
+/* Minimal PDF: one JPEG per sheet. */
+async function pdf(pages, photos, style, info, opts = {}) {
+  const ps = printSheets(pages, photos, style, info, opts);
+  return imgPdf(ps.n, ps.sheet, opts.onPage);
+}
+/* The same sheets as JPEG files in a zip, named after the album and page numbers (00 = cover, 02-03 = a spread). */
+async function jpgZip(pages, photos, style, info, opts = {}) {
+  const ps = printSheets(pages, photos, style, info, opts), files = [], base = opts.name || "album", last = pages.length - 1;
+  const tag = (n) => n === 0 ? "00-bia" : n === last ? String(n).padStart(2, "0") + "-cuoi" : String(n).padStart(2, "0");
+  for (let i = 0; i < ps.n; i++) {
+    const { cv, pages: sh } = ps.sheet(i);
+    const blob = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .92));
+    files.push({ name: `${base}-${sh.filter((n) => n != null).map(tag).join("-")}.jpg`, data: new Uint8Array(await blob.arrayBuffer()) });
+    opts.onPage && opts.onPage(i + 1, ps.n); await new Promise((ok) => setTimeout(ok, 0));
+  }
+  return zip(files);
+}
+// Zip without compression (JPEGs are compressed already).
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (d) => { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], dir = []; let off = 0;
+  const hdr = (n) => { const b = new DataView(new ArrayBuffer(n)); return b; };
+  for (const f of files) {
+    const nm = enc.encode(f.name), crc = crc32(f.data), h = hdr(30);
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, f.data.length, true); h.setUint32(22, f.data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(h.buffer, nm, f.data);
+    const c = hdr(46); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, f.data.length, true); c.setUint32(24, f.data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+    dir.push(c.buffer, nm); off += 30 + nm.length + f.data.length;
+  }
+  const size = dir.reduce((a, x) => a + x.byteLength, 0), e = hdr(22);
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, e.buffer], { type: "application/zip" });
 }
 /* A PDF with one JPEG per page: sheet(i) returns { cv, wCm, hCm } for page i. */
 async function imgPdf(N, sheet, onPage) {
@@ -759,5 +819,5 @@ async function takenAt(file) {
   return 0;
 }
 
-G.PhotoBook = { layout, render, pdf, imgPdf, STY, F, TONE, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
+G.PhotoBook = { layout, render, pdf, jpgZip, printSheets, stamp, variants: (k) => (T[k] || []).length, imgPdf, STY, F, TONE, takenAt, phrase, fonts, hits, spreads, LAYOUT, TYPO, COVER, PATTERN, DESIGN };
 })(window);

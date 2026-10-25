@@ -477,6 +477,8 @@ function framed(style,c,W,H,ph,p,i,info,t,frame){
   const shadow=()=>{c.shadowColor="rgba(0,0,0,.45)";c.shadowBlur=40*u;c.shadowOffsetY=10*u};
   const photoIn=(path,r)=>{c.save();path();c.clip();cover(c,ph.c,r.x,r.y,r.w,r.h,k.z,k.px,k.py);c.restore()};
   const rect=(r)=>()=>{c.beginPath();c.rect(r.x,r.y,r.w,r.h)};
+  // a finished album page or spread: shown whole, never cropped, with a soft shadow and a slow zoom of the whole sheet
+  if(frame==="book"){const z=1+(k.z-1)*.35,r=fit(ph.ar,W*.04,H*.05,W*.92,H*.9),cx=r.x+r.w/2,cy=r.y+r.h/2;c.translate(cx,cy);c.scale(z,z);c.translate(-cx,-cy);c.save();shadow();c.fillStyle="#000";c.fillRect(r.x,r.y,r.w,r.h);c.restore();c.drawImage(ph.c,r.x,r.y,r.w,r.h);c.restore();return}
   if(frame==="polaroid"){
     const m=16*u,mb=64*u,r=fit(ph.ar,bx+m,top+m,bw-2*m,bh-m-mb),a=(i%2?1:-1)*.026;
     c.save();c.translate(r.x+r.w/2,r.y+r.h/2+mb/2-m/2);c.rotate(a);c.translate(-(r.x+r.w/2),-(r.y+r.h/2+mb/2-m/2));
