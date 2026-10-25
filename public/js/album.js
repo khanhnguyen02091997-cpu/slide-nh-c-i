@@ -26,7 +26,7 @@ const T = {
   4: [[[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, .5, .5], [.5, .5, .5, .5]], [[0, 0, .62, 1], [.62, 0, .38, 1 / 3], [.62, 1 / 3, .38, 1 / 3], [.62, 2 / 3, .38, 1 / 3]],
       [[0, 0, 1, .5], [0, .5, 1 / 3, .5], [1 / 3, .5, 1 / 3, .5], [2 / 3, .5, 1 / 3, .5]]],
 };
-const M = .075, GUT = .022, CAP = .06; // margin, gutter, room for the page footer (fractions of the page's short side)
+const M = .075, GUT = .022, DGUT = GUT, CAP = .06; // margin, gutter, room for the page footer (fractions of the page's short side)
 const perms = (a) => a.length < 2 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map((p) => [x, ...p]));
 // Inner box in short-side units for a page of aspect A (width / height).
 const inner = (A = 1) => { const W = Math.max(A, 1), H = Math.max(1 / A, 1); return { x: M, y: M, w: W - 2 * M, h: H - 2 * M - CAP, W, H }; };
@@ -47,7 +47,10 @@ function best(ars, A) {
 /* Group photos (kept in order) into pages, varying 1-4 photos per page, or by a library layout (d.layout) with titles (d.typo). */
 function layout(ars, seed = 0, A = 1, d = {}) {
   const lay = LAYOUT[d.layout], typo = TYPO[d.typo] ? d.typo : "none", cover = COVER[d.cover] ? d.cover : "classic";
-  if (lay && lay.pages) return Object.assign(layoutLib(ars, seed, A, lay), { typo, cover });
+  const gut = d.gut != null ? d.gut : GUT;
+  // "mix" draws from every library layout (or the ones in d.pool); a range d.min..d.max limits photos per page
+  const pool = d.layout === "mix" ? (d.pool && d.pool.length ? d.pool : Object.keys(LAYOUT)).filter((k) => LAYOUT[k] && LAYOUT[k].pages) : lay && lay.pages ? [d.layout] : null;
+  if (pool) return Object.assign(layoutLib(ars, seed, A, pool, d.min || 1, d.max || 99, d.layout === "mix", d.pages), { typo, cover, gut });
   const pages = [{ type: "cover", photo: 0 }], rhythm = [2, 3, 1, 4, 2, 3, 4, 1, 3, 2];
   let i = ars.length > 1 ? 1 : 0, r = seed % rhythm.length;
   while (i < ars.length) {
@@ -62,7 +65,7 @@ function layout(ars, seed = 0, A = 1, d = {}) {
     i += pick.k;
   }
   pages.push({ type: "end" });
-  return Object.assign(pages, { typo, cover });
+  return Object.assign(pages, { typo, cover, gut });
 }
 
 
@@ -233,19 +236,36 @@ function drawTypo(ctx, st, id, b, ph, n, onPhoto, own) {
   ctx.restore();
 }
 
-/* Pages for a non-auto layout: templates in order, the last pages shrink to the photos left. */
-function layoutLib(ars, seed, A, lay) {
-  const pages = [{ type: "cover", photo: 0 }], tp = lay.pages;
-  let i = ars.length > 1 ? 1 : 0, r = seed % tp.length, ph = 0;
+/* Pages for library layouts. One layout: its templates in order. Mix (Auto Design): for each page the template whose cells
+   best fit the next photos' shapes and the wished photos per page, kept in min..max, rarely the same template twice in a row. */
+function layoutLib(ars, seed, A, pool, min, max, mix, target) {
+  const pages = [{ type: "cover", photo: 0 }], tps = pool.flatMap((k) => LAYOUT[k].pages), box = inner(A);
+  const fitCost = (t, at) => { let c = 0; t.cells.forEach((cl, j) => { const car = (cl[2] * box.w) / (cl[3] * box.h); c += Math.abs(Math.log(car / ars[at + j])); }); return c / t.cells.length; };
+  const jitter = (a, b) => ((Math.sin((a + 1) * 12.9898 + (b + 1) * 78.233 + seed * 37.719) * 43758.5453) % 1 + 1) % 1;
+  let i = ars.length > 1 ? 1 : 0, r = seed, ph = 0, prev = null;
+  // photos per page to aim for: from the wished page count, else the middle of the range
+  const want = target ? Math.max(1, (ars.length - i) / target) : (min + Math.min(max, 9)) / 2;
   while (i < ars.length) {
-    const left = ars.length - i; let t = tp[r++ % tp.length];
-    if (t.cells.length > left) t = tp.filter((x) => x.cells.length <= left).sort((x, y) => y.cells.length - x.cells.length)[0];
+    const left = ars.length - i; let t = null;
+    if (mix) {
+      let top = Infinity;
+      tps.forEach((x, n) => {
+        const k = x.cells.length; if (k > left || k < Math.min(min, left) || k > max) return;
+        const rest = left - k; // leaving fewer photos than a page can take makes an odd last page
+        const score = fitCost(x, i) + .22 * Math.abs(k - want) + (x === prev ? 1 : 0) + (rest > 0 && rest < min ? .6 : 0) + jitter(ph, n) * .5;
+        if (score < top) { top = score; t = x; }
+      });
+    } else {
+      const tp = tps.filter((x) => x.cells.length >= Math.min(min, left) && x.cells.length <= max);
+      t = tp.length ? tp[r++ % tp.length] : null;
+      if (t && t.cells.length > left) t = tp.filter((x) => x.cells.length <= left).sort((x, y) => y.cells.length - x.cells.length)[0];
+    }
     if (!t) { // fewer photos than any template: fall back to the automatic frames
-      const k = Math.min(4, left), b = best(ars.slice(i, i + k), A);
+      const k = Math.max(1, Math.min(4, left, max)), b = best(ars.slice(i, i + k), A);
       pages.push({ type: "photos", items: b.order.map((o, j) => ({ photo: i + o, cell: b.cells[j] })) }); i += k; continue;
     }
     pages.push({ type: "photos", t: t.t, pol: t.pol, shape: t.shape, bleed: t.bleed, onPh: t.onPh, ph: ph++, items: t.cells.map((c, j) => ({ photo: i + j, cell: c })) });
-    i += t.cells.length;
+    i += t.cells.length; prev = t;
   }
   pages.push({ type: "end" });
   return pages;
@@ -328,7 +348,7 @@ function render(ctx, dims, pages, n, photos, style, info, mark) {
     lines.forEach((ln, j) => text(ctx, st, ln, st.body, S * .026, cx, H * .54 + j * S * .04, st.soft));
     text(ctx, st, names + (date ? " · " + date : ""), st.body, S * .022, cx, H * .86, st.soft);
   } else {
-    const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null;
+    const b = inner(W / H), solo = pg.items.length === 1 && !pg.t, lib = pg.ph != null, GUT = pages.gut != null ? pages.gut : DGUT;
     // a bleed page measures cells on the whole page; others on the inner box with gutters
     const box = (c) => pg.bleed ? { x: c[0] * W, y: c[1] * H, w: c[2] * W, h: c[3] * H }
       : { x: (b.x + c[0] * b.w) * S + GUT * S / 2, y: (b.y + c[1] * b.h) * S + GUT * S / 2, w: c[2] * b.w * S - GUT * S, h: c[3] * b.h * S - GUT * S };
