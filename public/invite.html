@@ -40,13 +40,18 @@
       </section>
 
       <section>
-        <h2><span class="n">2</span>Giao diện</h2>
-        <div class="pick iv-tpl" id="tpl">
-          <button data-v="ivory"><i style="background:#faf6ef;border-color:#a07a45"></i>Ngà cổ điển</button>
-          <button data-v="blush"><i style="background:#fbf1ef;border-color:#c0737a"></i>Hồng phấn</button>
-          <button data-v="red"><i style="background:#b3261e;border-color:#c9a24a"></i>Song Hỷ đỏ</button>
-          <button data-v="sage"><i style="background:#f2f4ee;border-color:#6f8b5a"></i>Xanh lá mạ</button>
-          <button data-v="night"><i style="background:#121419;border-color:#d8b46a"></i>Đêm vàng</button>
+        <h2><span class="n">2</span>Mẫu thiệp</h2>
+        <p class="hint">Mỗi mẫu xem trước bằng ảnh và tên trong album này. Bấm để dùng, sau đó vẫn đổi được bố cục, màu và kiểu chữ riêng.</p>
+        <div class="iv-lib" id="lib"></div>
+        <div class="fields">
+          <label class="f">Bố cục<select id="layout">
+            <option value="classic">Ảnh tràn màn hình</option><option value="envelope">Phong bì mở ra</option><option value="arch">Khung vòm</option><option value="magazine">Bìa tạp chí</option>
+            <option value="film">Dải phim</option><option value="scrapbook">Scrapbook, ảnh polaroid</option><option value="hy">Song Hỷ truyền thống</option>
+          </select></label>
+          <label class="f">Màu<select id="tpl">
+            <option value="ivory">Ngà cổ điển</option><option value="beige">Kem be</option><option value="blush">Hồng phấn</option><option value="wine">Đỏ đô</option><option value="red">Đỏ Song Hỷ</option>
+            <option value="sage">Xanh lá mạ</option><option value="navy">Xanh navy</option><option value="mono">Trắng xám</option><option value="night">Đêm vàng</option>
+          </select></label>
         </div>
         <div class="fields">
           <label class="f">Kiểu chữ tên<select id="nameFont">
@@ -59,6 +64,7 @@
         <div class="checks">
           <label class="check"><input type="checkbox" id="countOn" checked><span>Đếm ngược tới ngày cưới</span></label>
           <label class="check"><input type="checkbox" id="petalsOn" checked><span>Cánh hoa rơi nhẹ</span></label>
+          <label class="check"><input type="checkbox" id="calOn" checked><span>Lịch tháng cưới, khoanh tim ngày cưới</span></label>
         </div>
       </section>
 

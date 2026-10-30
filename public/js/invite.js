@@ -12,7 +12,15 @@ $("host").textContent = location.host + "/t/";
 // Banks with their VietQR codes (BIN), for the transfer QR on the gift box.
 const BANKS = [["Vietcombank", "970436"], ["VietinBank", "970415"], ["BIDV", "970418"], ["Agribank", "970405"], ["Techcombank", "970407"], ["MB Bank", "970422"], ["ACB", "970416"], ["VPBank", "970432"], ["TPBank", "970423"], ["Sacombank", "970403"], ["VIB", "970441"], ["HDBank", "970437"], ["SHB", "970443"], ["MSB", "970426"], ["OCB", "970448"], ["SeABank", "970440"], ["Eximbank", "970431"], ["LPBank", "970449"], ["Nam A Bank", "970428"]];
 const DEF_EVENTS = [{ title: "Lễ Thành Hôn", time: "09:00", place: "Tư gia nhà trai" }, { title: "Tiệc Cưới", time: "11:00", place: "" }];
-const FIELDS = ["kicker", "groomFull", "brideFull", "greet", "text", "thanksTitle", "thanks", "nameFont", "order"];
+// The template library: a layout, a colour and a name font each. Thumbnails are live, with the album's own photos and names.
+const PRESETS = [
+  ["envelope", "beige", "pinyon", "Phong bì kem"], ["envelope", "navy", "alex", "Phong bì xanh navy"], ["arch", "ivory", "corinthia", "Vòm trắng ngà"],
+  ["arch", "wine", "vibes", "Vòm đỏ đô"], ["magazine", "mono", "vibes", "Tạp chí đen trắng"], ["magazine", "blush", "playball", "Tạp chí hồng"],
+  ["film", "night", "vibes", "Dải phim đêm"], ["film", "sage", "dancing", "Dải phim xanh lá"], ["scrapbook", "beige", "dancing", "Scrapbook giấy kraft"],
+  ["scrapbook", "blush", "charm", "Scrapbook hồng"], ["hy", "red", "vibes", "Song Hỷ đỏ vàng"], ["hy", "wine", "pinyon", "Hỷ đỏ đô"],
+  ["classic", "ivory", "vibes", "Ảnh tràn ngà"], ["classic", "sage", "alex", "Ảnh tràn xanh lá"], ["classic", "night", "pinyon", "Ảnh tràn đêm vàng"], ["classic", "navy", "corinthia", "Ảnh tràn navy"],
+];
+const FIELDS = ["layout", "tpl", "kicker", "groomFull", "brideFull", "greet", "text", "thanksTitle", "thanks", "nameFont", "order"];
 
 let album = null, photos = [], tracks = [], url = {}, row = null, d = {}, replies = [];
 
@@ -40,10 +48,10 @@ for (const k of FIELDS) if (d[k] != null) $(k).value = d[k];
 const fam = (f) => f || {};
 $("gFather").value = fam(d.groomFam).father || ""; $("gMother").value = fam(d.groomFam).mother || ""; $("gAddr").value = fam(d.groomFam).addr || "";
 $("bFather").value = fam(d.brideFam).father || ""; $("bMother").value = fam(d.brideFam).mother || ""; $("bAddr").value = fam(d.brideFam).addr || "";
-$("countOn").checked = d.count !== false; $("petalsOn").checked = d.petals !== false;
+$("countOn").checked = d.count !== false; $("petalsOn").checked = d.petals !== false; $("calOn").checked = d.cal !== false;
 $("rsvpOn").checked = d.rsvp !== false; $("wishOn").checked = d.wishes !== false;
 $("slug").value = row ? row.slug : suggestSlug(); $("published").checked = row ? row.published : false;
-pickTpl(d.tpl || "ivory");
+if (!d.layout) d.layout = "classic";
 $("music").innerHTML = `<option value="">Không có nhạc</option>` + tracks.map((t) => `<option value="${t.path}">${escH(t.name || "Bài nhạc")}</option>`).join("");
 if (!tracks.length) $("music").innerHTML = `<option value="">Chưa có nhạc, thêm nhạc trong studio</option>`;
 $("music").value = d.music || (row ? "" : (tracks[0] || {}).path || "");
@@ -56,8 +64,21 @@ function suggestSlug() {
 }
 
 /* ----- the template picker ----- */
-function pickTpl(v) { d.tpl = v; $("tpl").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v))); }
-$("tpl").onclick = (e) => { const b = e.target.closest("button"); if (b) { pickTpl(b.dataset.v); changed(); } };
+$("lib").innerHTML = PRESETS.map(([l, t, f, n], i) => `<button type="button" class="iv-card" data-i="${i}"><span class="iv-frame"><iframe src="/thiep.html?preview=1&thumb=1" loading="lazy" tabindex="-1" aria-hidden="true" title=""></iframe></span><b>${n}</b></button>`).join("");
+if (window.ResizeObserver) { const ro = new ResizeObserver((es) => es.forEach((e) => e.target.style.setProperty("--k", e.contentRect.width / 390))); $("lib").querySelectorAll(".iv-frame").forEach((f) => ro.observe(f)); }
+const markLib = () => $("lib").querySelectorAll(".iv-card").forEach((c) => { const [l, t, f] = PRESETS[+c.dataset.i]; c.setAttribute("aria-pressed", String(d.layout === l && d.tpl === t && d.nameFont === f)); });
+$("lib").onclick = (e) => {
+  const c = e.target.closest(".iv-card"); if (!c) return; const [l, t, f] = PRESETS[+c.dataset.i];
+  $("layout").value = l; $("tpl").value = t; $("nameFont").value = f; changed();
+};
+function thumbs(only) {
+  const m = model();
+  $("lib").querySelectorAll("iframe").forEach((fr, i) => {
+    if (only && fr.contentWindow !== only) return;
+    const [l, t, f] = PRESETS[i]; try { fr.contentWindow.postMessage({ type: "invite", model: { ...m, data: { ...m.data, layout: l, tpl: t, nameFont: f } } }, location.origin); } catch {}
+  });
+}
+let thumbT = 0; const thumbsSoon = () => { clearTimeout(thumbT); thumbT = setTimeout(thumbs, 800); };
 
 /* ----- events ----- */
 function drawEvents() {
@@ -145,7 +166,7 @@ function read() {
   for (const k of FIELDS) d[k] = $(k).value.trim();
   d.groomFam = { father: $("gFather").value.trim(), mother: $("gMother").value.trim(), addr: $("gAddr").value.trim() };
   d.brideFam = { father: $("bFather").value.trim(), mother: $("bMother").value.trim(), addr: $("bAddr").value.trim() };
-  d.count = $("countOn").checked; d.petals = $("petalsOn").checked; d.rsvp = $("rsvpOn").checked; d.wishes = $("wishOn").checked;
+  d.count = $("countOn").checked; d.petals = $("petalsOn").checked; d.cal = $("calOn").checked; d.rsvp = $("rsvpOn").checked; d.wishes = $("wishOn").checked;
   d.music = $("music").value;
 }
 function model() {
@@ -153,14 +174,17 @@ function model() {
     photos, tracks, url, wishes: replies.filter((r) => r.wish && !r.hidden).map((r) => ({ name: r.name, wish: r.wish })) };
 }
 let pvReady = false;
-addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.type === "invite-ready") { pvReady = true; preview(); } });
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || !e.data || e.data.type !== "invite-ready") return;
+  if (e.source === $("pv").contentWindow) { pvReady = true; preview(); } else thumbs(e.source);
+});
 // The preview may have loaded while this page was still fetching the album.
 try { pvReady = $("pv").contentDocument.readyState === "complete"; } catch {}
 $("pv").addEventListener("load", () => { pvReady = true; preview(); });
 function preview() { if (pvReady) $("pv").contentWindow.postMessage({ type: "invite", model: model() }, location.origin); }
 
 let timer = 0, saving = false, again = false;
-function changed() { read(); preview(); $("saveState").textContent = "Chưa lưu"; $("saveState").classList.add("dirty"); clearTimeout(timer); timer = setTimeout(save, 900); }
+function changed() { read(); preview(); markLib(); thumbsSoon(); $("saveState").textContent = "Chưa lưu"; $("saveState").classList.add("dirty"); clearTimeout(timer); timer = setTimeout(save, 900); }
 async function save() {
   if (!ready) { $("saveState").textContent = "Chưa lưu được (thiếu bảng thiệp)"; return; }
   if (saving) { again = true; return; }
@@ -219,7 +243,7 @@ $("csv").onclick = () => {
 
 drawEvents(); drawGifts(); drawPics(); linkUi(); guestLinks();
 read();
-preview();
+preview(); markLib(); thumbs();
 loadReplies();
 $("saveState").textContent = row ? "Đã lưu" : ready ? "Thiệp mới, sửa gì là tự lưu" : "Chưa cài bảng thiệp";
 if (!row && ready) save();

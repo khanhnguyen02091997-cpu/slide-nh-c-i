@@ -3,7 +3,9 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const P = new URLSearchParams(location.search);
-const PREVIEW = P.get("preview") === "1";
+const PREVIEW = P.get("preview") === "1", THUMB = P.get("thumb") === "1";
+if (THUMB) document.body.classList.add("thumb");
+const LAYS = ["classic", "envelope", "arch", "magazine", "film", "scrapbook", "hy"];
 const guestName = (P.get("k") || "").trim().slice(0, 60);
 const slugOf = () => { const m = location.pathname.match(/^\/t\/([a-z0-9-]+)/i); return (m ? m[1] : P.get("s") || "").toLowerCase(); };
 
@@ -35,6 +37,7 @@ let M = null, pics = [], timer = 0;
 function render(model) {
   M = model; const d = M.data || {};
   document.body.dataset.tpl = d.tpl || "ivory";
+  const lay = LAYS.includes(d.layout) ? d.layout : "classic"; document.body.dataset.lay = lay;
   useFont(d.nameFont);
   const g = (M.groom || "Chú rể").trim(), b = (M.bride || "Cô dâu").trim();
   const brideFirst = d.order === "bride";
@@ -43,13 +46,17 @@ function render(model) {
 
   text($("gG"), n1); text($("gB"), n2); text($("gDate"), dotDate(M.date));
   text($("hG"), n1); text($("hB"), n2); text($("hDate"), dotDate(M.date));
-  text($("heroKick"), d.kicker || "Save the date");
+  text($("heroKick"), d.kicker || (lay === "magazine" ? "Số đặc biệt" : "Save the date"));
+  text($("eN"), [...n1][0] + " & " + [...n2][0]); text($("eD"), dotDate(M.date));
+  text($("issue"), "Vol. 01 · " + (dotDate(M.date) || "Our wedding"));
   for (const id of ["gGuest", "guest"]) { $(id).hidden = !guestName; text($(id), guestName ? `Trân trọng kính mời ${guestName}` : ""); }
 
   const cover = M.url[d.cover] || M.url[M.photos[0]] || "";
   $("heroImg").style.backgroundImage = cover ? `url("${cover}")` : "";
   $("hero").classList.toggle("noimg", !cover);
   $("gate").style.setProperty("--img", cover ? `url("${cover}")` : "none");
+  const strip = (Array.isArray(d.pics) && d.pics.length ? d.pics : M.photos).filter((p) => M.url[p] && p !== (d.cover || M.photos[0])).slice(0, 4);
+  $("strip").innerHTML = strip.map((p) => `<i style="background-image:url('${esc(M.url[p])}')"></i>`).join("");
 
   // the two families
   const fam = (f, who) => f && (f.father || f.mother || f.addr) ? `<div class="fam"><small>${who}</small>${f.father ? `<b>Ông ${esc(f.father)}</b>` : ""}${f.mother ? `<b>Bà ${esc(f.mother)}</b>` : ""}${f.addr ? `<span>${esc(f.addr)}</span>` : ""}</div>` : "";
@@ -65,6 +72,13 @@ function render(model) {
   const t = parse(M.date);
   $("bigdate").innerHTML = t ? `<span>${WEEK[new Date(t.y, t.m - 1, t.d).getDay()]}</span><b>${p2(t.d)}</b><span>Tháng ${p2(t.m)} · ${t.y}</span>` : "";
   text($("lunar"), t && window.GatePrint ? "(" + GatePrint.lunarText(M.date) + ")" : "");
+  $("calBlk").hidden = !t || d.cal === false;
+  if (t) {
+    const first = (new Date(t.y, t.m - 1, 1).getDay() + 6) % 7, days = new Date(t.y, t.m, 0).getDate(); // weeks start on Monday
+    text($("calH"), `Tháng ${t.m} · ${t.y}`);
+    $("cal").innerHTML = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((w) => `<b>${w}</b>`).join("") + "<span></span>".repeat(first) +
+      Array.from({ length: days }, (_, i) => i + 1 === t.d ? `<span class="day"><em>${i + 1}</em></span>` : `<span>${i + 1}</span>`).join("");
+  }
 
   // countdown to the first event that has a time, else the wedding day
   const ev = (d.events || []).filter((e) => e && (e.title || e.place || e.date));
@@ -112,9 +126,10 @@ function render(model) {
 
   document.querySelectorAll(".blk, .ev, .end").forEach(reveal);
   $("state").hidden = true;
-  if (PREVIEW) { $("card").hidden = false; $("gate").hidden = true; }
+  if (THUMB) { const g = lay === "envelope" || lay === "hy"; $("card").hidden = g; $("gate").hidden = !g; }
+  else if (PREVIEW) { $("card").hidden = false; $("gate").hidden = true; }
   else if (!opened) { $("gate").hidden = false; }
-  petals(d.petals !== false);
+  petals(d.petals !== false && !THUMB);
 }
 
 function count(to) {
@@ -141,8 +156,12 @@ function copy(s, bt) {
 /* ----- opening the card starts the music (browsers allow sound only after a tap) ----- */
 let opened = false;
 $("openBtn").onclick = () => {
-  opened = true; $("gate").classList.add("out"); $("card").hidden = false;
-  setTimeout(() => $("gate").hidden = true, 900);
+  opened = true;
+  // the envelope opens its flap and lifts the card first
+  const env = document.body.dataset.lay === "envelope" && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (env) $("gate").classList.add("opening");
+  setTimeout(() => { $("gate").classList.add("out"); $("card").hidden = false; scrollTo(0, 0); }, env ? 1300 : 0);
+  setTimeout(() => $("gate").hidden = true, env ? 2200 : 900);
   if ($("audio").getAttribute("src")) play(true);
 };
 function play(on) {

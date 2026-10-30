@@ -13,7 +13,9 @@
 </head>
 <body data-tpl="ivory">
 <div class="cover-gate" id="gate" hidden>
+  <div class="env" aria-hidden="true"><div class="env-back"></div><div class="env-card"><b id="eN"></b><small id="eD"></small></div><div class="env-front"></div><div class="env-flap"></div></div>
   <div class="gate-in">
+    <b class="hy-mark" aria-hidden="true">囍</b>
     <p class="kicker">Thiệp mời cưới</p>
     <div class="gate-names"><span id="gG"></span><i>&amp;</i><span id="gB"></span></div>
     <p class="gate-date" id="gDate"></p>
@@ -24,7 +26,11 @@
 
 <main id="card" hidden>
   <header class="hero" id="hero">
-    <div class="hero-img" id="heroImg"></div>
+    <p class="mast" aria-hidden="true">The Wedding</p>
+    <p class="issue" id="issue"></p>
+    <b class="hy-mark hy-hero" aria-hidden="true">囍</b>
+    <div class="hero-frame"><div class="hero-img" id="heroImg"></div></div>
+    <div class="strip" id="strip" aria-hidden="true"></div>
     <div class="hero-txt">
       <p class="kicker light" id="heroKick">Save the date</p>
       <h1 class="names"><span id="hG"></span><i>&amp;</i><span id="hB"></span></h1>
@@ -45,6 +51,12 @@
     <p class="lead" id="text"></p>
     <div class="bigdate" id="bigdate"></div>
     <p class="lunar" id="lunar"></p>
+  </section>
+
+  <section class="blk cal" id="calBlk">
+    <h2>Lịch cưới</h2>
+    <p class="cal-h" id="calH"></p>
+    <div class="cal-g" id="cal"></div>
   </section>
 
   <section class="blk count" id="countBlk">
