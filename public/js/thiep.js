@@ -118,9 +118,9 @@ function render(model) {
   text($("thanks"), d.thanksTitle || "Thank you");
   text($("thanksTxt"), d.thanks || "Rất hân hạnh được đón tiếp!");
 
-  // music: the track picked in the editor
-  const tr = (M.tracks || []).find((x) => x.path === d.music);
-  const src = tr ? M.url[tr.path] : "";
+  // music: one of the album's tracks, or a song from the shared library (library/music/...)
+  const mine = d.music && (d.music.startsWith("library/") || (M.tracks || []).some((x) => x.path === d.music));
+  const src = mine ? M.url[d.music] || "" : "";
   if ($("audio").dataset.src !== src) { $("audio").dataset.src = src; if (src) $("audio").src = src; else $("audio").removeAttribute("src"); }
   $("music").hidden = !src || PREVIEW;
 
