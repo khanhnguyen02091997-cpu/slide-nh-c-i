@@ -36,5 +36,11 @@
     "api/clone-layout.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/t/:slug",
+      "destination": "/api/thiep?s=:slug"
+    }
+  ]
 }

@@ -1111,6 +1111,7 @@ function showPart(part) {
   document.querySelector("h1").firstChild.textContent = h + " ";
 }
 document.querySelectorAll(".parts button").forEach((b) => b.onclick = () => {
+  if (b.dataset.part === "invite") { location.href = "/invite.html?album=" + albumId; return; } // its own page
   const part = b.dataset.part, cur = val("mode");
   if (partOf(cur) === part) return;
   if (partOf(cur) === "slide") lastSlide = cur;
