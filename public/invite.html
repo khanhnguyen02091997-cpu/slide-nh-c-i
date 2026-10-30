@@ -113,6 +113,9 @@
         <div class="grid iv-pics" id="pics"></div>
         <div class="row"><button id="picAll">Chọn hết</button><button id="picNone">Bỏ hết</button></div>
         <label class="f">Nhạc nền (khách bấm Mở thiệp là nhạc chạy)<select id="music"></select></label>
+        <div class="row"><button type="button" id="musicPlay">▶ Nghe thử</button><label class="btn">♪ Tải nhạc của bạn<input id="musicUp" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac"></label></div>
+        <p class="note" id="musicMsg" role="status"></p>
+        <audio id="musicAudio" preload="none"></audio>
       </section>
 
       <section>

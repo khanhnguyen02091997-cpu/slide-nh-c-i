@@ -28,13 +28,15 @@ let album = null, photos = [], tracks = [], url = {}, row = null, d = {}, replie
 const { data: a, error } = await client.from("albums").select("*").eq("id", albumId).single();
 if (error || !a) { document.querySelector(".page").innerHTML = '<div class="empty">Không tìm thấy album này. <a href="/albums.html">Về danh sách album</a></div>'; return; }
 album = a;
-const [{ data: ps }, { data: ts }, inv] = await Promise.all([
+const [{ data: ps }, { data: ts }, inv, { data: lib }] = await Promise.all([
   client.from("album_photos").select("path,position").eq("album_id", albumId).order("position"),
   client.from("album_tracks").select("path,name,position").eq("album_id", albumId).order("position"),
   client.from("invites").select("*").eq("album_id", albumId).maybeSingle(),
+  client.from("music_library").select("path,name,artist,mood").order("position").order("created_at"),
 ]);
+const library = lib || []; // shared songs, empty until supabase/music-library.sql has run
 photos = (ps || []).map((p) => p.path); tracks = ts || [];
-const paths = [...photos, ...tracks.map((t) => t.path)];
+const paths = [...photos, ...tracks.map((t) => t.path), ...library.map((m) => m.path)];
 const signed = paths.length ? (await client.storage.from("media").createSignedUrls(paths, 86400)).data || [] : [];
 url = Object.fromEntries(signed.map((x) => [x.path, x.signedUrl]));
 const ready = !inv.error;
@@ -52,9 +54,36 @@ $("countOn").checked = d.count !== false; $("petalsOn").checked = d.petals !== f
 $("rsvpOn").checked = d.rsvp !== false; $("wishOn").checked = d.wishes !== false;
 $("slug").value = row ? row.slug : suggestSlug(); $("published").checked = row ? row.published : false;
 if (!d.layout) d.layout = "classic";
-$("music").innerHTML = `<option value="">Không có nhạc</option>` + tracks.map((t) => `<option value="${t.path}">${escH(t.name || "Bài nhạc")}</option>`).join("");
-if (!tracks.length) $("music").innerHTML = `<option value="">Chưa có nhạc, thêm nhạc trong studio</option>`;
-$("music").value = d.music || (row ? "" : (tracks[0] || {}).path || "");
+function musicOptions() {
+  const mine = tracks.map((t) => `<option value="${escH(t.path)}">${escH(t.name || "Bài nhạc")}</option>`).join("");
+  const moods = [...new Set(library.map((m) => m.mood || "Nhạc có sẵn"))];
+  $("music").innerHTML = `<option value="">Không có nhạc</option>` + (mine ? `<optgroup label="Nhạc của album">${mine}</optgroup>` : "") +
+    moods.map((g) => `<optgroup label="${escH(g === "Nhạc có sẵn" ? g : "Có sẵn · " + g)}">${library.filter((m) => (m.mood || "Nhạc có sẵn") === g).map((m) => `<option value="${escH(m.path)}">${escH(m.name + (m.artist ? " · " + m.artist : ""))}</option>`).join("")}</optgroup>`).join("");
+}
+musicOptions();
+$("music").value = d.music || (row ? "" : (tracks[0] || library[0] || {}).path || "");
+if ($("music").selectedIndex < 0) $("music").value = "";
+$("musicPlay").onclick = () => {
+  const au = $("musicAudio"), src = url[$("music").value];
+  if (!src) return;
+  if (!au.paused && au.dataset.src === src) { au.pause(); $("musicPlay").textContent = "▶ Nghe thử"; return; }
+  if (au.dataset.src !== src) { au.dataset.src = src; au.src = src; }
+  au.play().then(() => $("musicPlay").textContent = "⏸ Dừng", () => {});
+};
+$("music").addEventListener("change", () => { $("musicAudio").pause(); $("musicPlay").textContent = "▶ Nghe thử"; });
+// a song straight from this page: saved with the album's music, like in the studio
+$("musicUp").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  $("musicMsg").textContent = "Đang tải " + f.name + "...";
+  const ext = (f.name.split(".").pop() || "mp3").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
+  const path = `${user.id}/${albumId}/music/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.${ext}`, name = f.name.replace(/\.[^.]+$/, "");
+  let r = await client.storage.from("media").upload(path, f, { contentType: f.type || "audio/mpeg" });
+  if (!r.error) r = await client.from("album_tracks").insert({ album_id: albumId, user_id: user.id, path, name, position: tracks.length });
+  if (r.error) { $("musicMsg").textContent = "Chưa tải được: " + r.error.message; return; }
+  const s = await client.storage.from("media").createSignedUrls([path], 86400);
+  if (s.data && s.data[0]) url[path] = s.data[0].signedUrl;
+  tracks.push({ path, name }); musicOptions(); $("music").value = path; $("musicMsg").textContent = "Đã thêm " + name + "."; changed();
+};
 
 function escH(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function slugify(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }

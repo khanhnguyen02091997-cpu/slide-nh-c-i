@@ -10,7 +10,7 @@ Web làm slide ảnh cưới có tài khoản riêng cho từng người:
 - **Sách lật trang:** tải một file `.html` để khách lật từng trang như sách thật (điện thoại vuốt, máy tính bấm), hoặc video MP4 cuốn sách tự lật.
 - **Bản mini:** cùng cuốn album, PDF nhỏ 20, 15 hoặc 10 cm để tặng bố mẹ.
 - **Ảnh cổng / ảnh in lớn:** 40 × 60 đến 60 × 120 cm, tên cô dâu chú rể, ngày dương và ngày âm tự tính, logo studio; xem thử trên giá đỡ hoặc khung treo tường và tải ảnh mockup.
-- **Thiệp cưới online:** mỗi album có một link thiệp `/t/ten-co-dau-chu-re` gửi khách qua Zalo, Facebook (hiện tên và ảnh bìa khi dán link). Có màn mở thiệp kèm nhạc, tên hai gia đình, ngày dương và âm, đếm ngược, lễ và tiệc với nút Chỉ đường và Lưu vào lịch, album ảnh, khách xác nhận tham dự, sổ lời chúc, hộp mừng cưới có mã QR ngân hàng, lịch tháng khoanh tim ngày cưới. Thư viện 16 mẫu xem trước bằng ảnh của album: 7 bố cục (ảnh tràn, phong bì mở ra, khung vòm, bìa tạp chí, dải phim, scrapbook polaroid, Song Hỷ) và 9 màu. Link riêng cho từng khách hiện "Trân trọng kính mời ...", mã QR in lên thiệp giấy, tải danh sách khách ra Excel.
+- **Thiệp cưới online:** mỗi album có một link thiệp `/t/ten-co-dau-chu-re` gửi khách qua Zalo, Facebook (hiện tên và ảnh bìa khi dán link). Có màn mở thiệp kèm nhạc, tên hai gia đình, ngày dương và âm, đếm ngược, lễ và tiệc với nút Chỉ đường và Lưu vào lịch, album ảnh, khách xác nhận tham dự, sổ lời chúc, hộp mừng cưới có mã QR ngân hàng, lịch tháng khoanh tim ngày cưới. Thư viện 16 mẫu xem trước bằng ảnh của album: 7 bố cục (ảnh tràn, phong bì mở ra, khung vòm, bìa tạp chí, dải phim, scrapbook polaroid, Song Hỷ) và 9 màu. Nhạc nền chọn từ nhạc của album, tải lên ngay trong trang soạn, hoặc từ kho **Nhạc có sẵn** do admin nạp trong trang Quản lý (`supabase/music-library.sql`). Link riêng cho từng khách hiện "Trân trọng kính mời ...", mã QR in lên thiệp giấy, tải danh sách khách ra Excel.
 - **Màu cả cuốn:** một tông màu cho mọi ảnh trong album, giữ nút để so với ảnh gốc.
 - **Tự canh mặt:** tìm mặt người trong ảnh (MediaPipe, chạy ngay trên máy) rồi đặt vùng cắt cho mặt nằm đẹp trong khung.
 - **Intro, outro studio:** video mở đầu bằng logo, tên studio, kết bằng lời cảm ơn, số điện thoại, fanpage.
@@ -47,6 +47,7 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `api/clone-layout.js` | AI (Gemini) đọc ảnh một trang album mẫu, trả về vị trí khung ảnh và ô chữ để tạo layout riêng |
 | `supabase/schema.sql` | Bảng dữ liệu, phân quyền, kho lưu ảnh và nhạc |
 | `supabase/invite.sql` | Bảng thiệp online, khách trả lời, quyền cho khách xem ảnh của thiệp đã mở |
+| `supabase/music-library.sql` | Kho nhạc có sẵn dùng chung cho thiệp online (admin tải lên) |
 | `supabase/free-limits.sql` | Giới hạn bản miễn phí ở máy chủ (tối đa 10 ảnh mỗi album) |
 
 Không có bước build. Web tĩnh nằm trong `public/`, hàm máy chủ trong `api/` chạy trên Vercel.
