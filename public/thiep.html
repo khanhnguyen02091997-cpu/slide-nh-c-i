@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Thiệp cưới</title>
+<meta name="description" content="Trân trọng kính mời bạn đến chung vui cùng gia đình chúng tôi.">
+<!--og-->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Great+Vibes&display=swap">
+<link rel="stylesheet" href="/css/thiep.css">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+</head>
+<body data-tpl="ivory">
+<div class="cover-gate" id="gate" hidden>
+  <div class="env" aria-hidden="true"><div class="env-back"></div><div class="env-card"><b id="eN"></b><small id="eD"></small></div><div class="env-front"></div><div class="env-flap"></div></div>
+  <div class="gate-in">
+    <b class="hy-mark" aria-hidden="true">囍</b>
+    <p class="kicker">Thiệp mời cưới</p>
+    <div class="gate-names"><span id="gG"></span><i>&amp;</i><span id="gB"></span></div>
+    <p class="gate-date" id="gDate"></p>
+    <p class="gate-guest" id="gGuest" hidden></p>
+    <button class="open-btn" id="openBtn">Mở thiệp</button>
+  </div>
+</div>
+
+<main id="card" hidden>
+  <header class="hero" id="hero">
+    <p class="mast" aria-hidden="true">The Wedding</p>
+    <p class="issue" id="issue"></p>
+    <b class="hy-mark hy-hero" aria-hidden="true">囍</b>
+    <div class="hero-frame"><div class="hero-img" id="heroImg"></div></div>
+    <div class="strip" id="strip" aria-hidden="true"></div>
+    <div class="hero-txt">
+      <p class="kicker light" id="heroKick">Save the date</p>
+      <h1 class="names"><span id="hG"></span><i>&amp;</i><span id="hB"></span></h1>
+      <p class="hero-date" id="hDate"></p>
+    </div>
+    <a class="scroll-hint" href="#invite" aria-label="Xem tiếp">⌄</a>
+  </header>
+
+  <section class="blk invite" id="invite">
+    <p class="guest" id="guest" hidden></p>
+    <div class="fams" id="fams"></div>
+    <p class="kicker" id="greet"></p>
+    <div class="couple">
+      <div><small>Chú rể</small><b class="script" id="fG"></b></div>
+      <i class="amp">&amp;</i>
+      <div><small>Cô dâu</small><b class="script" id="fB"></b></div>
+    </div>
+    <p class="lead" id="text"></p>
+    <div class="bigdate" id="bigdate"></div>
+    <p class="lunar" id="lunar"></p>
+  </section>
+
+  <section class="blk cal" id="calBlk">
+    <h2>Lịch cưới</h2>
+    <p class="cal-h" id="calH"></p>
+    <div class="cal-g" id="cal"></div>
+  </section>
+
+  <section class="blk count" id="countBlk">
+    <p class="kicker">Đếm ngược tới ngày vui</p>
+    <div class="clock" id="clock"><div><b>0</b><span>Ngày</span></div><div><b>0</b><span>Giờ</span></div><div><b>0</b><span>Phút</span></div><div><b>0</b><span>Giây</span></div></div>
+  </section>
+
+  <section class="blk events" id="evBlk">
+    <h2>Sự kiện cưới</h2>
+    <div class="ev-list" id="events"></div>
+  </section>
+
+  <section class="blk gallery" id="galBlk">
+    <h2>Album ảnh cưới</h2>
+    <div class="gal" id="gal"></div>
+  </section>
+
+  <section class="blk rsvp" id="rsvpBlk">
+    <h2>Xác nhận tham dự</h2>
+    <p class="sub">Bạn vui lòng cho chúng mình biết bạn có đến được không nhé.</p>
+    <form id="rsvp" novalidate>
+      <label>Tên của bạn<input type="text" name="name" maxlength="80" required autocomplete="name"></label>
+      <label>Số điện thoại <small>(không bắt buộc)</small><input type="tel" name="phone" maxlength="20" autocomplete="tel"></label>
+      <fieldset class="seg"><legend>Bạn sẽ đến chứ?</legend>
+        <label><input type="radio" name="attend" value="yes" checked><span>Mình sẽ đến</span></label>
+        <label><input type="radio" name="attend" value="maybe"><span>Chưa chắc</span></label>
+        <label><input type="radio" name="attend" value="no"><span>Tiếc quá, không đến được</span></label>
+      </fieldset>
+      <div class="two">
+        <label>Đi mấy người<select name="guests"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="6">6 trở lên</option></select></label>
+        <label>Bạn là khách của<select name="side"><option value="">Cả hai</option><option value="groom">Nhà trai</option><option value="bride">Nhà gái</option></select></label>
+      </div>
+      <label>Lời chúc <small>(không bắt buộc)</small><textarea name="wish" maxlength="600" rows="3" placeholder="Chúc hai bạn trăm năm hạnh phúc..."></textarea></label>
+      <button class="send" type="submit">Gửi xác nhận</button>
+      <p class="msg" id="rsvpMsg" role="status"></p>
+    </form>
+  </section>
+
+  <section class="blk wishes" id="wishBlk">
+    <h2>Lời chúc</h2>
+    <div class="wish-list" id="wishes"></div>
+  </section>
+
+  <section class="blk gifts" id="giftBlk">
+    <h2>Hộp mừng cưới</h2>
+    <p class="sub">Sự hiện diện của bạn là món quà lớn nhất. Nếu ở xa không đến được, bạn có thể gửi lời chúc qua đây.</p>
+    <div class="gift-list" id="gifts"></div>
+  </section>
+
+  <footer class="end">
+    <p class="script" id="thanks">Thank you</p>
+    <p class="end-txt" id="thanksTxt"></p>
+    <p class="mark"><a href="/" target="_blank" rel="noopener">Làm bằng Slide Ảnh Cưới</a></p>
+  </footer>
+</main>
+
+<div class="state" id="state">Đang mở thiệp...</div>
+<button class="music" id="music" hidden aria-label="Bật tắt nhạc" aria-pressed="false">♪</button>
+<audio id="audio" loop preload="none"></audio>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Xem ảnh"><img id="lbImg" alt=""><button class="lb-x" id="lbX" aria-label="Đóng">✕</button><button class="lb-p" id="lbP" aria-label="Ảnh trước">‹</button><button class="lb-n" id="lbN" aria-label="Ảnh sau">›</button></div>
+<div class="petals" id="petals" aria-hidden="true"></div>
+
+<script src="/js/gate.js"></script>
+<script src="/js/thiep.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Thiệp online · Slide Ảnh Cưới</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1a120b">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-180.png">
+<script src="/js/pwa.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" id="back" href="/albums.html">‹ Về studio</a>
+  <div class="who"><span class="saving" id="saveState" role="status">Đang tải...</span><span id="email"></span></div>
+</div>
+<div class="page">
+  <div class="sec-h">
+    <h1>Thiệp cưới <em>online</em></h1>
+  </div>
+  <p class="note err" id="setup" hidden>Máy chủ chưa có bảng thiệp online. Vào Supabase, SQL Editor, dán file <b>supabase/invite.sql</b> rồi bấm Run, xong tải lại trang này.</p>
+
+  <div class="layout">
+    <div class="main">
+      <section class="iv-share">
+        <h2><span class="n">1</span>Link gửi khách</h2>
+        <div class="iv-link"><span id="host"></span><input type="text" id="slug" maxlength="60" spellcheck="false" autocapitalize="off" aria-label="Đuôi link thiệp"></div>
+        <p class="note" id="slugMsg" role="status"></p>
+        <label class="check"><input type="checkbox" id="published"><span><b>Mở thiệp cho khách xem</b><small>Tắt thì link báo thiệp chưa mở. Ảnh và nhạc của album này chỉ khách có link mới mở được.</small></span></label>
+        <div class="row"><button id="copyLink">Sao chép link</button><a class="btn" id="openLink" target="_blank" rel="noopener">Mở thiệp</a><button id="qrBtn">Mã QR</button></div>
+        <div class="iv-qr" id="qrBox" hidden><canvas id="qr" width="240" height="240" aria-label="Mã QR của link thiệp"></canvas><button id="qrSave">Tải ảnh QR</button></div>
+        <details class="iv-guests">
+          <summary>Link riêng cho từng khách (hiện "Trân trọng kính mời ...")</summary>
+          <label class="f wide">Mỗi dòng một tên khách<textarea id="guestNames" placeholder="Anh Minh &amp; chị Hà&#10;Gia đình cô Lan&#10;Bạn Tuấn"></textarea></label>
+          <ul class="iv-glist" id="guestLinks"></ul>
+        </details>
+      </section>
+
+      <section>
+        <h2><span class="n">2</span>Mẫu thiệp</h2>
+        <p class="hint">Mỗi mẫu xem trước bằng ảnh và tên trong album này. Bấm để dùng, sau đó vẫn đổi được bố cục, màu và kiểu chữ riêng.</p>
+        <div class="iv-lib" id="lib"></div>
+        <div class="fields">
+          <label class="f">Bố cục<select id="layout">
+            <option value="classic">Ảnh tràn màn hình</option><option value="envelope">Phong bì mở ra</option><option value="arch">Khung vòm</option><option value="magazine">Bìa tạp chí</option>
+            <option value="film">Dải phim</option><option value="scrapbook">Scrapbook, ảnh polaroid</option><option value="hy">Song Hỷ truyền thống</option>
+          </select></label>
+          <label class="f">Màu<select id="tpl">
+            <option value="ivory">Ngà cổ điển</option><option value="beige">Kem be</option><option value="blush">Hồng phấn</option><option value="wine">Đỏ đô</option><option value="red">Đỏ Song Hỷ</option>
+            <option value="sage">Xanh lá mạ</option><option value="navy">Xanh navy</option><option value="mono">Trắng xám</option><option value="night">Đêm vàng</option>
+          </select></label>
+        </div>
+        <div class="fields">
+          <label class="f">Kiểu chữ tên<select id="nameFont">
+            <option value="vibes">Great Vibes</option><option value="pinyon">Pinyon Script</option><option value="alex">Alex Brush</option><option value="corinthia">Corinthia</option>
+            <option value="dancing">Dancing Script</option><option value="playball">Playball</option><option value="charm">Charm</option><option value="pacifico">Pacifico</option><option value="lobster">Lobster</option><option value="patrick">Patrick Hand</option>
+          </select></label>
+          <label class="f">Tên ai đứng trước<select id="order"><option value="groom">Chú rể trước (nhà trai)</option><option value="bride">Cô dâu trước (lễ vu quy)</option></select></label>
+          <label class="f">Dòng chữ nhỏ trên ảnh bìa<input type="text" id="kicker" placeholder="Save the date"></label>
+        </div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="countOn" checked><span>Đếm ngược tới ngày cưới</span></label>
+          <label class="check"><input type="checkbox" id="petalsOn" checked><span>Cánh hoa rơi nhẹ</span></label>
+          <label class="check"><input type="checkbox" id="calOn" checked><span>Lịch tháng cưới, khoanh tim ngày cưới</span></label>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="n">3</span>Cô dâu chú rể</h2>
+        <div class="fields">
+          <label class="f">Tên chú rể (ngắn)<input type="text" id="groom" placeholder="Minh"></label>
+          <label class="f">Tên cô dâu (ngắn)<input type="text" id="bride" placeholder="Lan"></label>
+          <label class="f">Họ tên đầy đủ chú rể<input type="text" id="groomFull" placeholder="Nguyễn Văn Minh"></label>
+          <label class="f">Họ tên đầy đủ cô dâu<input type="text" id="brideFull" placeholder="Trần Thị Lan"></label>
+          <label class="f">Ngày cưới<input type="date" id="date"></label>
+        </div>
+        <div class="iv-fams">
+          <fieldset><legend>Nhà trai</legend>
+            <label class="f">Bố<input type="text" id="gFather" placeholder="Nguyễn Văn A"></label>
+            <label class="f">Mẹ<input type="text" id="gMother" placeholder="Lê Thị B"></label>
+            <label class="f">Địa chỉ<input type="text" id="gAddr" placeholder="Xã, huyện, tỉnh"></label>
+          </fieldset>
+          <fieldset><legend>Nhà gái</legend>
+            <label class="f">Bố<input type="text" id="bFather" placeholder="Trần Văn C"></label>
+            <label class="f">Mẹ<input type="text" id="bMother" placeholder="Phạm Thị D"></label>
+            <label class="f">Địa chỉ<input type="text" id="bAddr" placeholder="Xã, huyện, tỉnh"></label>
+          </fieldset>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="n">4</span>Lời mời</h2>
+        <div class="fields">
+          <label class="f wide">Câu mở đầu<input type="text" id="greet" placeholder="Trân trọng báo tin lễ thành hôn của con chúng tôi"></label>
+          <label class="f wide">Lời mời<textarea id="text" style="min-height:90px" placeholder="Sự hiện diện của quý khách là niềm vinh hạnh cho gia đình chúng tôi."></textarea></label>
+          <label class="f">Chữ cuối thiệp<input type="text" id="thanksTitle" placeholder="Thank you"></label>
+          <label class="f">Lời cảm ơn<input type="text" id="thanks" placeholder="Rất hân hạnh được đón tiếp!"></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-h"><h2><span class="n">5</span>Lễ và tiệc</h2><button id="addEv">＋ Thêm</button></div>
+        <p class="hint">Khách bấm được Chỉ đường (Google Maps) và Lưu vào lịch. Ngày âm lịch tự tính.</p>
+        <div class="iv-evs" id="evs"></div>
+      </section>
+
+      <section>
+        <h2><span class="n">6</span>Ảnh và nhạc</h2>
+        <p class="hint">Bấm một ảnh để đưa vào hoặc bỏ khỏi album trong thiệp. Bấm ★ để chọn làm ảnh bìa. Ảnh lấy từ album trong studio.</p>
+        <div class="grid iv-pics" id="pics"></div>
+        <div class="row"><button id="picAll">Chọn hết</button><button id="picNone">Bỏ hết</button></div>
+        <label class="f">Nhạc nền (khách bấm Mở thiệp là nhạc chạy)<select id="music"></select></label>
+      </section>
+
+      <section>
+        <div class="sec-h"><h2><span class="n">7</span>Hộp mừng cưới</h2><button id="addGift">＋ Thêm</button></div>
+        <p class="hint">Chọn ngân hàng trong danh sách thì thiệp có sẵn mã QR chuyển khoản. Để trống nếu không muốn hiện.</p>
+        <div class="iv-gifts" id="gifts"></div>
+      </section>
+
+      <section>
+        <div class="sec-h"><h2><span class="n">8</span>Khách trả lời</h2><button id="reload">↻ Tải lại</button></div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="rsvpOn" checked><span><b>Cho khách xác nhận tham dự</b><small>Khách điền tên, đến hay không, đi mấy người, lời chúc.</small></span></label>
+          <label class="check"><input type="checkbox" id="wishOn" checked><span><b>Hiện lời chúc trên thiệp</b><small>Lời chúc nào không muốn hiện thì bấm Ẩn bên dưới.</small></span></label>
+        </div>
+        <div class="iv-stats" id="stats"></div>
+        <div class="iv-table"><table class="codes"><thead><tr><th>Khách</th><th>Đến</th><th>Số người</th><th>Bên</th><th>Lời chúc</th><th></th></tr></thead><tbody id="replies"></tbody></table></div>
+        <div class="row"><button id="csv">⬇ Tải danh sách (Excel .csv)</button></div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="iv-phone"><iframe id="pv" src="/thiep.html?preview=1" title="Xem trước thiệp"></iframe></div>
+      <p class="hint" style="text-align:center">Xem trước, sửa bên trái là thiệp đổi ngay.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/invite.js"></script>
+</body>
+</html>

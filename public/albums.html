@@ -62,7 +62,7 @@
     for (const a of albums) {
       const el = document.createElement("div");
       el.className = "album";
-      el.innerHTML = `<a class="cover" href="/studio.html?album=${a.id}"></a><div class="meta"><b></b><small></small></div><div class="act"><a class="btn" href="/studio.html?album=${a.id}">Mở</a><button class="danger" data-del>Xóa</button></div>`;
+      el.innerHTML = `<a class="cover" href="/studio.html?album=${a.id}"></a><div class="meta"><b></b><small></small></div><div class="act"><a class="btn" href="/studio.html?album=${a.id}">Mở</a><a class="btn" href="/invite.html?album=${a.id}">💌 Thiệp</a><button class="danger" data-del>Xóa</button></div>`;
       const cover = el.querySelector(".cover");
       const u = urlOf[coverPath[a.id]];
       if (u) { const img = document.createElement("img"); img.src = u; img.alt = ""; cover.appendChild(img); }
