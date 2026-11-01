@@ -288,9 +288,14 @@ body[data-lay="hy"] .ev{border-color:var(--gold)}
 
 /* gallery thumbnails in the editor's template library: no motion */
 body.thumb *,body.thumb *::before,body.thumb *::after{animation:none!important;transition:none!important}
-body.thumb .scroll-hint,body.thumb .music{display:none}
+body.thumb .scroll-hint,body.thumb .music,body.thumb .gift-fab{display:none}
 body.thumb .cover-gate{position:absolute}
 
 @media (prefers-reduced-motion:reduce){.hero-img,.open-btn,.scroll-hint,.music.on{animation:none}.blk,.ev,.end{transition:none;opacity:1;transform:none}.cal-g .day::before{animation:none}}
 @media (min-width:720px){main{box-shadow:0 0 60px rgba(0,0,0,.06)}}
 body[data-lay="envelope"] .open-btn{order:-1}
+
+/* floating shortcut to the gift box (bank accounts), bottom left */
+.gift-fab{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;display:inline-flex;align-items:center;gap:6px;height:46px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--acc);font:600 14px/1 var(--sans);text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.gift-fab[hidden]{display:none}
+body:has(#card[hidden]) .gift-fab{display:none}
