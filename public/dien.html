@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Điền thông tin thiệp cưới</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+</head>
+<body class="cp">
+<div class="page cp-page">
+  <header>
+    <p class="eyebrow">Thiệp cưới online</p>
+    <h1 id="title">Thông tin <em>của hai bạn</em></h1>
+    <p class="sub" id="lead">Đang mở...</p>
+  </header>
+
+  <form id="form" class="main" hidden novalidate>
+    <section>
+      <h2><span class="n">1</span>Cô dâu chú rể</h2>
+      <div class="fields">
+        <label class="f">Tên chú rể (tên gọi)<input type="text" id="groom" maxlength="60" placeholder="Minh"></label>
+        <label class="f">Tên cô dâu (tên gọi)<input type="text" id="bride" maxlength="60" placeholder="Lan"></label>
+        <label class="f">Họ tên đầy đủ chú rể<input type="text" id="groomFull" maxlength="80" placeholder="Nguyễn Văn Minh"></label>
+        <label class="f">Họ tên đầy đủ cô dâu<input type="text" id="brideFull" maxlength="80" placeholder="Trần Thị Lan"></label>
+        <label class="f">Ngày cưới<input type="date" id="date"></label>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">2</span>Bố mẹ hai bên</h2>
+      <div class="iv-fams">
+        <fieldset><legend>Nhà trai</legend>
+          <label class="f">Bố<input type="text" id="gFather" maxlength="80" placeholder="Nguyễn Văn A"></label>
+          <label class="f">Mẹ<input type="text" id="gMother" maxlength="80" placeholder="Lê Thị B"></label>
+          <label class="f">Địa chỉ<input type="text" id="gAddr" maxlength="160" placeholder="Xã, huyện, tỉnh"></label>
+        </fieldset>
+        <fieldset><legend>Nhà gái</legend>
+          <label class="f">Bố<input type="text" id="bFather" maxlength="80" placeholder="Trần Văn C"></label>
+          <label class="f">Mẹ<input type="text" id="bMother" maxlength="80" placeholder="Phạm Thị D"></label>
+          <label class="f">Địa chỉ<input type="text" id="bAddr" maxlength="160" placeholder="Xã, huyện, tỉnh"></label>
+        </fieldset>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><h2><span class="n">3</span>Lễ và tiệc</h2><button type="button" id="addEv">＋ Thêm</button></div>
+      <p class="hint">Khách sẽ bấm được Chỉ đường và Lưu vào lịch.</p>
+      <div class="iv-evs" id="evs"></div>
+    </section>
+
+    <section>
+      <h2><span class="n">4</span>Số tài khoản nhận mừng cưới</h2>
+      <p class="hint">Chọn ngân hàng thì thiệp có sẵn mã QR để khách quét chuyển khoản. Để trống nếu không muốn hiện.</p>
+      <div class="iv-gifts" id="accs"></div>
+    </section>
+
+    <div class="cp-bar">
+      <span class="saving" id="state" role="status"></span>
+      <a class="btn" id="view" target="_blank" rel="noopener" hidden>Xem thiệp</a>
+      <button type="submit" class="go" id="saveBtn">Lưu thông tin</button>
+    </div>
+  </form>
+</div>
+<script src="/js/banks.js"></script>
+<script src="/js/dien.js"></script>
+</body>
+</html>

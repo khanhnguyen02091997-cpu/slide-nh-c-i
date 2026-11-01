@@ -366,3 +366,11 @@ input[type=time]{font:inherit;color:var(--fg);background:var(--bg);border:1px so
 #musicList input,#musicList select{font:inherit;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0;flex:1 1 120px}
 #musicList audio{height:34px;max-width:220px}
 #musicList .row{align-items:center;flex-wrap:nowrap}
+/* couple fill-in page (dien.html) and its card in the invitation editor */
+.cp-page{max-width:760px}
+.cp-bar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
+.cp-bar .saving{margin-right:auto}
+.cp-qr{display:flex;gap:12px;align-items:center}
+.cp-qr img{width:120px;height:120px;border-radius:8px;border:1px solid var(--line);background:#fff;object-fit:contain}
+.iv-couple{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.iv-couple .iv-link span{max-width:100%}

@@ -1,0 +1,2 @@
+// Vietnamese banks with their VietQR codes (BIN), for the transfer QR on the invitation's gift box.
+window.VN_BANKS = [["Vietcombank", "970436"], ["VietinBank", "970415"], ["BIDV", "970418"], ["Agribank", "970405"], ["Techcombank", "970407"], ["MB Bank", "970422"], ["ACB", "970416"], ["VPBank", "970432"], ["TPBank", "970423"], ["Sacombank", "970403"], ["VIB", "970441"], ["HDBank", "970437"], ["SHB", "970443"], ["MSB", "970426"], ["OCB", "970448"], ["SeABank", "970440"], ["Eximbank", "970431"], ["LPBank", "970449"], ["Nam A Bank", "970428"]];

@@ -41,6 +41,10 @@
     {
       "source": "/t/:slug",
       "destination": "/api/thiep?s=:slug"
+    },
+    {
+      "source": "/d/:token",
+      "destination": "/dien.html"
     }
   ]
 }
