@@ -32,6 +32,13 @@
         <label class="check"><input type="checkbox" id="published"><span><b>Mở thiệp cho khách xem</b><small>Tắt thì link báo thiệp chưa mở. Ảnh và nhạc của album này chỉ khách có link mới mở được.</small></span></label>
         <div class="row"><button id="copyLink">Sao chép link</button><a class="btn" id="openLink" target="_blank" rel="noopener">Mở thiệp</a><button id="qrBtn">Mã QR</button></div>
         <div class="iv-qr" id="qrBox" hidden><canvas id="qr" width="240" height="240" aria-label="Mã QR của link thiệp"></canvas><button id="qrSave">Tải ảnh QR</button></div>
+        <div class="iv-couple">
+          <b>Link cho cô dâu chú rể tự điền thông tin</b>
+          <p class="hint">Gửi link này cho hai bạn. Các bạn tự điền tên, bố mẹ, lễ và tiệc, số tài khoản; thiệp và trang này tự cập nhật theo. Đổi link thì link cũ hết dùng được.</p>
+          <div class="iv-link" id="cpBox" hidden><span id="cpLink"></span></div>
+          <div class="row"><button type="button" id="cpMake">Tạo link cho dâu rể</button><button type="button" id="cpCopy" hidden>Sao chép link</button><a class="btn" id="cpOpen" target="_blank" rel="noopener" hidden>Mở thử</a><button type="button" id="cpReset" hidden>Đổi link</button></div>
+          <p class="note" id="cpMsg" role="status"></p>
+        </div>
         <details class="iv-guests">
           <summary>Link riêng cho từng khách (hiện "Trân trọng kính mời ...")</summary>
           <label class="f wide">Mỗi dòng một tên khách<textarea id="guestNames" placeholder="Anh Minh &amp; chị Hà&#10;Gia đình cô Lan&#10;Bạn Tuấn"></textarea></label>
@@ -146,6 +153,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="/js/common.js"></script>
+<script src="/js/banks.js"></script>
 <script src="/js/invite.js"></script>
 </body>
 </html>

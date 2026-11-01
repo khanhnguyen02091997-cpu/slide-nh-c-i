@@ -9,8 +9,7 @@ $("email").textContent = user.email || "";
 $("back").href = "/studio.html?album=" + albumId;
 $("host").textContent = location.host + "/t/";
 
-// Banks with their VietQR codes (BIN), for the transfer QR on the gift box.
-const BANKS = [["Vietcombank", "970436"], ["VietinBank", "970415"], ["BIDV", "970418"], ["Agribank", "970405"], ["Techcombank", "970407"], ["MB Bank", "970422"], ["ACB", "970416"], ["VPBank", "970432"], ["TPBank", "970423"], ["Sacombank", "970403"], ["VIB", "970441"], ["HDBank", "970437"], ["SHB", "970443"], ["MSB", "970426"], ["OCB", "970448"], ["SeABank", "970440"], ["Eximbank", "970431"], ["LPBank", "970449"], ["Nam A Bank", "970428"]];
+const BANKS = window.VN_BANKS;
 const DEF_EVENTS = [{ title: "Lễ Thành Hôn", time: "09:00", place: "Tư gia nhà trai" }, { title: "Tiệc Cưới", time: "11:00", place: "" }];
 // The template library: a layout, a colour and a name font each. Thumbnails are live, with the album's own photos and names.
 const PRESETS = [
@@ -45,15 +44,21 @@ row = inv.data;
 d = row ? { ...row.data } : { tpl: "ivory", nameFont: (a.settings || {}).nameFont || "vibes", events: DEF_EVENTS.map((e) => ({ ...e, date: a.wedding_date || "" })), rsvp: true, wishes: true, gifts: [] };
 
 /* ----- fill the form ----- */
-$("groom").value = a.groom; $("bride").value = a.bride; $("date").value = a.wedding_date || "";
-for (const k of FIELDS) if (d[k] != null) $(k).value = d[k];
 const fam = (f) => f || {};
-$("gFather").value = fam(d.groomFam).father || ""; $("gMother").value = fam(d.groomFam).mother || ""; $("gAddr").value = fam(d.groomFam).addr || "";
-$("bFather").value = fam(d.brideFam).father || ""; $("bMother").value = fam(d.brideFam).mother || ""; $("bAddr").value = fam(d.brideFam).addr || "";
+// The fields the couple can also fill in from their own link (supabase/invite-couple.sql).
+function fillCouple() {
+  $("groom").value = album.groom; $("bride").value = album.bride; $("date").value = album.wedding_date || "";
+  for (const k of FIELDS) if (d[k] != null) $(k).value = d[k];
+  $("gFather").value = fam(d.groomFam).father || ""; $("gMother").value = fam(d.groomFam).mother || ""; $("gAddr").value = fam(d.groomFam).addr || "";
+  $("bFather").value = fam(d.brideFam).father || ""; $("bMother").value = fam(d.brideFam).mother || ""; $("bAddr").value = fam(d.brideFam).addr || "";
+}
+fillCouple();
 $("countOn").checked = d.count !== false; $("petalsOn").checked = d.petals !== false; $("calOn").checked = d.cal !== false;
 $("rsvpOn").checked = d.rsvp !== false; $("wishOn").checked = d.wishes !== false;
 $("slug").value = row ? row.slug : suggestSlug(); $("published").checked = row ? row.published : false;
 if (!d.layout) d.layout = "classic";
+// Two account cards to start with, one for the groom and one for the bride (empty ones are not shown to guests).
+if (!d.gifts || !d.gifts.length) d.gifts = [{ role: "groom", who: "Mừng cưới chú rể", bin: "", bank: "", acc: "", holder: "" }, { role: "bride", who: "Mừng cưới cô dâu", bin: "", bank: "", acc: "", holder: "" }];
 function musicOptions() {
   const mine = tracks.map((t) => `<option value="${escH(t.path)}">${escH(t.name || "Bài nhạc")}</option>`).join("");
   const moods = [...new Set(library.map((m) => m.mood || "Nhạc có sẵn"))];
@@ -148,7 +153,7 @@ $("gifts").oninput = (e) => {
   changed();
 };
 $("gifts").onclick = (e) => { const f = e.target.closest("[data-i]"); if (f && e.target.matches("[data-del]")) { d.gifts.splice(+f.dataset.i, 1); drawGifts(); changed(); } };
-$("addGift").onclick = () => { const n = (d.gifts = d.gifts || []).length; d.gifts.push({ who: n ? "Mừng cưới cô dâu" : "Mừng cưới chú rể", bin: "", bank: "", acc: "", holder: "" }); drawGifts(); changed(); };
+$("addGift").onclick = () => { const n = (d.gifts = d.gifts || []).length; d.gifts.push({ ...(n < 2 && !d.gifts.some((g) => g.role === (n ? "bride" : "groom")) ? { role: n ? "bride" : "groom" } : {}), who: n ? "Mừng cưới cô dâu" : "Mừng cưới chú rể", bin: "", bank: "", acc: "", holder: "" }); drawGifts(); changed(); };
 
 /* ----- photos: in the gallery or not, and the cover ----- */
 const inGal = () => Array.isArray(d.pics) ? d.pics : photos.slice(0, 18);
@@ -219,6 +224,8 @@ async function save() {
   if (saving) { again = true; return; }
   const slug = $("slug").value;
   if (!/^[a-z0-9][a-z0-9-]{2,59}$/.test(slug)) { $("slugMsg").textContent = "Đuôi link cần 3 đến 60 ký tự: chữ không dấu, số và dấu gạch ngang."; $("slugMsg").classList.add("err"); return; }
+  // Don't write over what the couple saved from their link meanwhile: their newer fields win.
+  if (row && row.couple_token) { try { await pull(); } catch {} }
   saving = true; $("saveState").textContent = "Đang lưu...";
   const al = { groom: $("groom").value.trim(), bride: $("bride").value.trim(), wedding_date: $("date").value || null };
   const [r1, r2] = await Promise.all([
@@ -228,7 +235,7 @@ async function save() {
   if (!r2.error) Object.assign(album, al);
   const err = r1.error || r2.error;
   if (r1.error && /duplicate|unique/i.test(r1.error.message)) { $("slugMsg").textContent = "Đuôi link này đã có người dùng, bạn đổi đuôi khác nhé."; $("slugMsg").classList.add("err"); }
-  else if (!r1.error) { $("slugMsg").textContent = $("published").checked ? "Thiệp đang mở, khách vào link là xem được." : "Thiệp đang đóng, bật \"Mở thiệp cho khách xem\" khi sẵn sàng."; $("slugMsg").classList.remove("err"); }
+  else if (!r1.error) { row = row || {}; row.slug = slug; $("slugMsg").textContent = $("published").checked ? "Thiệp đang mở, khách vào link là xem được." : "Thiệp đang đóng, bật \"Mở thiệp cho khách xem\" khi sẵn sàng."; $("slugMsg").classList.remove("err"); }
   $("saveState").textContent = err ? "Chưa lưu được" : "Đã lưu"; $("saveState").classList.toggle("dirty", !!err);
   saving = false;
   if (again) { again = false; save(); }
@@ -240,6 +247,44 @@ document.querySelector(".main").addEventListener("input", (e) => {
 });
 document.querySelector(".main").addEventListener("change", (e) => { if (e.target.matches("select, input[type=checkbox], input[type=date]") && !e.target.closest("#evs, #gifts")) changed(); });
 addEventListener("beforeunload", (e) => { if ($("saveState").classList.contains("dirty")) { save(); e.preventDefault(); } });
+
+/* ----- the couple's own link /d/<token>, and picking up what they save ----- */
+const cpUrl = () => row && row.couple_token ? location.origin + "/d/" + row.couple_token : "";
+function cpUi() {
+  const u = cpUrl();
+  $("cpBox").hidden = $("cpCopy").hidden = $("cpOpen").hidden = $("cpReset").hidden = !u; $("cpMake").hidden = !!u;
+  $("cpLink").textContent = u.replace(/^https?:\/\//, ""); $("cpOpen").href = u || "#";
+}
+async function makeToken() {
+  const b = new Uint8Array(16); crypto.getRandomValues(b); const tok = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  if (!row) { await save(); if (!row) { $("cpMsg").textContent = "Lưu thiệp trước đã (kiểm tra đuôi link ở trên) rồi tạo link nhé."; return; } }
+  const { error } = await client.from("invites").update({ couple_token: tok }).eq("album_id", albumId);
+  if (error) { $("cpMsg").textContent = /couple_token/.test(error.message) ? "Máy chủ chưa có phần này. Vào Supabase, SQL Editor, chạy file supabase/invite-couple.sql rồi thử lại." : "Chưa tạo được link: " + error.message; $("cpMsg").classList.add("err"); return; }
+  row.couple_token = tok; $("cpMsg").textContent = "Đã tạo link. Bấm Sao chép rồi gửi cho cô dâu chú rể qua Zalo, Messenger..."; $("cpMsg").classList.remove("err"); cpUi();
+}
+$("cpMake").onclick = makeToken;
+$("cpReset").onclick = () => { if (confirm("Đổi link mới? Link cũ đã gửi cho dâu rể sẽ không dùng được nữa.")) makeToken(); };
+$("cpCopy").onclick = () => copyText(cpUrl(), $("cpCopy"));
+cpUi();
+const COUPLE_KEYS = ["groomFull", "brideFull", "groomFam", "brideFam", "events", "gifts"];
+// When the couple saved something new, take it into this page (their fields only) and say so.
+async function pull() {
+  if (!ready || !row || saving) return false;
+  const [{ data: iv }, { data: al }] = await Promise.all([
+    client.from("invites").select("data").eq("album_id", albumId).maybeSingle(),
+    client.from("albums").select("groom,bride,wedding_date").eq("id", albumId).single(),
+  ]);
+  if (!iv || !iv.data || !iv.data.coupleAt || iv.data.coupleAt === d.coupleAt) return false;
+  for (const k of COUPLE_KEYS) if (k in iv.data) d[k] = iv.data[k];
+  d.coupleAt = iv.data.coupleAt;
+  if (al) Object.assign(album, al);
+  fillCouple(); drawEvents(); drawGifts(); preview(); thumbsSoon();
+  $("cpMsg").textContent = "Cô dâu chú rể vừa cập nhật thông tin (" + new Date(d.coupleAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + "). Thiệp đã có thông tin mới."; $("cpMsg").classList.remove("err");
+  return true;
+}
+const busyTyping = () => $("saveState").classList.contains("dirty");
+setInterval(() => { if (!document.hidden && row && row.couple_token && !busyTyping()) pull().catch(() => {}); }, 15000);
+addEventListener("focus", () => { if (row && row.couple_token && !busyTyping()) pull().catch(() => {}); });
 
 /* ----- guest replies ----- */
 const ATT = { yes: "Đến", no: "Không đến", maybe: "Chưa chắc" }, SIDE = { groom: "Nhà trai", bride: "Nhà gái", "": "" };

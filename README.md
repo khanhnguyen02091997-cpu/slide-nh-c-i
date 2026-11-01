@@ -47,6 +47,7 @@ Web là PWA: mở bằng Chrome hoặc Edge, bấm **📲 Cài app** ở góc tr
 | `api/clone-layout.js` | AI (Gemini) đọc ảnh một trang album mẫu, trả về vị trí khung ảnh và ô chữ để tạo layout riêng |
 | `supabase/schema.sql` | Bảng dữ liệu, phân quyền, kho lưu ảnh và nhạc |
 | `supabase/invite.sql` | Bảng thiệp online, khách trả lời, quyền cho khách xem ảnh của thiệp đã mở |
+| `supabase/invite-couple.sql` | Link `/d/<mã>` cho cô dâu chú rể tự điền tên, bố mẹ, lễ tiệc, số tài khoản; lưu thẳng vào thiệp |
 | `supabase/music-library.sql` | Kho nhạc có sẵn dùng chung cho thiệp online (admin tải lên) |
 | `supabase/free-limits.sql` | Giới hạn bản miễn phí ở máy chủ (tối đa 10 ảnh mỗi album) |
 
@@ -57,7 +58,7 @@ Không có bước build. Web tĩnh nằm trong `public/`, hàm máy chủ trong
 ### 1. Supabase (tài khoản, dữ liệu, lưu ảnh)
 
 1. Tạo project miễn phí tại https://supabase.com.
-2. Vào **SQL Editor > New query**, dán toàn bộ `supabase/schema.sql`, bấm **Run**. Sau đó làm tương tự với `supabase/free-limits.sql` và `supabase/invite.sql` (thiệp online).
+2. Vào **SQL Editor > New query**, dán toàn bộ `supabase/schema.sql`, bấm **Run**. Sau đó làm tương tự với `supabase/free-limits.sql`, `supabase/invite.sql` (thiệp online) và `supabase/invite-couple.sql` (link cho dâu rể tự điền).
 3. Vào **Authentication > URL Configuration**:
    - **Site URL**: địa chỉ web của bạn, ví dụ `https://slide-cuoi.vercel.app`
    - **Redirect URLs**: thêm `https://slide-cuoi.vercel.app/**`
