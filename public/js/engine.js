@@ -656,7 +656,11 @@ function build(mode,n,cfg){
       r++;const o=[...ord];if(cfg.shuffle)for(let i=n-1;i>0;i--){const j=Math.random()*(i+1)|0;[o[i],o[j]]=[o[j],o[i]]}
       for(const i of o){if(tot+pd+end.dur>cfg.fill+.01)break;s.push({type:"photo",i,name:"Ảnh "+(i+1)+" · vòng "+r,dur:pd});tot+=pd}
     }
-    end.dur=Math.max(end.dur,cfg.fill-tot);s.push(end);
+    // what is left (less than one photo) becomes one shorter photo, so the thank-you card never hangs on
+    const left=cfg.fill-tot-end.dur;
+    if(left>=2){const i=ord[(s.filter(x=>x.type==="photo").length)%n];s.push({type:"photo",i,name:"Ảnh "+(i+1)+" · vòng "+r,dur:left})}
+    else if(left>0)end.dur+=left;
+    s.push(end);
   }
   s.forEach((x,j)=>x.k=j);return s;
 }
