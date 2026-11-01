@@ -140,7 +140,7 @@ async function load() {
   if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
   $("letB").value = s.letB || ""; $("letG").value = s.letG || "";
-  $("fitMusic").checked = s.fit !== false;
+  $("fitMusic").checked = s.fit !== false; $("loopMusic").checked = !!s.loopMusic;
   if (s.book) $("bookSize").value = String(s.book);
   if (PhotoBook.LAYOUT[s.bookLay] || s.bookLay === "mix") bookLay = s.bookLay;
   if (s.bookAuto && typeof s.bookAuto === "object") bookAuto = { ...bookAuto, ...s.bookAuto };
@@ -419,19 +419,23 @@ async function analyzeAll() {
 }
 function fitted(mode) {
   const base = +$("sec").value, n = Math.max(1, photos.length);
-  if (!$("fitMusic").checked || !fitInfo || mode === "stage") return { sec: base };
+  // "Ảnh lặp lại đến hết bài nhạc": every photo keeps the chosen length and the photos go round again until the music ends.
+  const loop = $("loopMusic").checked && !!fitInfo && (mode === "video" || mode === "deliver");
+  if ((!$("fitMusic").checked && !loop) || !fitInfo || mode === "stage") return { sec: base };
   let sec = base;
-  if (mode === "video" || mode === "deliver") {
+  if (!loop && (mode === "video" || mode === "deliver")) {
     // Opening max(6,sec) + n photos + 7 s thank-you = length of the music.
     const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0;
     const M = fitInfo.dur - L; sec = (M - 13) / (n + C); if (sec >= 6) sec = (M - 7) / (n + 1 + C);
     sec = Math.min(15, Math.max(2.5, sec));
   }
-  if (!fitInfo.bpm) return { sec, auto: true };
-  let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
-  return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
+  let beat = 0;
+  if ($("fitMusic").checked && fitInfo.bpm) { beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2; sec = Math.max(2, Math.round(sec / beat)) * beat; }
+  const beat0 = beat ? fitInfo.beat0 : 0, d = (x) => beat ? Math.max(2, Math.round(x / beat)) * beat : x;
+  const fill = loop ? fitInfo.dur - (beat0 || 0) - (mode === "video" && $("stIntro").checked ? d(4.5) + d(6) : 0) : 0;
+  return { sec, beat, beat0, bpm: beat ? fitInfo.bpm : 0, auto: !loop, loop, fill };
 }
-function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean), ...fxCfg() }; }
+function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, fill: f.fill || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean), ...fxCfg() }; }
 // Title template, colour looks (whole slide and per photo), chapter cards keyed by photo index, one subtitle line per photo.
 function fxCfg() {
   const chap = {}; for (const l of $("chap").value.split("\n")) { const m = l.match(/^\s*(\d+)\s*[:.)\-]\s*(.+)$/); if (m && +m[1] >= 1) chap[+m[1] - 1] = m[2].trim().normalize("NFC"); }
@@ -440,7 +444,7 @@ function fxCfg() {
 function lookMap() { const m = {}; for (const p of photos) if (p.path && p.look) m[p.path] = p.look; return m; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, loopMusic: $("loopMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -1155,7 +1159,7 @@ function refresh() {
 function showSec(mode) {
   const f = fitted(mode), whole = (mode === "video" || mode === "deliver") && f.auto;
   $("sec").disabled = whole;
-  $("secVal").textContent = (f.auto ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "") : "");
+  $("secVal").textContent = (f.auto || f.beat ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" : f.loop ? " · lặp đến hết nhạc" : "") + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "");
 }
 $("sec").addEventListener("input", () => showSec(val("mode")));
 

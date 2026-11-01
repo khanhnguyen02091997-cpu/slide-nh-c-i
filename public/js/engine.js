@@ -648,6 +648,16 @@ function build(mode,n,cfg){
   }
   // Fit to music: every scene lasts a whole number of beats, so cuts land on the beat.
   if(cfg.beat>0&&mode!=="stage")s.forEach(x=>x.dur=Math.max(2,Math.round(x.dur/cfg.beat))*cfg.beat);
+  // Loop to the music: after the first round the photos go round again (no extras) until cfg.fill seconds, then the thank-you card.
+  if(cfg.fill>0&&n&&(mode==="video"||mode==="deliver")&&s.length&&s[s.length-1].type==="end"){
+    const snap=x=>cfg.beat>0?Math.max(2,Math.round(x/cfg.beat))*cfg.beat:x,pd=snap(sec),end=s.pop();
+    let tot=s.reduce((a,x)=>a+x.dur,0),r=1;
+    while(tot+pd+end.dur<=cfg.fill+.01&&r<500){
+      r++;const o=[...ord];if(cfg.shuffle)for(let i=n-1;i>0;i--){const j=Math.random()*(i+1)|0;[o[i],o[j]]=[o[j],o[i]]}
+      for(const i of o){if(tot+pd+end.dur>cfg.fill+.01)break;s.push({type:"photo",i,name:"Ảnh "+(i+1)+" · vòng "+r,dur:pd});tot+=pd}
+    }
+    end.dur=Math.max(end.dur,cfg.fill-tot);s.push(end);
+  }
   s.forEach((x,j)=>x.k=j);return s;
 }
 
