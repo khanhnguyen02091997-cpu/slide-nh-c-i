@@ -140,7 +140,7 @@ async function load() {
   if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
   $("letB").value = s.letB || ""; $("letG").value = s.letG || "";
-  $("fitMusic").checked = s.fit !== false; $("loopMusic").checked = !!s.loopMusic;
+  $("loopMusic").checked = !!s.loopMusic; $("fitMusic").checked = s.fit !== false && !s.loopMusic;
   if (s.book) $("bookSize").value = String(s.book);
   if (PhotoBook.LAYOUT[s.bookLay] || s.bookLay === "mix") bookLay = s.bookLay;
   if (s.bookAuto && typeof s.bookAuto === "object") bookAuto = { ...bookAuto, ...s.bookAuto };
@@ -418,22 +418,26 @@ async function analyzeAll() {
   refresh();
 }
 function fitted(mode) {
-  const base = +$("sec").value, n = Math.max(1, photos.length);
-  // "Ảnh lặp lại đến hết bài nhạc": every photo keeps the chosen length and the photos go round again until the music ends.
-  const loop = $("loopMusic").checked && !!fitInfo && (mode === "video" || mode === "deliver");
-  if ((!$("fitMusic").checked && !loop) || !fitInfo || mode === "stage") return { sec: base };
+  const base = +$("sec").value, n = Math.max(1, photos.length), long = mode === "video" || mode === "deliver";
+  if (!fitInfo || mode === "stage") return { sec: base };
+  // Two separate ways to follow the music (only one can be on):
+  // "Ảnh lặp lại đến hết bài nhạc": every photo keeps exactly the chosen seconds and the photos go round again until the music ends.
+  if (long && $("loopMusic").checked) {
+    const fill = fitInfo.dur - ($("stIntro").checked && mode === "video" ? 10.5 : 0);
+    return { sec: base, loop: true, fill };
+  }
+  // "Tự khớp ảnh với nhạc": the photos are stretched so one round lasts the whole song, and cuts land on the beat.
+  if (!$("fitMusic").checked) return { sec: base };
   let sec = base;
-  if (!loop && (mode === "video" || mode === "deliver")) {
+  if (long) {
     // Opening max(6,sec) + n photos + 7 s thank-you = length of the music.
     const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0;
     const M = fitInfo.dur - L; sec = (M - 13) / (n + C); if (sec >= 6) sec = (M - 7) / (n + 1 + C);
     sec = Math.min(15, Math.max(2.5, sec));
   }
-  let beat = 0;
-  if ($("fitMusic").checked && fitInfo.bpm) { beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2; sec = Math.max(2, Math.round(sec / beat)) * beat; }
-  const beat0 = beat ? fitInfo.beat0 : 0, d = (x) => beat ? Math.max(2, Math.round(x / beat)) * beat : x;
-  const fill = loop ? fitInfo.dur - (beat0 || 0) - (mode === "video" && $("stIntro").checked ? d(4.5) + d(6) : 0) : 0;
-  return { sec, beat, beat0, bpm: beat ? fitInfo.bpm : 0, auto: !loop, loop, fill };
+  if (!fitInfo.bpm) return { sec, auto: true };
+  let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
+  return { sec: Math.max(2, Math.round(sec / beat)) * beat, beat, beat0: fitInfo.beat0, bpm: fitInfo.bpm, auto: true };
 }
 function cfg(mode = val("mode")) { const f = fitted(mode); return { mark: plan.pro ? "" : MARK, trans: "auto", trs: transList(), frame: $("frame").value, ldur: letterDur(), collage: LETTER_STYLES.includes(val("style")), sec: f.sec, beat: f.beat || 0, beat0: f.beat0 || 0, fill: f.fill || 0, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value.split("\n").map((s) => s.trim().normalize("NFC")).filter(Boolean), ...fxCfg() }; }
 // Title template, colour looks (whole slide and per photo), chapter cards keyed by photo index, one subtitle line per photo.
@@ -1159,9 +1163,13 @@ function refresh() {
 function showSec(mode) {
   const f = fitted(mode), whole = (mode === "video" || mode === "deliver") && f.auto;
   $("sec").disabled = whole;
-  $("secVal").textContent = (f.auto || f.beat ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" : f.loop ? " · lặp đến hết nhạc" : "") + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "");
+  const wantMusic = (mode === "video" || mode === "deliver") && $("loopMusic").checked && !tracks.length;
+  $("secVal").textContent = (f.auto ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "") : f.loop ? " · lặp đến hết nhạc" : wantMusic ? " · thêm nhạc để lặp ảnh theo bài" : "");
 }
 $("sec").addEventListener("input", () => showSec(val("mode")));
+// "Tự khớp ảnh với nhạc" and "Ảnh lặp lại đến hết bài nhạc" are two different ways; turning one on turns the other off.
+$("fitMusic").addEventListener("change", () => { if ($("fitMusic").checked) $("loopMusic").checked = false; });
+$("loopMusic").addEventListener("change", () => { if ($("loopMusic").checked) $("fitMusic").checked = false; });
 
 function openPlayer(mode) {
   pvHold = true;
