@@ -114,6 +114,7 @@ function render(model) {
   }).join("");
   $("gifts").querySelectorAll("[data-copy]").forEach((bt) => bt.onclick = () => copy(gifts[+bt.dataset.copy].acc.replace(/\s/g, ""), bt));
   $("giftBlk").hidden = !gifts.length;
+  $("giftFab").hidden = !gifts.length;
 
   text($("thanks"), d.thanksTitle || "Thank you");
   text($("thanksTxt"), d.thanks || "Rất hân hạnh được đón tiếp!");
