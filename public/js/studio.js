@@ -1185,8 +1185,95 @@ async function exportVideo() {
   let lastE = 0;
   record({ cv, dur, vertical, beat0: c.beat0, name: slug() + (vertical ? "-doc" : ""), draw: (e) => { eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv); } });
 }
-/* Record a canvas animation as a video with the album's music: draw(e) paints second e. */
-async function record({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
+/* Record a canvas animation as a video with the album's music: draw(e) paints second e.
+   Chrome/Edge: render frame by frame at exactly 30 fps with WebCodecs and mux an MP4, so the file is smooth
+   however slow the computer is and even if the tab is hidden. Other browsers: live capture (recordLive). */
+async function record(o) {
+  let r = "no";
+  try { r = await recordOffline(o); } catch (e) { console.warn("offline export failed", e); r = "no"; }
+  if (r === "no") return recordLive(o);
+}
+const FPS = 30;
+const nextTask = () => new Promise((r) => { const m = new MessageChannel(); m.port1.onmessage = () => r(); m.port2.postMessage(0); });
+let muxerLib = null;
+function loadMuxer() { return muxerLib || (muxerLib = new Promise((ok, no) => { if (window.Mp4Muxer) return ok(window.Mp4Muxer); const s = document.createElement("script"); s.src = "/js/vendor/mp4-muxer.js"; s.onload = () => ok(window.Mp4Muxer); s.onerror = () => { muxerLib = null; no(new Error("muxer")); }; document.head.appendChild(s); })); }
+async function pickVideoCfg(W, H) {
+  const bitrate = Math.max(W, H) >= 1920 ? 10e6 : 6e6;
+  for (const codec of ["avc1.640028", "avc1.4d0028", "avc1.420028", "avc1.42001f"]) {
+    const cfg = { codec, width: W, height: H, bitrate, framerate: FPS, avc: { format: "avc" } };
+    try { if ((await VideoEncoder.isConfigSupported(cfg)).supported) return cfg; } catch {}
+  }
+  return null;
+}
+async function pickAudioCfg() {
+  for (const [codec, mux] of [["mp4a.40.2", "aac"], ["opus", "opus"]]) {
+    const cfg = { codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 192000 };
+    try { if ((await AudioEncoder.isConfigSupported(cfg)).supported) return { cfg, mux }; } catch {}
+  }
+  return null;
+}
+/* The album's music for dur seconds, mixed offline (same looping and fades as the live path). */
+async function mixMusic(dur, beat0) {
+  if (!tracks.length || !window.OfflineAudioContext) return null;
+  const sr = 48000, ac = new OfflineAudioContext(2, Math.ceil(dur * sr), sr), bufs = [];
+  for (const t of tracks) { try { bufs.push(await ac.decodeAudioData(await (await trackFile(t)).arrayBuffer())); } catch {} }
+  if (!bufs.length) return null;
+  const gain = ac.createGain(); gain.connect(ac.destination);
+  let at = 0, j = 0;
+  while (at < dur) { const s = ac.createBufferSource(); s.buffer = bufs[j % bufs.length]; s.connect(gain); const off = j === 0 ? Math.max(0, Math.min(beat0 || 0, s.buffer.duration - 1)) : 0; s.start(at, off); at += s.buffer.duration - off; j++; }
+  gain.gain.setValueAtTime(0, 0); gain.gain.linearRampToValueAtTime(1, 1.5); gain.gain.setValueAtTime(1, Math.max(1.6, dur - 3)); gain.gain.linearRampToValueAtTime(0, dur);
+  return ac.startRendering();
+}
+async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
+  if (!window.VideoEncoder || !window.VideoFrame) return "no";
+  const vcfg = await pickVideoCfg(cv.width, cv.height); if (!vcfg) return "no";
+  const M = await loadMuxer().catch(() => null); if (!M) return "no";
+  $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị nhạc...";
+  pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", !!vertical); $("pvBox").style.aspectRatio = `${cv.width} / ${cv.height}`; sizePv();
+  let cancelled = false, err = null, venc = null, aenc = null; cancelRec = () => { cancelled = true; };
+  const done = () => { pvHold = false; $("go").disabled = false; busy(false); $("vprog").hidden = true; cancelRec = null; refresh(); };
+  try {
+    const music = tracks.length && window.AudioEncoder ? await mixMusic(dur, beat0) : null;
+    const acfg = music ? await pickAudioCfg() : null;
+    const muxer = new M.Muxer({ target: new M.ArrayBufferTarget(), fastStart: "in-memory", firstTimestampBehavior: "offset",
+      video: { codec: "avc", width: cv.width, height: cv.height, frameRate: FPS }, ...(acfg ? { audio: { codec: acfg.mux, numberOfChannels: 2, sampleRate: 48000 } } : {}) });
+    if (acfg && !cancelled) {
+      aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { err = e; } }); aenc.configure(acfg.cfg);
+      const L = music.getChannelData(0), R = music.getChannelData(1), step = 4800;
+      for (let i = 0; i < music.length && !err; i += step) {
+        const n = Math.min(step, music.length - i), d = new Float32Array(n * 2); d.set(L.subarray(i, i + n), 0); d.set(R.subarray(i, i + n), n);
+        const a = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i / 48000 * 1e6), data: d });
+        aenc.encode(a); a.close();
+      }
+      await aenc.flush(); aenc.close(); aenc = null;
+    }
+    venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { err = e; } }); venc.configure(vcfg);
+    const N = Math.ceil(dur * FPS), us = 1e6 / FPS; let shown = 0;
+    for (let i = 0; i < N; i++) {
+      if (cancelled || err) break;
+      draw(i / FPS);
+      const f = new VideoFrame(cv, { timestamp: Math.round(i * us), duration: Math.round(us) });
+      venc.encode(f, { keyFrame: i % (FPS * 2) === 0 }); f.close();
+      while (venc.encodeQueueSize > 6 && !err) await nextTask();
+      const now = performance.now();
+      if (now - shown > 120) { shown = now; pctx.drawImage(cv, 0, 0, pv.width, pv.height); $("vbar").style.width = (i / N * 100) + "%"; $("vtxt").textContent = `Đang dựng ${label} ` + Math.floor(i / N * 100) + "% (" + fmtDur(i / FPS) + " / " + fmtDur(dur) + ")"; await nextTask(); }
+    }
+    if (cancelled) { try { venc.close(); } catch {} done(); return "ok"; }
+    if (err) throw err;
+    $("vtxt").textContent = "Đang đóng gói MP4...";
+    await venc.flush(); venc.close(); venc = null; muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
+    saveFile(blob, name + ".mp4");
+    done();
+    $("goNote").classList.remove("err");
+    $("goNote").textContent = `Đã xuất ${label} MP4 (` + (blob.size / 1048576).toFixed(1) + " MB, " + FPS + " hình/giây)." + (music && !acfg ? " Trình duyệt này không nén được âm thanh nên video không có nhạc; thử Chrome bản mới." : "");
+    return "ok";
+  } catch (e) {
+    console.warn(e); try { venc && venc.close(); aenc && aenc.close(); } catch {}
+    done(); return "no";
+  }
+}
+async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
   const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
   draw(0);
   const stream = cv.captureStream(30); let ac = null;
@@ -1219,7 +1306,7 @@ async function record({ cv, dur, draw, name, vertical, beat0 = 0, label = "video
   iv = setInterval(() => {
     const e = (performance.now() - t0) / 1000; draw(e);
     pctx.drawImage(cv, 0, 0, pv.width, pv.height);
-    $("vbar").style.width = Math.min(100, e / dur * 100) + "%"; $("vtxt").textContent = `Đang dựng ${label} ` + fmtDur(Math.min(e, dur)) + " / " + fmtDur(dur);
+    $("vbar").style.width = Math.min(100, e / dur * 100) + "%"; $("vtxt").textContent = `Đang quay ${label} ` + fmtDur(Math.min(e, dur)) + " / " + fmtDur(dur) + ". Giữ nguyên tab này, đừng chuyển tab.";
     if (e >= dur + .3) finish();
   }, 1000 / 30);
 }
