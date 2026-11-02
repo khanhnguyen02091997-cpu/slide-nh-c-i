@@ -490,6 +490,13 @@ function framed(style,c,W,H,ph,p,i,info,t,frame){
   if(frame==="full"){cover(c,ph.c,0,0,W,H,k.z,k.px,k.py);
     if(info.cap){const g=c.createLinearGradient(0,H*.6,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.6)");c.fillStyle=g;c.fillRect(0,0,W,H);P.cap(c,W,H-80*u,info,t,u)}
     c.restore();return}
+  // Whole photo as large as the frame allows (a portrait fills the full height), the same photo blurred behind it.
+  // Gives the photo the most pixels of any frame, so it is the sharpest in an exported video.
+  if(frame==="fit"){cover(c,ph.b,0,0,W,H,1.1);c.fillStyle="rgba(0,0,0,.12)";c.fillRect(0,0,W,H);
+    const r=fit(ph.ar,0,0,W,H);c.save();c.shadowColor="rgba(0,0,0,.35)";c.shadowBlur=30*u;c.fillStyle="#000";c.fillRect(r.x,r.y,r.w,r.h);c.restore();
+    c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();cover(c,ph.c,r.x,r.y,r.w,r.h,1+(k.z-1)*.6,k.px,k.py);c.restore();
+    if(info.cap){const g=c.createLinearGradient(0,H*.7,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.55)");c.fillStyle=g;c.fillRect(0,0,W,H);P.cap(c,W,H-70*u,info,t,u)}
+    c.restore();return}
   const bot=info.cap?H*.17:H*.06,top=H*.06,bx=W*.07,bw=W*.86,bh=H-top-bot;
   const shadow=()=>{c.shadowColor="rgba(0,0,0,.45)";c.shadowBlur=40*u;c.shadowOffsetY=10*u};
   const photoIn=(path,r)=>{c.save();path();c.clip();cover(c,ph.c,r.x,r.y,r.w,r.h,k.z,k.px,k.py);c.restore()};
