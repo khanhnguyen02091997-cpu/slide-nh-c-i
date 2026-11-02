@@ -1193,7 +1193,7 @@ async function exportVideo() {
   const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const vp = vidPhotos(), c = vidCfg(cfg("video")), scenes = withStudio(SE.build("video", vp.length, c)), dur = SE.total(scenes);
-  const eng = SE.Engine(cv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false });
+  const eng = SE.Engine(cv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false, hq: true });
   let lastE = 0;
   record({ cv, dur, vertical, beat0: c.beat0, name: slug() + (vertical ? "-doc" : ""), draw: (e) => { eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv); } });
 }
@@ -1201,18 +1201,24 @@ async function exportVideo() {
    Chrome/Edge: render frame by frame at exactly 30 fps with WebCodecs and mux an MP4, so the file is smooth
    however slow the computer is and even if the tab is hidden. Other browsers: live capture (recordLive). */
 async function record(o) {
-  let r = "no";
-  try { r = await recordOffline(o); } catch (e) { console.warn("offline export failed", e); r = "no"; }
-  if (r === "no") return recordLive(o);
+  // Hardware encoder first; if it is missing or breaks mid-way, the browser's software encoder. Only then the live capture,
+  // which is real-time and drops frames on a slow or busy computer, so it is the last resort.
+  for (const sw of [false, true]) {
+    let r = "no";
+    try { r = await recordOffline(o, sw); } catch (e) { console.warn("offline export failed", e); r = "no"; }
+    if (r !== "no") return;
+  }
+  return recordLive(o);
 }
 const FPS = 30;
 const nextTask = () => new Promise((r) => { const m = new MessageChannel(); m.port1.onmessage = () => r(); m.port2.postMessage(0); });
 let muxerLib = null;
 function loadMuxer() { return muxerLib || (muxerLib = new Promise((ok, no) => { if (window.Mp4Muxer) return ok(window.Mp4Muxer); const s = document.createElement("script"); s.src = "/js/vendor/mp4-muxer.js"; s.onload = () => ok(window.Mp4Muxer); s.onerror = () => { muxerLib = null; no(new Error("muxer")); }; document.head.appendChild(s); })); }
-async function pickVideoCfg(W, H) {
-  const bitrate = Math.max(W, H) >= 1920 ? 10e6 : 6e6;
-  for (const codec of ["avc1.640028", "avc1.4d0028", "avc1.420028", "avc1.42001f"]) {
-    const cfg = { codec, width: W, height: H, bitrate, framerate: FPS, avc: { format: "avc" } };
+async function pickVideoCfg(W, H, sw) {
+  // Slow zooms over soft wedding photos and blurred backgrounds need plenty of bits or they smear and band.
+  const bitrate = Math.max(W, H) >= 1920 ? 16e6 : 8e6;
+  for (const codec of ["avc1.640028", "avc1.4d0028", "avc1.420028", "avc1.64002a", "avc1.42002a"]) {
+    const cfg = { codec, width: W, height: H, bitrate, framerate: FPS, avc: { format: "avc" }, hardwareAcceleration: sw ? "prefer-software" : "no-preference" };
     try { if ((await VideoEncoder.isConfigSupported(cfg)).supported) return cfg; } catch {}
   }
   return null;
@@ -1236,9 +1242,24 @@ async function mixMusic(dur, beat0) {
   gain.gain.setValueAtTime(0, 0); gain.gain.linearRampToValueAtTime(1, 1.5); gain.gain.setValueAtTime(1, Math.max(1.6, dur - 3)); gain.gain.linearRampToValueAtTime(0, dur);
   return ac.startRendering();
 }
-async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
+/* An mp4-muxer target that keeps the file as Blob pieces (which the browser may hold on disk) rather than one growing
+   ArrayBuffer: a few minutes of 1080p ran out of memory there, and the export then fell back to the blurry live capture.
+   Later writes into bytes already stored (the muxer patches the mdat size at the end) are spliced into those pieces. */
+function blobTarget(M) {
+  const parts = []; let end = 0;
+  const target = new M.StreamTarget({ chunked: true, chunkSize: 4 << 20, onData: (d, pos) => {
+    for (const p of parts) {
+      const a = Math.max(pos, p.pos), b = Math.min(pos + d.length, p.pos + p.size);
+      if (a < b) p.blob = new Blob([p.blob.slice(0, a - p.pos), d.subarray(a - pos, b - pos), p.blob.slice(b - p.pos)]);
+    }
+    if (pos > end) { parts.push({ pos: end, size: pos - end, blob: new Blob([new Uint8Array(pos - end)]) }); end = pos; }
+    if (pos + d.length > end) { const s = end; parts.push({ pos: s, size: pos + d.length - s, blob: new Blob([d.subarray(s - pos)]) }); end = pos + d.length; }
+  } });
+  return { target, blob: () => new Blob(parts.map((p) => p.blob), { type: "video/mp4" }) };
+}
+async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }, sw = false) {
   if (!window.VideoEncoder || !window.VideoFrame) return "no";
-  const vcfg = await pickVideoCfg(cv.width, cv.height); if (!vcfg) return "no";
+  const vcfg = await pickVideoCfg(cv.width, cv.height, sw); if (!vcfg) return "no";
   const M = await loadMuxer().catch(() => null); if (!M) return "no";
   $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0"; $("vtxt").textContent = "Đang chuẩn bị nhạc...";
   pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", !!vertical); $("pvBox").style.aspectRatio = `${cv.width} / ${cv.height}`; sizePv();
@@ -1247,7 +1268,8 @@ async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label =
   try {
     const music = tracks.length && window.AudioEncoder ? await mixMusic(dur, beat0) : null;
     const acfg = music ? await pickAudioCfg() : null;
-    const muxer = new M.Muxer({ target: new M.ArrayBufferTarget(), fastStart: "in-memory", firstTimestampBehavior: "offset",
+    const out = blobTarget(M);
+    const muxer = new M.Muxer({ target: out.target, fastStart: false, firstTimestampBehavior: "offset",
       video: { codec: "avc", width: cv.width, height: cv.height, frameRate: FPS }, ...(acfg ? { audio: { codec: acfg.mux, numberOfChannels: 2, sampleRate: 48000 } } : {}) });
     if (acfg && !cancelled) {
       aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { err = e; } }); aenc.configure(acfg.cfg);
@@ -1274,14 +1296,14 @@ async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label =
     if (err) throw err;
     $("vtxt").textContent = "Đang đóng gói MP4...";
     await venc.flush(); venc.close(); venc = null; muxer.finalize();
-    const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
+    const blob = out.blob();
     saveFile(blob, name + ".mp4");
     done();
     $("goNote").classList.remove("err");
     $("goNote").textContent = `Đã xuất ${label} MP4 (` + (blob.size / 1048576).toFixed(1) + " MB, " + FPS + " hình/giây)." + (music && !acfg ? " Trình duyệt này không nén được âm thanh nên video không có nhạc; thử Chrome bản mới." : "");
     return "ok";
   } catch (e) {
-    console.warn(e); try { venc && venc.close(); aenc && aenc.close(); } catch {}
+    console.warn("offline export failed (" + (sw ? "software" : "hardware") + " encoder)", e); try { venc && venc.close(); aenc && aenc.close(); } catch {}
     done(); return "no";
   }
 }
@@ -1300,12 +1322,19 @@ async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "v
       stream.addTrack(dest.stream.getAudioTracks()[0]);
     }
   }
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: vertical ? 9e6 : 12e6 }), chunks = [];
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16e6 }), chunks = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   let cancelled = false; cancelRec = () => { cancelled = true; finish(); };
   pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", !!vertical); $("pvBox").style.aspectRatio = `${cv.width} / ${cv.height}`; sizePv();
-  let iv = 0, t0 = 0;
-  function finish() { clearInterval(iv); if (rec.state !== "inactive") rec.stop(); }
+  let iv = 0, t0 = 0, hidAt = 0;
+  // A hidden or minimised tab gets about one timer tick a second, which used to leave the video stuck on one frame per
+  // second (the "blurry, jerky" export). Pause the recording and the music while hidden and carry on when the tab is back.
+  const onVis = () => {
+    if (document.hidden) { if (rec.state === "recording") { rec.pause(); ac && ac.suspend(); hidAt = performance.now(); } }
+    else if (hidAt) { t0 += performance.now() - hidAt; hidAt = 0; ac && ac.resume(); if (rec.state === "paused") rec.resume(); }
+  };
+  document.addEventListener("visibilitychange", onVis);
+  function finish() { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); if (rec.state !== "inactive") rec.stop(); }
   rec.onstop = () => {
     stream.getTracks().forEach((t) => t.stop()); ac && ac.close(); pvHold = false; $("go").disabled = false; busy(false); $("vprog").hidden = true;
     if (cancelled) { refresh(); return; }
@@ -1314,8 +1343,9 @@ async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "v
     $("goNote").textContent = `Đã xuất ${label} ` + ext.toUpperCase() + " (" + (blob.size / 1048576).toFixed(1) + " MB)." + (ext === "webm" ? " Trình duyệt này chỉ quay được WebM; muốn MP4 thì dùng Chrome bản mới." : "");
     refresh();
   };
-  rec.start(1000); t0 = performance.now();
+  rec.start(1000); t0 = performance.now(); onVis();
   iv = setInterval(() => {
+    if (hidAt) return;
     const e = (performance.now() - t0) / 1000; draw(e);
     pctx.drawImage(cv, 0, 0, pv.width, pv.height);
     $("vbar").style.width = Math.min(100, e / dur * 100) + "%"; $("vtxt").textContent = `Đang quay ${label} ` + fmtDur(Math.min(e, dur)) + " / " + fmtDur(dur) + ". Giữ nguyên tab này, đừng chuyển tab.";
