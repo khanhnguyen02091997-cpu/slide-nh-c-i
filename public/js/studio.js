@@ -434,6 +434,12 @@ function fitted(mode) {
     const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0;
     const M = fitInfo.dur - L; sec = (M - 13) / (n + C); if (sec >= 6) sec = (M - 7) / (n + 1 + C);
     sec = Math.min(15, Math.max(2.5, sec));
+  } else if (mode === "party") {
+    // Party screen loops forever: stretch one round (name screen + photos + repeated name screens) to the length of the music,
+    // so every round of photos starts again with the song.
+    const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0, ev = +$("every").value, k = ev ? Math.floor((n - 1) / ev) : 0, M = fitInfo.dur - L;
+    sec = (M - 7) / (n + C + k); if (sec >= 7) sec = M / (n + C + k + 1);
+    sec = Math.min(15, Math.max(2.5, sec));
   }
   if (!fitInfo.bpm) return { sec, auto: true };
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
@@ -1161,7 +1167,7 @@ function refresh() {
   startPreview(); if (!isBook(mode)) pageBadges();
 }
 function showSec(mode) {
-  const f = fitted(mode), whole = (mode === "video" || mode === "deliver") && f.auto;
+  const f = fitted(mode), whole = (mode === "video" || mode === "deliver" || mode === "party") && f.auto;
   $("sec").disabled = whole;
   const wantMusic = (mode === "video" || mode === "deliver") && $("loopMusic").checked && !tracks.length;
   $("secVal").textContent = (f.auto ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "") : f.loop ? " · lặp đến hết nhạc" : wantMusic ? " · thêm nhạc để lặp ảnh theo bài" : "");
