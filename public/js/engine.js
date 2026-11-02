@@ -29,7 +29,7 @@ const U=(W,H)=>Math.min(W,H)/1080;
 function prep(img){
   const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height,k=Math.min(1,2400/Math.max(w,h));
   const c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*k));c.height=Math.max(1,Math.round(h*k));
-  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  const cx=c.getContext("2d");cx.imageSmoothingQuality="high";cx.drawImage(img,0,0,c.width,c.height);
   const t=document.createElement("canvas"),tk=20/Math.max(w,h);t.width=Math.max(2,Math.round(w*tk));t.height=Math.max(2,Math.round(h*tk));
   t.getContext("2d").drawImage(c,0,0,t.width,t.height);
   const b=document.createElement("canvas");b.width=t.width*10;b.height=t.height*10;const bx=b.getContext("2d");bx.imageSmoothingQuality="high";bx.drawImage(t,0,0,b.width,b.height);
@@ -681,12 +681,12 @@ function Engine(canvas,o){
   function photoAt(sc){const n=o.photos.length;if(!n)return null;return o.photos[((sc.i||0)%n+n)%n]}
   function drawPhotoGallery(c,lt){
     const s=S(),n=o.photos.length,per=o.sec,k=Math.floor(lt/per),l=lt-k*per,W=canvas.width,H=canvas.height;
-    const nm=nameFor(null,k%n),T=TT(nm),one=(cx,kk,tt)=>photo(cx,W,H,o.photos[kk%n],clamp(tt/(per+T)),kk%n,o.info,tt);
+    const nm=nameFor(null,k%n),T=TT(nm),one=(cx,kk,tt)=>(o.hq&&(cx.imageSmoothingQuality="high"),photo(cx,W,H,o.photos[kk%n],clamp(tt/(per+T)),kk%n,o.info,tt));
     if(k>0&&l<T){const A=bufs[2],B=bufs[3];one(A.getContext("2d"),k-1,per+l);one(B.getContext("2d"),k,l);c.save();trans(c,A,B,ease(l/T),W,H,k,nm);c.restore()}
     else one(c,k,l);
   }
   function draw(c,sc,lt){
-    const s=S(),W=canvas.width,H=canvas.height,I=o.info;names(c,I);c.save();
+    const s=S(),W=canvas.width,H=canvas.height,I=o.info;if(o.hq)c.imageSmoothingQuality="high";names(c,I);c.save();
     const card=(cd,lt,ph)=>{if(TFX[o.tfx])tcard(o.tfx,c,W,H,cd,lt,ph,I);else s.card(c,W,H,cd,lt,ph)};
     if(!o.photos.length&&sc.type!=="cue"){card({role:"title",kicker:"Lễ thành hôn",big:[I.groom,I.bride],amp:true,sub:I.date},lt,null)}
     else if(sc.type==="photo"){photo(c,W,H,photoAt(sc),clamp(lt/(sc.dur+TT(nameFor(sc)))),sc.i,I,lt);const st=o.subs&&o.subs[sc.i];if(st)subtitle(c,W,H,st,lt,sc.dur,I.cap)}
@@ -702,7 +702,7 @@ function Engine(canvas,o){
   }
   function render(){
     const s=S(),W=canvas.width,H=canvas.height,cur=o.scenes[idx];if(!cur)return;
-    ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
+    if(o.hq)ctx.imageSmoothingQuality="high";ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
     const nm=nameFor(cur),T=TT(nm);
     if(prev&&t<T){fitBufs();const A=bufs[0],B=bufs[1];draw(A.getContext("2d"),prev,prevT+t);draw(B.getContext("2d"),cur,t);ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);trans(ctx,A,B,ease(t/T),W,H,cur.k,nm)}
     else{if(cur.type==="gallery")fitBufs();draw(ctx,cur,t)}
