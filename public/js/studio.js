@@ -137,6 +137,7 @@ async function load() {
   if (s.sec) $("sec").value = s.sec;
   if (s.every != null) $("every").value = String(s.every);
   if (s.vfmt) $("vfmt").value = s.vfmt;
+  $("vbest").checked = !!s.vbest;
   if (s.vres && [...$("vres").options].some((o) => o.value === String(s.vres))) $("vres").value = String(s.vres);
   if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
@@ -455,7 +456,7 @@ function fxCfg() {
 function lookMap() { const m = {}; for (const p of photos) if (p.path && p.look) m[p.path] = p.look; return m; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, loopMusic: $("loopMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, vres: $("vres").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, loopMusic: $("loopMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, vres: $("vres").value, vbest: $("vbest").checked, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -1228,12 +1229,18 @@ async function exportVideo() {
   const vp = vidPhotos(), c = vidCfg(cfg("video")), scenes = withStudio(SE.build("video", vp.length, c)), dur = SE.total(scenes);
   const eng = SE.Engine(cv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false, hq: true, sharp: true });
   let lastE = 0;
-  record({ cv, dur, vertical, beat0: c.beat0, name: slug() + (vertical ? "-doc" : ""), draw: (e) => { eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv); } });
+  record({ cv, dur, vertical, beat0: c.beat0, best: plan.pro && $("vbest").checked, name: slug() + (vertical ? "-doc" : ""), draw: (e) => { eng.step(e - lastE); lastE = e; eng.render(); stampLogo(cv); } });
 }
 /* Record a canvas animation as a video with the album's music: draw(e) paints second e.
    Chrome/Edge: render frame by frame at exactly 30 fps with WebCodecs and mux an MP4, so the file is smooth
    however slow the computer is and even if the tab is hidden. Other browsers: live capture (recordLive). */
 async function record(o) {
+  if (o.best) {
+    let r = "no";
+    try { r = await recordBest(o); } catch (e) { console.warn("x264 export failed", e); r = "no"; }
+    if (r !== "no") return;
+    $("goNote").classList.add("err"); $("goNote").textContent = "Không chạy được chế độ chất lượng cao nhất trên máy này, đang xuất theo cách thường...";
+  }
   // Hardware encoder first; if it is missing or breaks mid-way, the browser's software encoder. Only then the live capture,
   // which is real-time and drops frames on a slow or busy computer, so it is the last resort.
   for (const sw of [false, true]) {
@@ -1341,6 +1348,91 @@ async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label =
     console.warn("offline export failed (" + (sw ? "software" : "hardware") + " encoder)", e); try { venc && venc.close(); aenc && aenc.close(); } catch {}
     done(); return "no";
   }
+}
+/* "Chất lượng cao nhất": the frames go through x264 (ffmpeg.wasm, single thread, so no special page headers) at
+   constant quality instead of the browser's hardware encoder. Frames are rendered and compressed in chunks of
+   CHUNK as JPEG q.95, each chunk becomes a small MP4 kept outside the wasm heap, and at the end the pieces are
+   joined (concat demuxer, no re-encode) and muxed with the music into one MP4. Slow (about 5 frames a second for 1080p on an ordinary laptop),
+   so the progress line shows the time left. */
+const FF_CORE = ["https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/", "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/"];
+let ffLib = null;
+async function blobURL(url, type) { const r = await fetch(url); if (!r.ok) throw new Error(url + " " + r.status); return URL.createObjectURL(new Blob([await r.arrayBuffer()], { type })); }
+function loadFF(say) {
+  return ffLib || (ffLib = (async () => {
+    if (!window.FFmpegWASM) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "/js/vendor/ffmpeg/ffmpeg.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    let err = null;
+    for (const base of FF_CORE) {
+      try {
+        say("Đang tải bộ nén x264 (khoảng 30 MB, chỉ lần đầu)...");
+        const coreURL = await blobURL(base + "ffmpeg-core.js", "text/javascript"), wasmURL = await blobURL(base + "ffmpeg-core.wasm", "application/wasm");
+        return { coreURL, wasmURL };
+      } catch (e) { err = e; }
+    }
+    throw err;
+  })().catch((e) => { ffLib = null; throw e; }));
+}
+async function recordBest({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
+  if (!window.Worker || !window.WebAssembly) return "no";
+  const CHUNK = 60, say = (t) => { $("vtxt").textContent = t; };
+  $("go").disabled = true; busy(true); $("vprog").hidden = false; $("vbar").style.width = "0";
+  pvHold = true; const pctx = pv.getContext("2d"); $("pvBox").classList.toggle("v", !!vertical); $("pvBox").style.aspectRatio = `${cv.width} / ${cv.height}`; sizePv();
+  let cancelled = false, ff = null; cancelRec = () => { cancelled = true; try { ff && ff.terminate(); } catch {} };
+  const done = () => { pvHold = false; $("go").disabled = false; busy(false); $("vprog").hidden = true; cancelRec = null; refresh(); };
+  try {
+    const urls = await loadFF(say); if (cancelled) { done(); return "ok"; }
+    ff = new FFmpegWASM.FFmpeg();
+    await ff.load({ ...urls, classWorkerURL: new URL("/js/vendor/ffmpeg/814.ffmpeg.js", location.href).href });
+    say("Đang chuẩn bị nhạc...");
+    const music = tracks.length ? await mixMusic(dur, beat0) : null;
+    const N = Math.ceil(dur * FPS), pieces = [], t0 = performance.now();
+    const x264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-tune", "film", "-x264-params", "aq-mode=3", "-pix_fmt", "yuv420p", "-profile:v", "high", "-video_track_timescale", "30000"];
+    for (let a = 0; a < N; a += CHUNK) {
+      const b = Math.min(N, a + CHUNK);
+      for (let i = a; i < b; i++) {
+        if (cancelled) { done(); return "ok"; }
+        draw(i / FPS);
+        const jpg = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", .95));
+        await ff.writeFile(`f${String(i - a).padStart(4, "0")}.jpg`, new Uint8Array(await jpg.arrayBuffer()));
+        if (i % 10 === 0) {
+          pctx.drawImage(cv, 0, 0, pv.width, pv.height);
+          const el = (performance.now() - t0) / 1000, left = i > 30 ? el / i * (N - i) : 0;
+          $("vbar").style.width = (i / N * 100) + "%";
+          say(`Đang dựng ${label} chất lượng cao ` + Math.floor(i / N * 100) + "%" + (left ? " · còn khoảng " + fmtDur(left) : "") + ". Có thể chuyển tab, đừng đóng tab.");
+        }
+      }
+      if (await ff.exec(["-framerate", String(FPS), "-i", "f%04d.jpg", ...x264, "p.mp4"]) !== 0) throw new Error("x264 failed");
+      pieces.push(await ff.readFile("p.mp4"));
+      for (let i = a; i < b; i++) await ff.deleteFile(`f${String(i - a).padStart(4, "0")}.jpg`);
+      await ff.deleteFile("p.mp4");
+    }
+    say("Đang ghép nhạc và đóng gói MP4...");
+    for (let k = 0; k < pieces.length; k++) await ff.writeFile(`p${k}.mp4`, pieces[k]);
+    await ff.writeFile("list.txt", pieces.map((_, k) => `file 'p${k}.mp4'`).join("\n")); pieces.length = 0;
+    const args = ["-f", "concat", "-safe", "0", "-i", "list.txt"];
+    if (music) { await ff.writeFile("a.wav", wav(music)); args.push("-i", "a.wav", "-c:a", "aac", "-b:a", "192k", "-shortest"); }
+    args.push("-c:v", "copy", "-movflags", "+faststart", "o.mp4");
+    if (await ff.exec(args) !== 0) throw new Error("mux failed");
+    const out = await ff.readFile("o.mp4"), blob = new Blob([out], { type: "video/mp4" });
+    ff.terminate(); ff = null;
+    saveFile(blob, name + ".mp4");
+    done();
+    $("goNote").classList.remove("err");
+    $("goNote").textContent = `Đã xuất ${label} MP4 chất lượng cao nhất (` + cv.width + "×" + cv.height + ", x264, " + (blob.size / 1048576).toFixed(1) + " MB, " + FPS + " hình/giây).";
+    return "ok";
+  } catch (e) {
+    if (cancelled) { done(); return "ok"; }
+    console.warn(e); try { ff && ff.terminate(); } catch {}
+    done(); return "no";
+  }
+}
+// 16-bit stereo WAV of an AudioBuffer, for ffmpeg to encode as AAC.
+function wav(buf) {
+  const n = buf.length, L = buf.getChannelData(0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L, out = new DataView(new ArrayBuffer(44 + n * 4));
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, "RIFF"); out.setUint32(4, 36 + n * 4, true); str(8, "WAVE"); str(12, "fmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true);
+  out.setUint32(24, buf.sampleRate, true); out.setUint32(28, buf.sampleRate * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); str(36, "data"); out.setUint32(40, n * 4, true);
+  for (let i = 0, o = 44; i < n; i++, o += 4) { out.setInt16(o, Math.max(-1, Math.min(1, L[i])) * 32767, true); out.setInt16(o + 2, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
+  return new Uint8Array(out.buffer);
 }
 async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "video" }) {
   const mime = pickMime(); if (!mime || !HTMLCanvasElement.prototype.captureStream) return fail("Trình duyệt này không quay được video. Dùng Chrome hoặc Edge trên máy tính nhé.");
