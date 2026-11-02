@@ -1355,7 +1355,8 @@ async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "v
 $("vcancel").onclick = () => cancelRec && cancelRec();
 
 /* ----- deliverable single-file slideshow ----- */
-function jpeg(ph) { const c = ph.c, k = Math.min(1, 1920 / Math.max(c.width, c.height)), o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k); o.getContext("2d").drawImage(c, 0, 0, o.width, o.height); return o.toDataURL("image/jpeg", .86); }
+// Photos inside the delivered .html: full prepared size (up to 2400 px) so a 2K/4K TV or projector still looks sharp.
+function jpeg(ph) { const c = ph.c, k = Math.min(1, 2400 / Math.max(c.width, c.height)), o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k); const g = o.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL("image/jpeg", .92); }
 const dataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
 let engineSrc = null;
 async function exportDeliver() {
