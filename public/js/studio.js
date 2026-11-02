@@ -1385,7 +1385,11 @@ async function recordBest({ cv, dur, draw, name, vertical, beat0 = 0, label = "v
     say("Đang chuẩn bị nhạc...");
     const music = tracks.length ? await mixMusic(dur, beat0) : null;
     const N = Math.ceil(dur * FPS), pieces = [], t0 = performance.now();
-    const x264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-tune", "film", "-x264-params", "aq-mode=3", "-pix_fmt", "yuv420p", "-profile:v", "high", "-video_track_timescale", "30000"];
+    const x264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-tune", "film", "-x264-params", "aq-mode=3", "-profile:v", "high",
+      // The JPEG frames are full-range BT.601; convert to the BT.709 limited range players expect for HD and tag it,
+      // otherwise Mac/QuickTime and browsers read the colours with the wrong matrix and they look washed out.
+      "-vf", "scale=in_range=full:in_color_matrix=bt601:out_range=tv:out_color_matrix=bt709,format=yuv420p",
+      "-colorspace", "bt709", "-color_primaries", "bt709", "-color_range", "tv", "-video_track_timescale", "30000"];
     for (let a = 0; a < N; a += CHUNK) {
       const b = Math.min(N, a + CHUNK);
       for (let i = a; i < b; i++) {
