@@ -773,7 +773,7 @@ function Player(p){
   function size(){const dpr=Math.min(2,window.devicePixelRatio||1);let w=ov.clientWidth*dpr,h=ov.clientHeight*dpr;const k=Math.min(1,2560/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k)}
   size();const ro=new ResizeObserver(size);ro.observe(ov);
   const mk=()=>build(p.mode,p.photos.length,p.cfg);
-  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,mark:p.cfg.mark,tfx:p.cfg.tfx,subs:p.cfg.subs,look:p.cfg.look,looks:p.cfg.looks,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
+  const eng=Engine(cv,{style:p.style,photos:p.photos,info:p.info,sec:p.cfg.sec,trans:p.cfg.trans,trs:p.cfg.trs,frame:p.cfg.frame,mark:p.cfg.mark,tfx:p.cfg.tfx,subs:p.cfg.subs,look:p.cfg.look,looks:p.cfg.looks,hq:true,scenes:mk(),auto:!manual,loop:!manual,onLoop:mk,onScene:label});
   function label(i,sc){lbl.textContent=(i+1)+"/"+eng.scenes.length+" · "+sc.name}
   label(0,eng.scene);
   // music

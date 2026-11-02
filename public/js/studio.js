@@ -434,6 +434,12 @@ function fitted(mode) {
     const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0;
     const M = fitInfo.dur - L; sec = (M - 13) / (n + C); if (sec >= 6) sec = (M - 7) / (n + 1 + C);
     sec = Math.min(15, Math.max(2.5, sec));
+  } else if (mode === "party") {
+    // Party screen loops forever: stretch one round (name screen + photos + repeated name screens) to the length of the music,
+    // so every round of photos starts again with the song.
+    const L = letterDur().reduce((a, x) => a + x, 0), C = LETTER_STYLES.includes(val("style")) ? SE.nCollage(n) : 0, ev = +$("every").value, k = ev ? Math.floor((n - 1) / ev) : 0, M = fitInfo.dur - L;
+    sec = (M - 7) / (n + C + k); if (sec >= 7) sec = M / (n + C + k + 1);
+    sec = Math.min(15, Math.max(2.5, sec));
   }
   if (!fitInfo.bpm) return { sec, auto: true };
   let beat = 60 / fitInfo.bpm; while (beat < 0.45) beat *= 2;
@@ -1161,7 +1167,7 @@ function refresh() {
   startPreview(); if (!isBook(mode)) pageBadges();
 }
 function showSec(mode) {
-  const f = fitted(mode), whole = (mode === "video" || mode === "deliver") && f.auto;
+  const f = fitted(mode), whole = (mode === "video" || mode === "deliver" || mode === "party") && f.auto;
   $("sec").disabled = whole;
   const wantMusic = (mode === "video" || mode === "deliver") && $("loopMusic").checked && !tracks.length;
   $("secVal").textContent = (f.auto ? "~" + f.sec.toFixed(1).replace(".0", "") : $("sec").value) + " giây" + (f.auto ? " · khớp nhạc" + (f.bpm ? ` ${Math.round(f.bpm)} BPM` : "") : f.loop ? " · lặp đến hết nhạc" : wantMusic ? " · thêm nhạc để lặp ảnh theo bài" : "");
@@ -1355,7 +1361,8 @@ async function recordLive({ cv, dur, draw, name, vertical, beat0 = 0, label = "v
 $("vcancel").onclick = () => cancelRec && cancelRec();
 
 /* ----- deliverable single-file slideshow ----- */
-function jpeg(ph) { const c = ph.c, k = Math.min(1, 1920 / Math.max(c.width, c.height)), o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k); o.getContext("2d").drawImage(c, 0, 0, o.width, o.height); return o.toDataURL("image/jpeg", .86); }
+// Photos inside the delivered .html: full prepared size (up to 2400 px) so a 2K/4K TV or projector still looks sharp.
+function jpeg(ph) { const c = ph.c, k = Math.min(1, 2400 / Math.max(c.width, c.height)), o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k); const g = o.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL("image/jpeg", .92); }
 const dataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
 let engineSrc = null;
 async function exportDeliver() {
