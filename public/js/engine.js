@@ -40,7 +40,24 @@ function cover(ctx,src,x,y,w,h,z=1,px=0,py=0){
   const s=Math.max(w/src.width,h/src.height)*z,dw=src.width*s,dh=src.height*s;
   const fx=src.fx==null?.5:src.fx,fy=src.fy==null?.5:src.fy;
   const ox=clamp((w-dw)*fx+px*(dw-w)/2,w-dw,0),oy=clamp((h-dh)*fy+py*(dh-h)/2,h-dh,0);
-  ctx.drawImage(src,x+ox,y+oy,dw,dh);
+  ctx.drawImage(SHARP&&sharpAt(src,dw)||src,x+ox,y+oy,dw,dh);
+}
+/* Video export only (Engine option sharp): a photo shrunk from 2400 px to the few hundred pixels it fills in the frame
+   looks soft, so it is drawn from a copy resized to that width (rounded up to 48 px) with a light unsharp mask.
+   Copies live in a small shared LRU because the export walks through the photos in order. */
+let SHARP=false;const SHC=new Map();
+function sharpAt(src,dw){
+  if(!src.getContext||dw>src.width*.85||dw<64)return null;
+  const bw=Math.ceil(dw/48)*48;let m=src.__sh;if(!m)try{m=src.__sh={}}catch(e){return null}
+  let c=m[bw];if(c){SHC.delete(c);SHC.set(c,m);return c}
+  const bh=Math.max(1,Math.round(src.height*bw/src.width));c=document.createElement("canvas");c.width=bw;c.height=bh;
+  const g=c.getContext("2d",{willReadFrequently:true});g.imageSmoothingQuality="high";g.drawImage(src,0,0,bw,bh);
+  try{const d=g.getImageData(0,0,bw,bh),p=d.data,q=new Uint8ClampedArray(p),a=.55,r=bw*4;
+    for(let y=1;y<bh-1;y++)for(let x=1,i=y*r+4;x<bw-1;x++,i+=4)for(let k=0;k<3;k++){const j=i+k;p[j]=q[j]*(1+4*a)-a*(q[j-4]+q[j+4]+q[j-r]+q[j+r])}
+    g.putImageData(d,0,0)}catch(e){}
+  m[bw]=c;SHC.set(c,m);
+  while(SHC.size>24){const [old,om]=SHC.entries().next().value;SHC.delete(old);for(const k in om)if(om[k]===old)delete om[k]}
+  return c;
 }
 function focus(ph,fx=.5,fy=.5){ph.fx=ph.c.fx=ph.b.fx=fx;ph.fy=ph.c.fy=ph.b.fy=fy;return ph}
 function fit(ar,x,y,w,h){let fw=w,fh=w/ar;if(fh>h){fh=h;fw=h*ar}return{x:x+(w-fw)/2,y:y+(h-fh)/2,w:fw,h:fh}}
@@ -702,13 +719,13 @@ function Engine(canvas,o){
   }
   function render(){
     const s=S(),W=canvas.width,H=canvas.height,cur=o.scenes[idx];if(!cur)return;
-    if(o.hq)ctx.imageSmoothingQuality="high";ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
+    if(o.hq)ctx.imageSmoothingQuality="high";SHARP=!!o.sharp;ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
     const nm=nameFor(cur),T=TT(nm);
     if(prev&&t<T){fitBufs();const A=bufs[0],B=bufs[1];draw(A.getContext("2d"),prev,prevT+t);draw(B.getContext("2d"),cur,t);ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);trans(ctx,A,B,ease(t/T),W,H,cur.k,nm)}
     else{if(cur.type==="gallery")fitBufs();draw(ctx,cur,t)}
     if(s.overlay)s.overlay(ctx,W,H,time);
     if(o.mark)mark(ctx,W,H,o.mark);
-    ctx.restore();
+    ctx.restore();SHARP=false;
   }
   function go(n){
     const len=o.scenes.length;prev=o.scenes[idx];prevT=t;
