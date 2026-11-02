@@ -29,7 +29,7 @@ function markPro() {
   $("tAll").querySelectorAll("button").forEach((b) => { if (b.dataset.v !== "app" && !FREE.trans.includes(b.dataset.v)) b.insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
   document.querySelectorAll('.pick[data-for-select="tfx"] button').forEach((b) => { if (!FREE.tfx.includes(b.dataset.v)) b.insertAdjacentHTML("beforeend", ' <em class="pro-tag">PRO</em>'); });
   [...$("bookSize").options].forEach((o) => { if (!bookFree(o.value)) o.textContent += " (Pro)"; });
-  $("vfmt").insertAdjacentHTML("afterend", '<span class="hint">Bản miễn phí xuất video 720p, Pro xuất Full HD 1080p.</span>');
+  $("vres").insertAdjacentHTML("afterend", '<span class="hint">Bản miễn phí xuất video 720p, Pro chọn được Full HD, 2K hoặc 4K.</span>');
   $("planNote").innerHTML = `Bản miễn phí: tối đa ${FREE.photos} ảnh, 3 phong cách (Sang trọng, Hàn Quốc, Hiện đại), video 720p, album in 20 cm, có dòng chữ nhỏ ở góc. Các mục có chữ PRO vẫn xem thử được. <a href="/albums.html#pro">Nhập mã Pro</a> để mở hết.`;
 }
 
@@ -137,6 +137,7 @@ async function load() {
   if (s.sec) $("sec").value = s.sec;
   if (s.every != null) $("every").value = String(s.every);
   if (s.vfmt) $("vfmt").value = s.vfmt;
+  if (s.vres && [...$("vres").options].some((o) => o.value === String(s.vres))) $("vres").value = String(s.vres);
   if (s.nameFont && SE.NAMEF[s.nameFont]) { $("nameFont").value = s.nameFont; SE.loadName(s.nameFont).then(refresh); }
   if (s.cues) $("cues").value = s.cues;
   $("letB").value = s.letB || ""; $("letG").value = s.letG || "";
@@ -454,7 +455,7 @@ function fxCfg() {
 function lookMap() { const m = {}; for (const p of photos) if (p.path && p.look) m[p.path] = p.look; return m; }
 function focusMap() { const m = {}; for (const p of photos) if (p.path && (p.ph.fx !== .5 || p.ph.fy !== .5) && p.ph.fx != null) m[p.path] = [+p.ph.fx.toFixed(3), +p.ph.fy.toFixed(3)]; return m; }
 function transMap() { const m = {}; if (val("tmode") === "manual") for (const p of photos) if (p.path && p.tr) m[p.path] = p.tr; return m; }
-function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, loopMusic: $("loopMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
+function readSettings() { return { focus: focusMap(), tmode: val("tmode"), tseed: tSeed, ptrans: transMap(), frame: $("frame").value, tfx: $("tfx").value, look: $("look").value, plook: lookMap(), chap: $("chap").value, subs: $("subs").value, nameFont: $("nameFont").value, book: $("bookSize").value, bookLay, bookTypo, bookCover, bookText, bookAuto, bookOver, bookSwap, bookPattern, bookTone, autoFace: $("autoFace").checked, bookLook: $("bookLook").value, stIntro: $("stIntro").checked, spread: $("spread").checked, single: $("single").checked, bleed: $("bleed").checked, bookDpi: $("bookDpi").value, bookFile: $("bookFile").value.trim(), vsrc: $("vsrc").value, logo: { on: $("logoOn").checked, pos: logoPos, size: +$("logoSize").value, op: +$("logoOp").value }, vows: { tpl: $("vowTpl").value, title: $("vowTitle").value, groom: $("vowG").value, bride: $("vowB").value, font: $("vowFont").value, size: $("vowSize").value, cover: $("vowCover").checked }, letB: $("letB").value, letG: $("letG").value, fit: $("fitMusic").checked, loopMusic: $("loopMusic").checked, sec: +$("sec").value, every: +$("every").value, shuffle: $("shuffle").checked, cues: $("cues").value, vfmt: $("vfmt").value, vres: $("vres").value, cap: $("cap").checked, stageMusic: $("stageMusic").checked }; }
 function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ? `${m} phút ${s % 60} giây` : `${s} giây`; }
 
 /* ----- live preview ----- */
@@ -1217,7 +1218,12 @@ let cancelRec = null;
 function pickMime() { for (const m of ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; return null; }
 async function exportVideo() {
   await SE.loadName($("nameFont").value);
-  const vertical = $("vfmt").value === "v", long = plan.pro ? 1920 : 1280, short = plan.pro ? 1080 : 720, W = vertical ? short : long, H = vertical ? long : short;
+  // Free: 720p. Pro: the chosen 1080p / 1440p / 2160p, stepping down to the largest size this computer can encode.
+  const vertical = $("vfmt").value === "v", want = plan.pro ? +$("vres").value || 1080 : 720;
+  let short = want;
+  if (window.VideoEncoder) for (const s of [2160, 1440, 1080, 720].filter((s) => s <= want)) { short = s; const l = s * 16 / 9; if (await pickVideoCfg(vertical ? s : l, vertical ? l : s) || await pickVideoCfg(vertical ? s : l, vertical ? l : s, true)) break; }
+  else short = Math.min(want, 1080); // live capture cannot keep up above Full HD
+  const long = short * 16 / 9, W = vertical ? short : long, H = vertical ? long : short;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const vp = vidPhotos(), c = vidCfg(cfg("video")), scenes = withStudio(SE.build("video", vp.length, c)), dur = SE.total(scenes);
   const eng = SE.Engine(cv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes, auto: true, loop: false, hq: true, sharp: true });
@@ -1243,8 +1249,10 @@ let muxerLib = null;
 function loadMuxer() { return muxerLib || (muxerLib = new Promise((ok, no) => { if (window.Mp4Muxer) return ok(window.Mp4Muxer); const s = document.createElement("script"); s.src = "/js/vendor/mp4-muxer.js"; s.onload = () => ok(window.Mp4Muxer); s.onerror = () => { muxerLib = null; no(new Error("muxer")); }; document.head.appendChild(s); })); }
 async function pickVideoCfg(W, H, sw) {
   // Slow zooms over soft wedding photos and blurred backgrounds need plenty of bits or they smear and band.
-  const bitrate = Math.max(W, H) >= 1920 ? 16e6 : 8e6;
-  for (const codec of ["avc1.640028", "avc1.4d0028", "avc1.420028", "avc1.64002a", "avc1.42002a"]) {
+  const px = W * H, bitrate = px > 4e6 ? 40e6 : px > 2.2e6 ? 24e6 : px > 1e6 ? 16e6 : 8e6;
+  // H.264 levels: 4.0/4.2 up to 1080p, 5.0/5.1 for 1440p, 5.1/5.2 for 4K.
+  const levels = px > 4e6 ? ["33", "34"] : px > 2.2e6 ? ["32", "33"] : ["28", "2a"];
+  for (const codec of ["64", "4d", "42"].flatMap((p) => levels.map((l) => `avc1.${p}00${l}`))) {
     const cfg = { codec, width: W, height: H, bitrate, framerate: FPS, avc: { format: "avc" }, hardwareAcceleration: sw ? "prefer-software" : "no-preference" };
     try { if ((await VideoEncoder.isConfigSupported(cfg)).supported) return cfg; } catch {}
   }
@@ -1327,7 +1335,7 @@ async function recordOffline({ cv, dur, draw, name, vertical, beat0 = 0, label =
     saveFile(blob, name + ".mp4");
     done();
     $("goNote").classList.remove("err");
-    $("goNote").textContent = `Đã xuất ${label} MP4 (` + (blob.size / 1048576).toFixed(1) + " MB, " + FPS + " hình/giây)." + (music && !acfg ? " Trình duyệt này không nén được âm thanh nên video không có nhạc; thử Chrome bản mới." : "");
+    $("goNote").textContent = `Đã xuất ${label} MP4 (` + cv.width + "×" + cv.height + ", " + (blob.size / 1048576).toFixed(1) + " MB, " + FPS + " hình/giây)." + (music && !acfg ? " Trình duyệt này không nén được âm thanh nên video không có nhạc; thử Chrome bản mới." : "");
     return "ok";
   } catch (e) {
     console.warn("offline export failed (" + (sw ? "software" : "hardware") + " encoder)", e); try { venc && venc.close(); aenc && aenc.close(); } catch {}
