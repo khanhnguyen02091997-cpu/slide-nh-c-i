@@ -459,7 +459,21 @@ function fmtDur(s) { s = Math.round(s); const m = Math.floor(s / 60); return m ?
 
 /* ----- live preview ----- */
 const pv = $("pv"); let pvEng = null, pvLast = 0, pvHold = false;
-function sizePv() { const r = pv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1); pv.width = Math.max(320, Math.round(r.width * dpr)); pv.height = Math.max(180, Math.round(r.height * dpr)); }
+// The live preview is redrawn up to 30 times a second while the user edits, so it stays small: long side at most 1280 px
+// and at most 1.5x pixel density. Album and vow pages are drawn once per change, so they keep full density.
+function sizePv() { const r = pv.getBoundingClientRect(), live = !isBook(val("mode")) && val("mode") !== "vows", dpr = Math.min(live ? 1.5 : 2, window.devicePixelRatio || 1); let w = Math.max(320, r.width * dpr), h = Math.max(180, r.height * dpr); if (live) { const k = Math.min(1, 1280 / Math.max(w, h)); w *= k; h *= k; } pv.width = Math.round(w); pv.height = Math.round(h); }
+// Preview copies of the photos at most 1280 px: drawing the full 2400 px photos every frame made the editor lag.
+function pvPh(ph) {
+  if (!ph || !ph.c) return ph;
+  let p = ph.__pv;
+  if (!p) {
+    const src = ph.c, k = Math.min(1, 1280 / Math.max(src.width, src.height)); if (k === 1) return ph;
+    const c = document.createElement("canvas"); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+    const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, c.width, c.height);
+    p = ph.__pv = { c, b: ph.b, ar: ph.ar };
+  }
+  p.fx = p.c.fx = ph.fx; p.fy = p.c.fy = ph.fy; return p;
+}
 /* ----- photo book ----- */
 let bookPages = [], bookPage = 0, bookSeed = 0, bookLay = "auto", bookTypo = "none", bookCover = "classic", bookText = {};
 // Auto Design: photos per page range, wished page count (0 = free), layouts to draw from (empty = all), gutter (% of page side)
@@ -775,13 +789,20 @@ function startPreview() {
   if (isBook(mode)) { $("pvBox").classList.remove("v"); sizePv(); pvEng = null; layoutBook(); renderBook(); return; }
   if (mode === "vows") { const v = VOW_SIZE[$("vowSize").value]; $("pvBox").classList.remove("v"); $("pvBox").classList.add("sq"); $("pvBox").style.aspectRatio = `${v.w} / ${v.h}`; $("pvBox").style.maxWidth = `min(100%, ${(70 * v.w / v.h).toFixed(1)}vh)`; sizePv(); pvEng = null; renderVows(); return; }
   $("pvBox").classList.toggle("v", mode === "video" && $("vfmt").value === "v"); sizePv();
-  const vp = mode === "video" ? vidPhotos() : photos.map((p) => p.ph); if (mode === "video") c = vidCfg(c);
+  const vp = (mode === "video" ? vidPhotos() : photos.map((p) => p.ph)).map(pvPh); if (mode === "video") c = vidCfg(c);
   const mk = () => withStudio(SE.build(mode, vp.length, c));
   pvEng = SE.Engine(pv, { studio: studioInfo(), style: val("style"), photos: vp, info: info(), sec: c.sec, mark: c.mark, trans: c.trans, trs: c.trs, frame: c.frame, tfx: c.tfx, subs: c.subs, look: c.look, looks: c.looks, scenes: mk(), auto: true, loop: true, onLoop: mk,
     onScene: (i, sc) => $("pvScene").textContent = "Xem trước · " + sc.name });
   $("pvScene").textContent = "Xem trước · " + pvEng.scene.name;
 }
-function pvFrame(n) { const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n; if (pvEng && !pvHold) { pvEng.step(dt); pvEng.render(); if (val("mode") === "video") stampLogo(pv); } requestAnimationFrame(pvFrame); }
+// 30 fps is plenty for a preview, and nothing is drawn while the preview is scrolled out of sight.
+let pvSeen = true; new IntersectionObserver((es) => { pvSeen = es[es.length - 1].isIntersecting; }).observe(pv);
+function pvFrame(n) {
+  requestAnimationFrame(pvFrame);
+  if (n - pvLast < 1000 / 31) return;
+  const dt = Math.min(.1, (n - pvLast) / 1000); pvLast = n;
+  if (pvEng && !pvHold && pvSeen) { pvEng.step(dt); pvEng.render(); if (val("mode") === "video") stampLogo(pv); }
+}
 new ResizeObserver(() => { if (pvHold) return; if (pvEng) sizePv(); else if (isBook(val("mode"))) { sizePv(); renderBook(); } else if (val("mode") === "vows") { sizePv(); renderVows(); } }).observe(pv);
 
 /* ----- per-photo transitions: the app picks (auto) or the user edits each photo (manual) ----- */
@@ -1546,8 +1567,10 @@ function setupAI(enabled) {
   renderPhotos(); renderTracks();
   document.querySelectorAll(".main input, .main select, .main textarea").forEach((el) => {
     if (el.type === "file" || el.id === "aiQ") return;
-    const ev = el.tagName === "TEXTAREA" || el.type === "text" ? "input" : "change";
-    el.addEventListener(ev, () => { refresh(); changed(); });
+    const typing = el.tagName === "TEXTAREA" || el.type === "text";
+    // Typing rebuilt the whole preview on every key; wait until the user pauses.
+    if (typing) { let t = 0; el.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { refresh(); changed(); }, 300); }); }
+    else el.addEventListener("change", () => { refresh(); changed(); });
   });
   loading = false;
   status("Đã lưu");
